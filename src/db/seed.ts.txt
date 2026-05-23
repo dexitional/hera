@@ -1,0 +1,68 @@
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import * as schema from './schema';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+const db = drizzle(pool, { schema });
+
+async function main() {
+  console.log('⏳ Seeding database with dummy data configurations...');
+
+  // 1. Clear existing dataset rows to guarantee fresh indexing arrays
+  await db.delete(schema.votes);
+  await db.delete(schema.contestants);
+  await db.delete(schema.categories);
+  await db.delete(schema.events);
+
+  // 2. Insert Dummy Event
+  const [event] = await db.insert(schema.events).values({
+    title: 'National Entertainment Awards 2026',
+    isActive: 1,
+  }).returning();
+
+  console.log(`✅ Created Event: ${event.title}`);
+
+  // 3. Insert Multi-tier Categories tied to USSD shortcodes
+  const [catArtist] = await db.insert(schema.categories).values({
+    eventId: event.id,
+    name: 'Artist of the Year',
+    ussdCode: '1', // Maps to dialing "1" in the primary USSD tier selection screen
+  }).returning();
+
+  const [catRapper] = await db.insert(schema.categories).values({
+    eventId: event.id,
+    name: 'Best Rapper',
+    ussdCode: '2', // Maps to dialing "2" in the primary USSD tier selection screen
+  }).returning();
+
+  console.log('✅ Created Categories: "Artist of the Year" & "Best Rapper"');
+
+  // 4. Inject Contestants into "Artist of the Year" Category
+  await db.insert(schema.contestants).values([
+    { categoryId: catArtist.id, name: 'Sarkodie', ussdCode: '1' },
+    { categoryId: catArtist.id, name: 'Stonebwoy', ussdCode: '2' },
+    { categoryId: catArtist.id, name: 'Black Sherif', ussdCode: '3' },
+  ]);
+
+  // 5. Inject Contestants into "Best Rapper" Category
+  await db.insert(schema.contestants).values([
+    { categoryId: catRapper.id, name: 'Manifest', ussdCode: '1' },
+    { categoryId: catRapper.id, name: 'Medikal', ussdCode: '2' },
+    { categoryId: catRapper.id, name: 'Kofi Mole', ussdCode: '3' },
+  ]);
+
+  console.log('✅ Registered contestants across all active selection groups.');
+  console.log('🚀 Database Seeding process completed cleanly.');
+  process.exit(0);
+}
+
+main().catch((err) => {
+  console.error('❌ Seeding process critically failed:', err);
+  process.exit(1);
+});

@@ -1,0 +1,100 @@
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import { elections, organizations, users } from '../db/schema'; // Ensure organizations/users schemas are defined
+import { and, eq, lte } from 'drizzle-orm';
+import { getFullElectionResults } from '../server/results';
+import { Resend } from 'resend';
+import * as dotenv from 'dotenv';
+import { getCacheKeys, redis } from '#/server/redis';
+
+dotenv.config();
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const db = drizzle(pool);
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+async function notifyAdminOfResults(electionId: number, title: string) {
+  try {
+    // 1. Resolve admin contact info by joining election, organization, and user tables
+    const [adminProfile] = await db.select({
+      email: users.email,
+      phone: users.phone
+    })
+    .from(elections)
+    .innerJoin(organizations, eq(organizations.id, elections.orgId))
+    .innerJoin(users, eq(users.id, organizations.adminId))
+    .where(eq(elections.id, electionId))
+    .limit(1);
+
+    if (!adminProfile) return;
+
+    // 2. Fetch the compiled results payload via our server results routine
+    const report = await getFullElectionResults(electionId);
+    
+    // 3. Compose text summaries for SMS alerts
+    let smsSummary = `🔒 Election Completed: "${title}". Final Results Summary:\n`;
+    // Compose detailed HTML layouts for email dispatches
+    let emailHtml = `<h2>Official Certified Results: ${title}</h2><hr/>`;
+
+    report.positions.forEach((pos: any) => {
+      const winner = pos.candidates[0]; // Candidates list arrives pre-sorted by votes desc
+      smsSummary += `- ${pos.title}: ${winner ? `${winner.name} (${winner.votes} votes)` : 'No Candidates'}\n`;
+
+      emailHtml += `<h3>Office: ${pos.title}</h3><ul>`;
+      pos.candidates.forEach((cand: any) => {
+        emailHtml += `<li><strong>${cand.name}</strong> — ${cand.votes} votes</li>`;
+      });
+      emailHtml += `</ul>`;
+    });
+
+    // 4. Dispatch Asynchronous Notifications
+    // A) Send live Email Report via Resend API
+    await resend.emails.send({
+      from: 'Elections SaaS <results@yoursaas.com>',
+      to: adminProfile.email,
+      subject: `🚨 Official Results Certified: ${title}`,
+      html: emailHtml
+    });
+    console.log(`[EMAIL COMPLETED]: Final results report sent to ${adminProfile.email}`);
+
+    // B) Send direct SMS notification via Carrier Gateway Hook
+    await fetch('https://sms-provider.com', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.SMS_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipient: adminProfile.phone, text: smsSummary }),
+    });
+    console.log(`[SMS COMPLETED]: Status alert confirmation texted to ${adminProfile.phone}`);
+
+  } catch (err) {
+    console.error(`Failed to handle automated results notifications for election ${electionId}:`, err);
+  }
+}
+
+async function checkAndExpireElections() {
+  const currentTimestamp = new Date();
+  
+  try {
+    const expiredElections = await db.update(elections)
+      .set({ isActive: false })
+      .where(and(eq(elections.isActive, true), lte(elections.endAt, currentTimestamp)))
+      .returning({ id: elections.id, title: elections.title });
+
+    for (const election of expiredElections) {
+      console.log(`🔒 [EXPIRED]: Closing Election ID ${election.id}`);
+      // Trigger notifications for each closed election
+      await notifyAdminOfResults(election.id, election.title);
+      // CRITICAL STEP: Purge the cache instantly
+      const cacheKey = getCacheKeys.electionResults(election.id);
+      await redis.del(cacheKey);
+      console.log(`[CACHE PURGED]: Evicted memory cache string for election ID ${election.id}`);
+    }
+    
+  } catch (error) {
+    console.error('Scheduled closing worker runtime crash sequence:', error);
+  } finally {
+    await pool.end();
+    process.exit(0);
+  }
+}
+
+checkAndExpireElections();

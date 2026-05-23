@@ -1,0 +1,23 @@
+import PositionAdminForm from "#/components/election/PositionAdminForm";
+import { getElectionsFn } from "#/server/tenant-elections";
+import { createFileRoute } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
+
+
+export const Route = createFileRoute("/admin/positions/new")({
+  component: CreatePosition,
+  loader: async () => {
+    const elections = await getElectionsFn();
+    return { elections }
+  },
+  pendingComponent: () => (
+    <div className="flex justify-center p-12">
+      <Loader2 className="animate-spin text-purple-500" />
+    </div>
+  ),
+});
+
+function CreatePosition() {
+  const { elections  }:any = Route.useLoaderData();
+  return <PositionAdminForm data={{ elections }} />;
+}
