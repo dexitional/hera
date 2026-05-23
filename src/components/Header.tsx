@@ -101,7 +101,7 @@ export default function Header() {
             className="px-5 py-2 rounded-full bg-[#E3F09B] text-black font-semibold text-base hover:bg-purple-700 transition-colors"
             href="/admin"
           >
-            Dashboard test
+            Dashboard test nice
           </a>
         </div>
       </div>
