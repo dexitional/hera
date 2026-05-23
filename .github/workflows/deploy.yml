@@ -1,0 +1,78 @@
+name: Heravote Deploment Pipeline
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    name: Test & Validate Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+  deploy:
+    name: Deploy to Production VPS
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build TanStack Start Application
+        run: npm run build
+        env:
+          NITRO_PRESET: node-server
+
+      # STEP 1: Upload files using SSH Password
+      # This moves your code, ecosystems file, and built assets safely to the VPS.
+      - name: Copy Files via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          source: ".output/,package.json,package-lock.json,ecosystem.config.cjs"
+          target: "/var/www/html/herav"
+          rm: true # Clears the destination directory before copying to ensure a clean build
+
+      # STEP 2: Execute build commands and restart PM2 using SSH Password
+      - name: Finalize Server Environment & Restart PM2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            cd /var/www/html/herav
+            
+            # Recreate production .env file from GitHub Secrets
+            echo "${{ secrets.PRODUCTION_ENV_FILE }}" > .env
+            
+            # Install clean, production-only dependencies
+            npm ci --omit=dev
+            
+            # Reload application seamlessly with PM2 cluster mode
+            pm2 reload ecosystem.config.cjs --update-env || pm2 start ecosystem.config.cjs
