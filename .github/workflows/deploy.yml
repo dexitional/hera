@@ -2,9 +2,9 @@ name: Heravote Deploment Pipeline
 
 on:
   push:
-    branches: [ master, dev ]
+    branches: [master, dev]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   validate:
@@ -17,8 +17,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: 'npm'
+          node-version: 22
+          cache: "npm"
 
       - name: Install Dependencies
         run: npm ci
@@ -35,8 +35,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: 'npm'
+          node-version: 22
+          cache: "npm"
 
       - name: Install Dependencies
         run: npm ci
@@ -67,12 +67,12 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           script: |
             cd /var/www/html/herav
-            
+
             # Recreate production .env file from GitHub Secrets
             echo "${{ secrets.PRODUCTION_ENV_FILE }}" > .env
-            
+
             # Install clean, production-only dependencies
             npm ci --omit=dev
-            
+
             # Reload application seamlessly with PM2 cluster mode
             pm2 reload ecosystem.config.cjs --update-env || pm2 start ecosystem.config.cjs
