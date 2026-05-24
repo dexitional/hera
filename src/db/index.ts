@@ -15,5 +15,4 @@ pool.on('error', (err) => {
 
 // Initialize Drizzle ORM
 // export const db = drizzle(pool, { schema });
-
 export const db = drizzle(process.env.DATABASE_URL!, { schema })

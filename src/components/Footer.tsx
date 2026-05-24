@@ -15,7 +15,7 @@ export default function Footer() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
               <a
                 className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all duration-300 w-full sm:w-auto justify-center"
-                href="/auth/login"
+                href="/auth/signin"
               >
                 Get Started
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="tabler-icon tabler-icon-arrow-right w-4 h-4">
@@ -38,9 +38,15 @@ export default function Footer() {
             </div>
             <ul className="space-y-2 sm:space-y-3">
               <li>
-                <a className="text-sm sm:text-base text-zinc-400 hover:text-white transition-colors duration-300 flex items-center gap-2 sm:gap-3" href="/auth/login">
+                <a className="text-sm sm:text-base text-zinc-400 hover:text-white transition-colors duration-300 flex items-center gap-2 sm:gap-3" href="/elections">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="tabler-icon tabler-icon-thumb-up w-4 h-4 sm:w-5 sm:h-5"><path d="M7 11v8a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1v-7a1 1 0 0 1 1 -1h3a4 4 0 0 0 4 -4v-1a2 2 0 0 1 4 0v5h3a2 2 0 0 1 2 2l-1 5a2 3 0 0 1 -2 2h-7a3 3 0 0 1 -3 -3"></path></svg>
-                  Start Voting
+                  Goto Elections Voting 
+                </a>
+              </li>
+              <li>
+               <a className="text-sm sm:text-base text-zinc-400 hover:text-white transition-colors duration-300 flex items-center gap-2 sm:gap-3" href="/events">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="tabler-icon tabler-icon-thumb-up w-4 h-4 sm:w-5 sm:h-5"><path d="M7 11v8a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1v-7a1 1 0 0 1 1 -1h3a4 4 0 0 0 4 -4v-1a2 2 0 0 1 4 0v5h3a2 2 0 0 1 2 2l-1 5a2 3 0 0 1 -2 2h-7a3 3 0 0 1 -3 -3"></path></svg>
+                  Goto Events Voting
                 </a>
               </li>
               <li>
@@ -49,12 +55,12 @@ export default function Footer() {
                   Create Account
                 </a>
               </li>
-              <li>
+              {/* <li>
                 <div className="text-sm sm:text-base text-zinc-400 flex items-center gap-2 sm:gap-3">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="tabler-icon tabler-icon-device-mobile w-4 h-4 sm:w-5 sm:h-5"><path d="M6 5a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2v-14"></path><path d="M11 4h2"></path><path d="M12 17v.01"></path></svg>
                   USSD Support
                 </div>
-              </li>
+              </li> */}
             </ul>
           </div>
           <div className="mt-4 sm:mt-0">

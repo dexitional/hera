@@ -4,19 +4,18 @@ import { pgTable, serial, text, integer, timestamp, varchar, boolean, doublePrec
 // ==========================================
 // BETTER AUTH REQUIRED CORE TABLES
 // ==========================================
-export const user = pgTable('user', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  email: text('email').notNull().unique(),
-  emailVerified: boolean('email_verified').notNull(),
-  phone: text('phone').notNull().unique(),
-  paystackCustomerCode: text('paystack_customer_code'),
-  isSubscribed: boolean('is_subscribed').default(false).notNull(),
-  subscriptionPlan: text('subscription_plan'),
-  image: text('image'),
-  createdAt: timestamp('created_at').notNull(),
-  updatedAt: timestamp('updated_at').notNull(),
+export const user = pgTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("email_verified").notNull(),
+  image: text("image"),
+  // Add the custom role field here
+  role: text("role").notNull().default("user"), 
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
 });
+
 
 export const session = pgTable('session', {
   id: text('id').primaryKey(),
@@ -140,8 +139,8 @@ export const elections = pgTable('elections', {
   tag: text('tag').notNull(),
   title: text('title').notNull(),
   description: text('description').notNull(),
-  startAt: timestamp('start_at').notNull(),
-  endAt: timestamp('end_at').notNull(),
+  startAt: timestamp('start_at', { mode: 'date' }),
+  endAt: timestamp('end_at', { mode: 'date' }),
   imageUrl: text('image_url'),
   billVoters: integer('bill_voters'),
   billAmount: doublePrecision('bill_amount'),

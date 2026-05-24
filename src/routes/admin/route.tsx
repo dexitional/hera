@@ -1,28 +1,27 @@
-import { createFileRoute, Outlet } from '@tanstack/react-router'
+import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import DashboardHeader from '#/components/DashboardHeader';
+import { checkAuthSession } from '#/lib/auth-helper';
 export const Route = createFileRoute('/admin')({
-  component: DashboardLayout,
+    beforeLoad: async () => {
+        const authState = await checkAuthSession();
+        if (!authState?.authenticated) throw redirect({ to: "/auth/signin"  });
+        return {
+          user: authState?.user, 
+        };
+    },
+    component: DashboardLayout,
 })
 
 
 function DashboardLayout() {
-   
-  const INITIAL_ORGANIZATIONS = [
-    {
-        id: 'knvmlleenlmznzfsltwy',
-        name: 'Capevars.com',
-        plan: 'Free Plan',
-        projectsCount: 2,
-        href: '/dashboard/org/knvmlleenlmznzfsltwy'
-    }
-  ];
-
+  const { user } = Route.useRouteContext();
   return (
     <div className="min-h-screen bg-[#18181b] text-white font-sans antialiased">
-      <DashboardHeader />
+      { user && (<DashboardHeader user={user} />)}
       <div className="w-full min-h-screen bg-[#0a192a]/30 text-zinc-200 font-sans p-6">
         <Outlet />
       </div>
     </div>
   );
+  
 }

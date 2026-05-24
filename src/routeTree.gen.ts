@@ -36,6 +36,7 @@ import { Route as AdminElectionsIndexRouteImport } from './routes/admin/election
 import { Route as AdminContestantsIndexRouteImport } from './routes/admin/contestants.index'
 import { Route as AdminCategoriesIndexRouteImport } from './routes/admin/categories.index'
 import { Route as AdminCandidatesIndexRouteImport } from './routes/admin/candidates.index'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 import { Route as AdminVotersNewRouteImport } from './routes/admin/voters.new'
 import { Route as AdminPositionsNewRouteImport } from './routes/admin/positions.new'
 import { Route as AdminOrganizationsNewRouteImport } from './routes/admin/organizations.new'
@@ -190,6 +191,11 @@ const AdminCandidatesIndexRoute = AdminCandidatesIndexRouteImport.update({
   path: '/candidates/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminVotersNewRoute = AdminVotersNewRouteImport.update({
   id: '/voters/new',
   path: '/voters/new',
@@ -316,6 +322,7 @@ export interface FileRoutesByFullPath {
   '/admin/organizations/new': typeof AdminOrganizationsNewRoute
   '/admin/positions/new': typeof AdminPositionsNewRoute
   '/admin/voters/new': typeof AdminVotersNewRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin/candidates/': typeof AdminCandidatesIndexRoute
   '/admin/categories/': typeof AdminCategoriesIndexRoute
   '/admin/contestants/': typeof AdminContestantsIndexRoute
@@ -362,6 +369,7 @@ export interface FileRoutesByTo {
   '/admin/organizations/new': typeof AdminOrganizationsNewRoute
   '/admin/positions/new': typeof AdminPositionsNewRoute
   '/admin/voters/new': typeof AdminVotersNewRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin/candidates': typeof AdminCandidatesIndexRoute
   '/admin/categories': typeof AdminCategoriesIndexRoute
   '/admin/contestants': typeof AdminContestantsIndexRoute
@@ -410,6 +418,7 @@ export interface FileRoutesById {
   '/admin/organizations/new': typeof AdminOrganizationsNewRoute
   '/admin/positions/new': typeof AdminPositionsNewRoute
   '/admin/voters/new': typeof AdminVotersNewRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/admin/candidates/': typeof AdminCandidatesIndexRoute
   '/admin/categories/': typeof AdminCategoriesIndexRoute
   '/admin/contestants/': typeof AdminContestantsIndexRoute
@@ -459,6 +468,7 @@ export interface FileRouteTypes {
     | '/admin/organizations/new'
     | '/admin/positions/new'
     | '/admin/voters/new'
+    | '/api/auth/$'
     | '/admin/candidates/'
     | '/admin/categories/'
     | '/admin/contestants/'
@@ -505,6 +515,7 @@ export interface FileRouteTypes {
     | '/admin/organizations/new'
     | '/admin/positions/new'
     | '/admin/voters/new'
+    | '/api/auth/$'
     | '/admin/candidates'
     | '/admin/categories'
     | '/admin/contestants'
@@ -552,6 +563,7 @@ export interface FileRouteTypes {
     | '/admin/organizations/new'
     | '/admin/positions/new'
     | '/admin/voters/new'
+    | '/api/auth/$'
     | '/admin/candidates/'
     | '/admin/categories/'
     | '/admin/contestants/'
@@ -587,6 +599,7 @@ export interface RootRouteChildren {
   VoteElectionRoute: typeof VoteElectionRoute
   VoteReceiptAuditRoute: typeof VoteReceiptAuditRoute
   EventsIndexRoute: typeof EventsIndexRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   EventsEventIdIndexRoute: typeof EventsEventIdIndexRoute
   NomineeNomineeIdIndexRoute: typeof NomineeNomineeIdIndexRoute
   EventsEventIdCategoriesIndexRoute: typeof EventsEventIdCategoriesIndexRoute
@@ -783,6 +796,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/candidates/'
       preLoaderRoute: typeof AdminCandidatesIndexRouteImport
       parentRoute: typeof AdminRouteRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/voters/new': {
       id: '/admin/voters/new'
@@ -992,6 +1012,7 @@ const rootRouteChildren: RootRouteChildren = {
   VoteElectionRoute: VoteElectionRoute,
   VoteReceiptAuditRoute: VoteReceiptAuditRoute,
   EventsIndexRoute: EventsIndexRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
   EventsEventIdIndexRoute: EventsEventIdIndexRoute,
   NomineeNomineeIdIndexRoute: NomineeNomineeIdIndexRoute,
   EventsEventIdCategoriesIndexRoute: EventsEventIdCategoriesIndexRoute,

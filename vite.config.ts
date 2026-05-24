@@ -10,6 +10,7 @@ import { nitro } from 'nitro/vite'
 // })
 
 export default defineConfig({
+  
   plugins: [
     nitro({
       preset: 'node-server', // Or 'vercel', 'cloudflare-workers', etc.

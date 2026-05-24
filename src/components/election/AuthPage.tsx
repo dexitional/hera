@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Shield, Users, ThumbsUp, Mail, Lock, ArrowRight } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
+import { authClient } from '#/lib/auth-client';
 
 export default function AuthPage() {
 
@@ -21,15 +22,21 @@ export default function AuthPage() {
 
   const handleSubmit = async (e:any) => {
     e.preventDefault();
-    // const { error, data } = await authClient.signIn.email({
-    //     email: formData.email,
-    //     password: formData.password,
-    //     rememberMe: formData.rememberMe
-    // })
- 
-    // alert(JSON.stringify(data));
-    // if(data) navigate({ to:'/admin' });
-    // if(error) alert(JSON.stringify(error.message));
+    
+    const { data, error } = await authClient.signIn.email({
+        email: formData.email,
+        password: formData.password,
+        rememberMe: formData.rememberMe
+    });
+
+    console.log(data)
+
+    if (error) {
+      console.error("Authentication failed:", error.message);
+    } else {
+      //   window.location.href = '/admin';
+      navigate({ to: '/admin' })
+    }
   }
   
 
@@ -38,6 +45,8 @@ export default function AuthPage() {
     // Handle Google OAuth logic here
     console.log('Initiating Google Sign-In');
   };
+
+  
 
   return (
     <main className="relative">

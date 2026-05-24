@@ -91,15 +91,17 @@ console.log(data)
             { data.map((row: any) => (
               <div key={row?.id} className="rounded-3xl bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 overflow-hidden hover:border-slate-600/40 transition-all duration-300 group shadow-lg" style={{ opacity: 1, transform: "none" }}>
                 <div className="relative h-72 w-full">
-                  {/* <img
-                    alt="Sublimation Crystal Plaque"
-                    decoding="async"
-                    className="object-cover object-center"
-                    sizes="100vw"
-                    src="/_next/image?url=%2Fstore%2Fsublimation-crystal-plaque.jpeg&amp;w=3840&amp;q=75"
-                    style={{ position: "absolute", height: "100%", width: "100%", inset: 0, color: "transparent" }}
-                    srcSet="/_next/image?url=%2Fstore%2Fsublimation-crystal-plaque.jpeg&amp;w=640&amp;q=75 640w, /_next/image?url=%2Fstore%2Fsublimation-crystal-plaque.jpeg&amp;w=750&amp;q=75 750w, /_next/image?url=%2Fstore%2Fsublimation-crystal-plaque.jpeg&amp;w=828&amp;q=75 828w, /_next/image?url=%2Fstore%2Fsublimation-crystal-plaque.jpeg&amp;w=1080&amp;q=75 1080w, /_next/image?url=%2Fstore%2Fsublimation-crystal-plaque.jpeg&amp;w=1200&amp;q=75 1200w, /_next/image?url=%2Fstore%2Fsublimation-crystal-plaque.jpeg&amp;w=1920&amp;q=75 1920w, /_next/image?url=%2Fstore%2Fsublimation-crystal-plaque.jpeg&amp;w=2048&amp;q=75 2048w, /_next/image?url=%2Fstore%2Fsublimation-crystal-plaque.jpeg&amp;w=3840&amp;q=75 3840w"
-                  /> */}
+                  { row.imageUrl && (
+                    <img
+                      alt={row.title}
+                      decoding="async"
+                      className="object-cover object-top"
+                      sizes="100vw"
+                      src={row?.imageUrl}
+                      style={{ position: "absolute", height: "100%", width: "100%", inset: 0, color: "transparent" }}
+                      srcSet={row?.imageUrl}
+                    />
+                  )}
                   <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent"></div>
                   <div className="absolute top-4 right-4 z-10">
                     <div className="px-3 py-0.5 bg-purple-500 text-white rounded-full text-sm font-bold shadow-lg animate-pulse">{row.status?.toUpperCase()}</div>

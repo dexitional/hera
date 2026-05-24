@@ -2,6 +2,7 @@ import {
   HeadContent,
   Scripts,
   createRootRouteWithContext,
+  type ErrorComponentProps,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
@@ -13,6 +14,8 @@ import appCss from '../styles.css?url'
 import type { QueryClient } from '@tanstack/react-query'
 import Header from '#/components/Header'
 import Footer from '#/components/Footer'
+import { ErrorComponent } from '@tanstack/react-router'
+import { checkAuthSession } from '#/lib/auth-helper'
 
 
 interface MyRouterContext {
@@ -46,6 +49,20 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     ],
   }),
   shellComponent: RootDocument,
+  errorComponent: ({ error }: ErrorComponentProps) => {
+    return (
+      <div style={{ padding: '2rem', fontFamily: 'sans-serif', color: 'red' }}>
+        <h2>Application Error</h2>
+        <ErrorComponent error={error} />
+      </div>
+    );
+  },
+  
+  beforeLoad: async () => {
+    const authState = await checkAuthSession();
+    return { user: authState?.user, authenticated: authState?.authenticated };
+  },
+
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {

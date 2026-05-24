@@ -100,17 +100,17 @@ function GlobalAdminDashboard() {
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-purple-400" />
-              <span>Global Administrative Dashboard</span>
+              <span>Administrative Dashboard</span>
             </h1>
             <p className="text-xs text-zinc-400 mt-1">
-              Real-time platform metrics overview across multi-tenant organizations, transactional billing operations, active e-voting clusters, and core sessions.
+              Real-time platform overview across multi-tenant applications, transactional billing operations, active e-voting clusters, and core events sessions.
             </p>
           </div>
 
           <div className="inline-flex items-center gap-2 text-xs bg-zinc-900 border border-zinc-800 px-3.5 py-1.5 rounded-lg font-medium select-none shrink-0">
             <span className={`w-2 h-2 rounded-full bg-emerald-400 ${isSyncing ? "animate-ping" : ""}`} />
-            <span className="text-zinc-400">Live Ingestion:</span>
-            <span className="text-zinc-200 font-mono text-[11px]">Syncing</span>
+            <span className="text-zinc-400">Verified</span>
+            {/* <span className="text-zinc-200 font-mono text-[11px]">Syncing</span> */}
           </div>
         </div>
 
@@ -178,7 +178,8 @@ function GlobalAdminDashboard() {
                     <Calendar className="w-5 h-5 text-blue-400" />
                   </div>
                   <span className="text-xs font-mono font-bold bg-zinc-900 border border-zinc-800 text-zinc-400 px-2 py-0.5 rounded">
-                    {metrics.totalElections} Staged Elections
+                    {/* {metrics.totalElections} Staged Elections */}
+                    Manage Elections
                   </span>
                 </div>
                 <div>
@@ -270,7 +271,7 @@ function GlobalAdminDashboard() {
         </div>
 
         {/* ================= PLATFORM REVENUE TRACKING METRICS SECTION ================= */}
-        <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-5 space-y-4 shadow-xl">
+        {/* <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-5 space-y-4 shadow-xl">
           <div className="border-b border-zinc-900 pb-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
               <CircleDollarSign className="w-4 h-4 text-emerald-400" />
@@ -307,13 +308,13 @@ function GlobalAdminDashboard() {
               <p className="text-[10px] text-zinc-500 mt-1">Provisioned balance ready for merchant subaccount split routing</p>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* ================= BOTTOM METRICS DETAILS GRID SPLIT ================= */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10">
           
           {/* SECTOR LEFT: ACTIVE ELECTIONS LIST */}
-          <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-5 space-y-4 shadow-xl">
+          {/* <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-5 space-y-4 shadow-xl">
             <div className="border-b border-zinc-900 pb-3 flex justify-between items-center select-none">
               <h3 className="text-xs font-bold text-white flex items-center gap-2">
                 <Activity className="w-4 h-4 text-purple-400" />
@@ -344,10 +345,10 @@ function GlobalAdminDashboard() {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
 
           {/* SECTOR RIGHT: ACTIVE EVENTS PLATFORMS */}
-          <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-5 space-y-4 shadow-xl">
+          {/* <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-5 space-y-4 shadow-xl">
             <div className="border-b border-zinc-900 pb-3 flex justify-between items-center select-none">
               <h3 className="text-xs font-bold text-white flex items-center gap-2">
                 <Activity className="w-4 h-4 text-emerald-400" />
@@ -377,7 +378,7 @@ function GlobalAdminDashboard() {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
 
         </div>
 

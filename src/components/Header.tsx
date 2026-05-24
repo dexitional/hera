@@ -1,4 +1,26 @@
+import { authClient, useSession } from "#/lib/auth-client";
+import { Link } from "@tanstack/react-router";
+
 export default function Header() {
+  
+  const { data: sessionData, isPending, error }:any = useSession();
+  
+  const user = sessionData?.user;
+  
+  const handleSignOut = async () => {
+    await authClient.signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          // Redirect the user back to the login page upon successful logout
+          window.location.href = "/login";
+        },
+      },
+    });
+  };
+
+  // await handleSignOut()
+  console.log("sessionData: ", sessionData?.user)
+
   return (
     <header className="sticky top-0 z-50 w-full bg-[#0a192a] border-b border-[#23232b] shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between rounded-b-3xl">
@@ -91,18 +113,24 @@ export default function Header() {
           >
             Elections
           </a> */}
+
+          { (!user) && (
           <a
             className="px-5 py-2 rounded-full bg-[#E3F09B] text-black font-semibold text-base hover:bg-purple-700 transition-colors"
             href="/auth/signin"
           >
             Sign In
           </a>
-          <a
-            className="px-5 py-2 rounded-full bg-[#E3F09B] text-black font-semibold text-base hover:bg-purple-700 transition-colors"
-            href="/admin"
-          >
-            Dashboard test nice
-          </a>
+          )}
+
+          { (user) && (
+          <Link
+            to={`/admin`}
+            className="px-5 py-1 rounded-full bg-[#E3F09B] text-black font-semibold text-xs hover:bg-purple-700 transition-colors"
+           >
+            Goto Dashboard
+          </Link>
+          )}
         </div>
       </div>
       <div className="md:hidden bg-[#18181b] border-b border-[#23232b]/50">

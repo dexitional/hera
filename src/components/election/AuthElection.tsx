@@ -75,12 +75,26 @@ export default function AuthElection({ data }: any) {
               {/* Left Side: Marketing/Promo Panel */}
               <div>
                 <div className="flex items-center gap-3 mb-6"></div>
-                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-6 leading-tight text-left font-sans">
+                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white mb-6 leading-tight text-center font-sans">
                 {data?.tag?.replaceAll("-"," ")?.toUpperCase()}
                 </h1>
-                <p className="text-lg md:text-xl text-zinc-300 mb-8 text-left max-w-lg">
+                <p className="text-lg md:text-xl text-zinc-300 mb-8 text-center max-w-lg">
                   {data?.title}.
                 </p>
+                <div className="relative my-6 mx-auto py-4 h-40 w-40 flex items-center justify-center text-center">
+                { data.imageUrl && (
+                    <img
+                      alt={data.title}
+                      decoding="async"
+                      className="h-40 object-cover object-top"
+                      sizes="100vw"
+                      src={data?.imageUrl}
+                      style={{ position: "absolute", height: "100%", width: "100%", inset: 0, color: "transparent" }}
+                      srcSet={data?.imageUrl}
+                    />
+                  )}
+                </div>
+                
 
                 <div className="grid grid-cols-1 gap-4 mb-8">
                   {/* Secure Access */}
@@ -104,9 +118,13 @@ export default function AuthElection({ data }: any) {
                   {/* Trusted Platform */}
                   <div className="rounded-3xl bg-[#6d28d9]/8 p-6 flex items-center gap-4">
                     <Info className="w-8 h-8 text-purple-400 shrink-0" />
-                    <div>
+                    {/* <div>
                       <h3 className="text-lg font-bold text-white">Instructions</h3>
                       <p className="text-sm text-zinc-300">Please use OTP method to login into the system or portal credentials</p>
+                    </div> */}
+                    <div>
+                      <h3 className="text-lg font-bold text-white">Election Status</h3>
+                      <p className="text-sm text-zinc-300">{data?.status?.toUpperCase() }</p>
                     </div>
                   </div>
                 </div>
@@ -219,9 +237,10 @@ export default function AuthElection({ data }: any) {
                     <div>
                       <button 
                         type="submit" 
+                        disabled={ data.status && ['staged','ended'].includes(data.status) }
                         className="w-full px-4 py-3 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                       >
-                        Sign In
+                        Login to Vote
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </button>
                     </div>
@@ -231,12 +250,12 @@ export default function AuthElection({ data }: any) {
                   )}
                 
                   {/* Sign Up Redirect link */}
-                  <p className="text-center text-sm text-zinc-400 mt-6">
+                  {/* <p className="text-center text-sm text-zinc-400 mt-6">
                     Can't access account?{' '}
                     <a className="text-purple-400 hover:text-purple-300 transition-colors font-medium" href="/auth/signup">
                       Verify voter
                     </a>
-                  </p>
+                  </p> */}
                 </div>
               </div>
 

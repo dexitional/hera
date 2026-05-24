@@ -1,10 +1,12 @@
 import React from 'react'
 import { useState, useEffect, useRef } from 'react';
 import { 
-  Search, CircleHelp, Lightbulb, User, MessageSquare, BookOpen, LifeBuoy, Sparkles, Settings, LogOut, X, Plus, Boxes } from 'lucide-react';
+  Search, CircleHelp, Lightbulb, User, MessageSquare, BookOpen, LifeBuoy, Sparkles, Settings, LogOut, X, Plus, Boxes, 
+  User2Icon} from 'lucide-react';
+import { signOut } from '#/lib/auth-client';
 
 
-export default function DashboardHeader() {
+export default function DashboardHeader({ user }: any) {
 
   const INITIAL_ORGANIZATIONS = [
     {
@@ -85,32 +87,36 @@ export default function DashboardHeader() {
           <span className="font-bold tracking-tight text-white hover:text-zinc-200 transition-colors">Dashboard</span>
         </a>
         
-        <div className="flex items-center md:pl-2">
+        
+        {/* <div className="flex items-center md:pl-2">
           <span className="text-zinc-600 pr-2 select-none">
             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" fill="none">
               <path d="M16 3.549L7.12 20.600"></path>
             </svg>
           </span>
-          <span className="text-zinc-400 text-xs font-medium">New organization</span>
-        </div>
+          <span className="text-zinc-400 text-xs font-medium">New Elections</span>
+        </div> */}
+
+
+
       </div>
 
       {/* Controls Panel Layout */}
       <div className="flex items-center gap-x-2 ml-auto">
         
         {/* Feedback Trigger */}
-        <span 
+        {/* <span 
           onClick={() => setIsFeedbackOpen(true)}
           className="relative justify-center cursor-pointer inline-flex items-center text-center font-normal transition-all border border-transparent hover:bg-zinc-900 text-xs px-2.5 py-1 rounded-full h-[32px] text-zinc-400 hover:text-white select-none"
           tabIndex={0}
         >
           <span className="truncate">Feedback</span>
-        </span>
+        </span> */}
 
         <div className="flex items-center gap-1 md:gap-2">
           
           {/* Search Shortcut Button */}
-          <button 
+          {/* <button 
             type="button" 
             onClick={() => setIsSearchOpen(true)}
             className="px-4 py-2 border border-zinc-800 text-sm group h-[30px] pl-1.5 md:pl-2 pr-2 items-center justify-between text-zinc-400 hover:bg-zinc-900 hover:border-zinc-700 focus:outline-none transition hidden md:flex md:min-w-32 xl:min-w-32 rounded-full bg-transparent"
@@ -124,10 +130,10 @@ export default function DashboardHeader() {
                 ⌘K
               </span>
             </span>
-          </button>
+          </button> */}
 
           {/* Help Center Popover */}
-          <div className="relative" ref={helpRef}>
+          {/* <div className="relative" ref={helpRef}>
             <button 
               type="button" 
               onClick={() => toggleDropdown('help')}
@@ -138,7 +144,7 @@ export default function DashboardHeader() {
             </button>
 
             {activeDropdown === 'help' && (
-              <div className="absolute right-0 mt-2 w-56 rounded-xl border border-zinc-800 bg-zinc-950 p-1 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="absolute right-0 mt-2 w-56 rounded-xl border border-zinc-800 bg-[#0a192a] p-1 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                 <a href="/docs" className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-300 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors">
                   <BookOpen className="w-4 h-4 text-zinc-500" /> Documentation
                 </a>
@@ -147,10 +153,10 @@ export default function DashboardHeader() {
                 </a>
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* Advisor Popover */}
-          <div className="relative" ref={advisorRef}>
+          {/* <div className="relative" ref={advisorRef}>
             <button 
               type="button" 
               onClick={() => toggleDropdown('advisor')}
@@ -161,7 +167,7 @@ export default function DashboardHeader() {
             </button>
 
             {activeDropdown === 'advisor' && (
-              <div className="absolute right-0 mt-2 w-64 rounded-xl border border-zinc-800 bg-zinc-950 p-3 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="absolute right-0 mt-2 w-64 rounded-xl border border-zinc-800 bg-[#0a192a] p-3 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                 <div className="flex items-start gap-2 mb-2">
                   <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <div>
@@ -173,26 +179,33 @@ export default function DashboardHeader() {
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
 
         {/* Profile Menu Dropdown */}
+        
+        <span className="relative justify-center cursor-pointer inline-flex items-center text-center font-normal transition-all border border-transparent hover:bg-zinc-900 text-xs px-2.5 py-1 rounded-full h-[32px] text-zinc-400 hover:text-white select-none">
+          <span className="truncate">{user?.name}</span>
+        </span>
+
         <div className="relative ml-1 z-50" ref={profileRef}>
+         
           <button 
             type="button" 
             onClick={() => toggleDropdown('profile')}
-            className="relative justify-center cursor-pointer items-center transition-all bg-zinc-900 hover:bg-zinc-800 border-zinc-800 hover:border-zinc-700 border shrink-0 flex rounded-full overflow-hidden h-8 w-8"
+            className="relative justify-center cursor-pointer items-center transition-all bg-[#0a192a] hover:bg-zinc-800 border-[#E3F09B] hover:border-white border shrink-0 flex rounded-full overflow-hidden h-8 w-8"
           > 
-            <div className="bg-zinc-200 text-zinc-950 flex items-center justify-center w-full h-full rounded-full font-bold text-xs select-none">
-              JD
+            <div className="bg-[#0a192a] text-[#0a192a] flex items-center justify-center w-full h-full rounded-full font-bold text-xs select-none">
+              {/* {user?.name} */}
+              <User2Icon className="h-4 text-[#E3F09B]"/>
             </div>
           </button>
 
           {activeDropdown === 'profile' && (
-            <div className="absolute right-0 mt-2 w-56 rounded-xl border border-zinc-800 bg-zinc-950 p-1 shadow-2xl z-50 divide-y divide-zinc-900 animate-in fade-in slide-in-from-top-1 duration-150">
+            <div className="absolute right-0 mt-2 w-56 rounded-xl border border-zinc-800 bg-[#0a192a]/90 p-1 shadow-2xl z-50 divide-y divide-zinc-900 animate-in fade-in slide-in-from-top-1 duration-150">
               <div className="px-3 py-2">
-                <p className="text-xs font-medium text-white">John Doe</p>
-                <p className="text-[11px] text-zinc-500 truncate">johndoe@festora.com</p>
+                <p className="text-xs font-medium text-white"> {user?.name}</p>
+                <p className="text-[11px] text-zinc-500 truncate"> {user?.email}</p>
               </div>
               <div className="py-1">
                 <a href="/admin/settings" className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-300 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors">
@@ -201,7 +214,15 @@ export default function DashboardHeader() {
               </div>
               <div className="pt-1">
                 <button 
-                  onClick={() => console.log('Logging out...')}
+                  onClick={ async () => {
+                    await signOut({
+                      fetchOptions: {
+                        onSuccess: () => {
+                          window.location.href = "/auth/signin";
+                        },
+                      },
+                    });
+                  }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-950/40 rounded-lg transition-colors text-left"
                 >
                   <LogOut className="w-4 h-4" /> Sign Out
@@ -218,7 +239,7 @@ export default function DashboardHeader() {
    {/* Command Search Palette Backdrop (⌘K) */}
    {isSearchOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-start justify-center pt-[15vh] z-50 px-4 duration-200">
-          <div className="bg-zinc-950 border border-zinc-800 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+          <div className="bg-[#0a192a] border border-zinc-800 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
             <div className="flex items-center border-b border-zinc-900 px-3 py-2.5">
               <Search className="w-4 h-4 text-zinc-500 mr-2" />
               <input 
@@ -243,7 +264,7 @@ export default function DashboardHeader() {
       {/* Feedback Modal */}
       {isFeedbackOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-50 px-4 duration-200">
-          <div className="bg-zinc-950 border border-zinc-800 w-full max-w-md rounded-xl shadow-2xl p-5 relative animate-in zoom-in-95 duration-150">
+          <div className="bg-[#0a192a] border border-zinc-800 w-full max-w-md rounded-xl shadow-2xl p-5 relative animate-in zoom-in-95 duration-150">
             <button onClick={() => setIsFeedbackOpen(false)} className="absolute right-4 top-4 text-zinc-500 hover:text-zinc-300 transition-colors">
               <X className="w-4 h-4" />
             </button>

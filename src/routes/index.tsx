@@ -24,12 +24,21 @@ function App() {
                           />
                         </h1>
                         <p className="text-lg md:text-xl text-zinc-300 mb-8 text-left max-w-lg">Create transparent elections and voting events in minutes. From awards ceremonies to organisation elections - secure, verifiable, and engaging digital voting with real-time results.</p>
-                        <a className="inline-flex items-center justify-center px-8 py-4 rounded-full bg-purple-600 text-white font-bold text-lg shadow-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 hover:bg-purple-700" href="/events">
-                            Start now
-                            <svg className="ml-2 w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                                <path d="M5 12h14M12 5l7 7-7 7"></path>
-                            </svg>
-                        </a>
+                        <div className="flex gap-3">
+                            <a className="inline-flex items-center justify-center px-6 py-2 rounded-full bg-purple-600 text-white font-bold text-sm shadow-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 hover:bg-purple-700" href="/elections">
+                                Vote Now
+                                <svg className="ml-2 w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                    <path d="M5 12h14M12 5l7 7-7 7"></path>
+                                </svg>
+                            </a>
+                            <a className="inline-flex items-center justify-center px-6 py-2 rounded-full bg-purple-600 text-white font-bold text-sm shadow-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 hover:bg-purple-700" href="/auth/signup">
+                                Signup Now
+                                <svg className="ml-2 w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                    <path d="M5 12h14M12 5l7 7-7 7"></path>
+                                </svg>
+                            </a>
+                        </div>
+                        
                     </div>
                     <div className="relative">
                         <div className="relative bg-transparent rounded-2xl border border-slate-600/20 backdrop-blur-sm overflow-hidden">
@@ -199,12 +208,18 @@ function App() {
             </section>
             <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24">
                 <h2 className="text-3xl font-extrabold mb-10 text-white text-left">Trusted by Leading Institutions</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                     <div className="rounded-3xl bg-slate-600/10 p-10 flex flex-col items-center justify-center gap-4 shadow-md">
-                        <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center p-4">
-                            <img src="/brands/ucc-logo1.png" alt="University of Cape Coast Logo" className="w-full h-full object-contain"/>
+                        <div className="w-28 h-28 bg-white rounded-2xl flex items-center justify-center p-4">
+                            <img src="/ucc-logo1.png" alt="University of Cape Coast Logo" className="w-full h-full object-contain"/>
                         </div>
-                        <h3 className="text-xl font-extrabold text-white text-center">University of Cape Coast</h3>
+                        <h3 className="text-xl font-extrabold text-white text-center">UCC</h3>
+                    </div>
+                    <div className="rounded-3xl bg-slate-600/10 p-10 flex flex-col items-center justify-center gap-4 shadow-md">
+                        <div className="w-28 h-28 bg-white rounded-2xl flex items-center justify-center p-4">
+                            <img src="/esiama-logo.png" alt="University of Cape Coast Logo" className="w-full h-full object-contain"/>
+                        </div>
+                        <h3 className="text-xl font-extrabold text-white text-center">NMTC - Esiama</h3>
                     </div>
                 </div>
             </section>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router'
 import { UserPlus, Award, Shield, User, Mail, Phone, Lock, ArrowRight } from 'lucide-react';
+import { authClient } from '#/lib/auth-client';
 
 export const Route = createFileRoute('/auth/signup')({
   component: RouteComponent,
@@ -42,6 +43,19 @@ function RouteComponent() {
     //     password: formData.password,
        
     // })
+
+    const { data, error }: any = await authClient.signUp.email({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+    });
+
+    if (error) {
+      console.error("Sign up failed:", error.message);
+    } else {
+      window.location.href = '/admin';
+    }
+
   };
 
   const handleGoogleSignUp = () => {

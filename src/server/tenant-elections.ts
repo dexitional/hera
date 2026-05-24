@@ -1,22 +1,26 @@
 import { createServerFn } from '@tanstack/react-start';
-import { elections, user, positions, candidates, voters, electionVotes } from '../db/schema';
+import { elections, positions, candidates, voters, electionVotes } from '../db/schema';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../db';
 import { BUCKET_NAME, s3Client } from '#/lib/s3';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 import { stripCountryCode } from '#/lib/utils';
+import { authMiddleware } from '#/lib/middleware';
+import moment from 'moment';
 
 
 // ELECTIONS FUNCTIONS
 
-export const getElectionsFn = createServerFn({ method: 'GET'}).handler( 
-  async () => {
-    const admin = { id: '1' };
-    // const admin = await assertAuthenticatedAdmin();
-    return await db.select()
+export const getElectionsFn = createServerFn({ method: 'GET'})
+.middleware([authMiddleware])
+.handler(async ({ context }) => {
+    const admin:any = context?.user;
+    const resp = await db.select()
     .from(elections)
     .where(eq(elections.adminId, admin.id));
+    
+    return resp;
 });
 
 export const getElectionFn = createServerFn({ method: 'GET'}).handler( 
@@ -68,50 +72,131 @@ export const getElectionDataFn = createServerFn({ method: 'GET'}).handler(
 
 export const getActiveElectionsFn = createServerFn({ method: 'GET'}).handler( 
   async () => {
-    // const admin = await assertAuthenticatedAdmin();
     return await db.select()
     .from(elections)
     .where(eq(elections.isActive, true));
 });
 
 
-export const createElectionFn = createServerFn({ method: 'POST'}).handler( 
-  async ({ data }: any) => {
-    return await db.insert(elections).values({ 
-      title: data.title, 
-      adminId: '1', 
-      tag: data.tag, 
-      imageUrl: data.imageUrl, 
-      billVoters: data.billVoters, 
-      authMode: data.authMode, 
-      makePublic: data.makePublic, 
-      showFeed: data.showFeed, 
-      isActive: data.isActive, 
-      description: data.description, 
-      startAt: new Date(data.startAt),
-      endAt: new Date(data.endAt)
+export const createElectionFn = createServerFn({ method: 'POST'})
+.middleware([authMiddleware])
+.handler(async ({ context, data }: any) => {
+
+  try {
+
+    let finalAvatarUrl: string | undefined = undefined;
+    const file = data.get("image") as File | null;
+    
+    if (file && file.size > 0) {
+        const arrayBuffer = await file.arrayBuffer();
+        const rawBuffer = Buffer.from(arrayBuffer);
+        const optimizedBuffer = await sharp(rawBuffer)
+          .resize(512, 512, { fit: "inside", withoutEnlargement: true }) // Caps size at 800px max width/height
+          .webp({ quality: 75 }) // Converts to modern WebP format at 75% quality optimization
+          .toBuffer();
+        // Enforce the new optimal webp file path structure
+        const uniqueFileName = `logos/${crypto.randomUUID()}.webp`;
+            
+        // Upload to S3/R2
+        await s3Client.send(
+          new PutObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: uniqueFileName,
+            Body: optimizedBuffer,
+            ContentType: "image/webp",
+            CacheControl: "public, max-age=31536000, immutable", 
+          })
+        );
+  
+        // ## R2 CLOUD
+        const publicDomain = process.env.R2_PUBLIC_DOMAIN; 
+        finalAvatarUrl = `${publicDomain}/${uniqueFileName}`;
+    }
+
+    const resp = await db.insert(elections).values({ 
+      title: data.get("title") as string, 
+      adminId: context?.user?.id, 
+      tag: data.get("tag") as string, 
+      billVoters: data.get("billVoters") as number, 
+      authMode: data.get("authMode") as string, 
+      makePublic: data.get("makePublic") as boolean || false, 
+      showFeed: data.get("showFeed") as boolean || false, 
+      isActive: data.get("isActive") as boolean || true, 
+      description: data.get("description") as string, 
+      status: data.get("status") as string || 'staged', 
+      startAt: new Date(data.get("startAt") as string) ,
+      endAt: new Date(data.get("endAt") as string),
+      ...(finalAvatarUrl && { imageUrl: finalAvatarUrl })
     }).returning();
+
+    console.log(resp);
+
+    return resp;
+     
+  } catch (error) {
+    console.log(error)
   }
-);
+});
 
 export const updateElectionFn = createServerFn({ method: 'POST'}).handler( 
   async ({ data }: any) => {
-    return await db
-    .update(elections)
-    .set({ 
-      title: data.title, 
-      tag: data.tag, 
-      imageUrl: data.imageUrl, 
-      billVoters: data.billVoters, 
-      authMode: data.authMode, 
-      makePublic: data.makePublic, 
-      showFeed: data.showFeed, 
-      isActive: data.isActive, 
-      description: data.description, 
-      startAt: new Date(data.startAt),
-      endAt: new Date(data.endAt)
-    })
-    .where(eq(elections.id, data.id)).returning();
+
+    try {
+
+      let finalAvatarUrl: string | undefined = undefined;
+      const file = data.get("image") as File | null;
+      
+      if (file && file.size > 0) {
+          const arrayBuffer = await file.arrayBuffer();
+          const rawBuffer = Buffer.from(arrayBuffer);
+          const optimizedBuffer = await sharp(rawBuffer)
+            .resize(512, 512, { fit: "inside", withoutEnlargement: true }) // Caps size at 800px max width/height
+            .webp({ quality: 75 }) // Converts to modern WebP format at 75% quality optimization
+            .toBuffer();
+          // Enforce the new optimal webp file path structure
+          const uniqueFileName = `logos/${crypto.randomUUID()}.webp`;
+              
+          // Upload to S3/R2
+          await s3Client.send(
+            new PutObjectCommand({
+              Bucket: BUCKET_NAME,
+              Key: uniqueFileName,
+              Body: optimizedBuffer,
+              ContentType: "image/webp",
+              CacheControl: "public, max-age=31536000, immutable", 
+            })
+          );
+    
+          // ## R2 CLOUD
+          const publicDomain = process.env.R2_PUBLIC_DOMAIN; 
+          finalAvatarUrl = `${publicDomain}/${uniqueFileName}`;
+      }
+        console.log("finalAvatarUrl", finalAvatarUrl);
+        console.log("data form: ", data)
+        const resp = await db
+        .update(elections)
+        .set({ 
+          title: data.get("title") as string, 
+          tag: data.get("tag") as string, 
+          billVoters: data.get("billVoters") as number, 
+          authMode: data.get("authMode") as string, 
+          makePublic: data.get("makePublic") as boolean, 
+          showFeed: data.get("showFeed") as boolean, 
+          isActive: data.get("isActive") as boolean, 
+          description: data.get("description") as string, 
+          status: data.get("status") as string, 
+          startAt: new Date(data.get("startAt") as string) ,
+          endAt: new Date(data.get("endAt") as string),
+          ...(finalAvatarUrl && { imageUrl: finalAvatarUrl })
+        }).where(eq(elections.id, data.get("id") as number)).returning();
+
+        console.log("resp", resp);
+
+        return resp
+      
+    } catch (error) {
+       console.log(error)
+    }
 });
 
 
@@ -323,10 +408,11 @@ export const getElectionOverview = createServerFn({
 
     // POSITION FUNCTIONS
 
-    export const getPositionsListFn = createServerFn({ method: 'GET'}).handler( 
-      async () => {
-        const admin = { id: '1' };
-        // const admin = await assertAuthenticatedAdmin();
+    export const getPositionsListFn = createServerFn({ method: 'GET'})
+    .middleware([authMiddleware])
+    .handler(async ({ context }) => {
+        const admin:any = context?.user
+        
         return await db.select()
         .from(positions)
         .innerJoin(elections, eq(positions.electionId, elections.id))
@@ -334,11 +420,11 @@ export const getElectionOverview = createServerFn({
         .orderBy(asc(positions.order), asc(positions.createdAt));
     });
     
-    export const getPositionsFn = createServerFn({ method: 'GET' }).handler(
-      async () => {
-        const admin = { id: '1' };
-        // const admin = await assertAuthenticatedAdmin();
-    
+    export const getPositionsFn = createServerFn({ method: 'GET' })
+    .middleware([authMiddleware])
+    .handler(async ({ context }) => {
+        const admin: any = context?.user
+        
         return await db
           .select({
             position: positions,
@@ -394,9 +480,11 @@ export const getElectionOverview = createServerFn({
 
     // CANDIDATES FUNCTIONS
 
-    export const getCandidatesFn = createServerFn({ method: 'GET'}).handler( 
-      async () => {
-        const admin = { id: '1' };
+    export const getCandidatesFn = createServerFn({ method: 'GET'})
+    .middleware([authMiddleware])
+    .handler(async ({ context }) => {
+        //const admin = { id: '1' };
+        const admin: any = context?.user?.id
         // const admin = await assertAuthenticatedAdmin();
         return await db.select()
         .from(candidates)
@@ -531,10 +619,11 @@ export const getElectionOverview = createServerFn({
 
      // VOTERS FUNCTIONS
 
-     export const getVotersListFn = createServerFn({ method: 'GET'}).handler( 
-      async () => {
-        const admin = { id: '1' };
-        // const admin = await assertAuthenticatedAdmin();
+     export const getVotersListFn = createServerFn({ method: 'GET'})
+     .middleware([authMiddleware])
+     .handler( async ({ context }) => {
+        // const admin = { id: '1' };
+        const admin:any = context.user.id;
         return await db.select()
         .from(voters)
         .innerJoin(elections, eq(positions.electionId, elections.id))
@@ -542,11 +631,11 @@ export const getElectionOverview = createServerFn({
         .orderBy(asc(positions.order), asc(positions.createdAt));
     });
     
-    export const getVotersFn = createServerFn({ method: 'GET' }).handler(
-      async () => {
-        const admin = { id: '1' };
-        // const admin = await assertAuthenticatedAdmin();
-    
+    export const getVotersFn = createServerFn({ method: 'GET' })
+    .middleware([authMiddleware])
+    .handler(async ({ context }) => {
+        const admin:any = context.user.id;
+       
         return await db
           .select()
           .from(voters)

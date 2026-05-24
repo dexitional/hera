@@ -48,6 +48,7 @@ function ManageElectionConsole() {
         
         {/* ================= WORKSPACE CONSOLE BREADCRUMB HEADER ================= */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
+          
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono uppercase tracking-wider">
               <Link to="/admin/elections" className="hover:text-purple-400 transition-colors">Elections</Link>
@@ -56,7 +57,7 @@ function ManageElectionConsole() {
             </div>
             <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
               <Sliders className="w-5 h-5 text-purple-400" />
-              <span>Console:&nbsp;&nbsp; {election.title}</span>
+              <span>Group:&nbsp;&nbsp; {election.title}</span>
             </h1>
           </div>
 
@@ -82,18 +83,21 @@ function ManageElectionConsole() {
 
         {/* ================= QUICK STATS DISCOVERY RIBBON ================= */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-[#0a192a]/50 border border-zinc-800 p-4 rounded-xl">
+          
+          {/* <div className="bg-[#0a192a]/50 border border-zinc-800 p-4 rounded-xl">
             <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Turnout Density</p>
             <h3 className="text-2xl font-black text-white mt-1 font-mono">{!isNaN(parseFloat(turnoutPercentage)) ? turnoutPercentage : 0}%</h3>
             <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-2.5 overflow-hidden border border-zinc-800/40">
               <div className="bg-purple-500 h-full rounded-full" style={{ width: `${turnoutPercentage}%` }} />
             </div>
           </div>
+
           <div className="bg-[#0a192a]/50 border border-zinc-800 p-4 rounded-xl">
             <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Total Ballots Cast</p>
             <h3 className="text-2xl font-black text-purple-400 mt-1 font-mono">{election.counts.votesCast.toLocaleString()}</h3>
             <p className="text-[10px] text-zinc-500 mt-2 font-medium">Audited cryptographic receipts</p>
-          </div>
+          </div> */}
+
           <div className="bg-[#0a192a]/50 border border-zinc-800 p-4 rounded-xl">
             <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Timeline Start</p>
             <p className="text-xs font-semibold text-zinc-200 mt-2 flex items-center gap-1.5">
@@ -101,6 +105,7 @@ function ManageElectionConsole() {
             </p>
             <p className="text-[10px] font-mono text-zinc-500 mt-1">{election.startAt.split(',')[1]}</p>
           </div>
+
           <div className="bg-[#0a192a]/50 border border-zinc-800 p-4 rounded-xl">
             <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Security Auth Gate</p>
             <p className="text-xs font-semibold text-zinc-200 mt-2 flex items-center gap-1.5 truncate">
@@ -110,6 +115,7 @@ function ManageElectionConsole() {
               <CheckCircle2 className="w-3 h-3" /> Anti-tamper verification active
             </p>
           </div>
+
         </div>
 
         {/* ================= INTERACTIVE CONFIGURATION CARDS CONTAINER ================= */}
@@ -164,7 +170,7 @@ function ManageElectionConsole() {
                     <Users className="w-5 h-5 text-orange-400" />
                   </div>
                   <span className="text-xs font-mono font-bold bg-zinc-900 border border-zinc-800 text-zinc-400 px-2.5 py-1 rounded">
-                    {election.counts.candidates} Enrolled
+                    {election.counts.candidates} Registered
                   </span>
                 </div>
                 <div>
