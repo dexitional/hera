@@ -260,6 +260,7 @@ function ElectionsDirectory() {
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </Link>
+                            { election?.status == 'staged' && (
                             <button
                               onClick={() => handleDeleteElection(election?.id)}
                               title="Delete Election"
@@ -267,6 +268,7 @@ function ElectionsDirectory() {
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
+                            )}
                           </div>
 
                         </div>

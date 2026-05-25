@@ -24,23 +24,29 @@ export default function AuthElection({ data }: any) {
     onSuccess: async (resp) => {
       const dt = resp?.data;
      
-      // Initialize Store
-      const user:any = {
-        id: dt?.voters?.id,
-        username: dt?.voters?.username,
-        name: dt?.voters?.name,
-        phoneNumber: dt?.voters?.phoneNumber,
-        email: dt?.voters?.email,
-        electionId: dt?.voters?.electionId,
-        hasVoted: dt?.voters?.hasVoted
-      }
+      if(dt){
+        // Initialize Store
+        const user:any = {
+          id: dt?.voters?.id,
+          username: dt?.voters?.username,
+          name: dt?.voters?.name,
+          phoneNumber: dt?.voters?.phoneNumber,
+          email: dt?.voters?.email,
+          electionId: dt?.voters?.electionId,
+          hasVoted: dt?.voters?.hasVoted
+        }
 
-      const token = generateTokenCode()
-      authActions.login(user,token);
-      console.log("user: ", user);
-      navigate({ to: `/vote/cast`});
+        const token = generateTokenCode()
+        authActions.login(user,token);
+        console.log("user: ", user);
+        navigate({ to: `/vote/cast`});
+        
+        queryClient.invalidateQueries({ queryKey: ['voter-page'] });
+
+      } else {
+        alert("Invalid credentials. Try again !")
+      }
       
-      queryClient.invalidateQueries({ queryKey: ['voter-page'] });
     },
      onError: (error) => console.error(error.message)
   });

@@ -277,94 +277,204 @@ export const getElectionOverview = createServerFn({
 
 
 
- export const getUnifiedElectionTelemetry = createServerFn({
-    method: "GET",
-  })
-    .handler(async ({ data: electionId }): Promise<any> => {
+//  export const getUnifiedElectionTelemetry = createServerFn({
+//     method: "GET",
+//   }).handler(async ({ data: electionId }): Promise<any> => {
       
-      // Execute data retrieval paths concurrently using Promise.all to maximize pipeline throughput
-      const [
-        [electionRecord], 
-        [votersCountResult],
-        rawPositions, 
-        rawCandidateTallies, 
-        rawRecentVotes
-      ] = await Promise.all([
+//       // Execute data retrieval paths concurrently using Promise.all to maximize pipeline throughput
+//       const [
+//         [electionRecord], 
+//         [votersCountResult],
+//         rawPositions, 
+//         rawCandidateTallies, 
+//         rawRecentVotes
+//       ] = await Promise.all([
         
-        // Query 1: Fetch primary election properties from the 'elections' table core node
-        db
-          .select()
-          .from(elections)
-          .where(eq<any>(elections.id, electionId)),
+//         // Query 1: Fetch primary election properties from the 'elections' table core node
+//         db
+//           .select()
+//           .from(elections)
+//           .where(eq<any>(elections.id, electionId)),
   
-        // Query 2: Count eligible registered voters enrolled for this election index
-        db
-          .select({ count: sql<number>`count(${voters.id})::int` })
-          .from(voters)
-          .where(eq<any>(voters.electionId, electionId)),
+//         // Query 2: Count eligible registered voters enrolled for this election index
+//         db
+//           .select({ count: sql<number>`count(${voters.id})::int` })
+//           .from(voters)
+//           .where(eq<any>(voters.electionId, electionId)),
   
-        // Query 3: Fetch structural portfolios matching this active election ID
-        db
-          .select()
-          .from(positions)
-          .where(eq<any>(positions.electionId, electionId)),
+//         // Query 3: Fetch structural portfolios matching this active election ID
+//         db
+//           .select()
+//           .from(positions)
+//           .where(eq<any>(positions.electionId, electionId)),
   
-        // Query 4: Aggregate candidate results via outer grouping joins directly inside SQL nodes
-        db
-          .select({
-            id: candidates.id,
-            name: candidates.name,
-            imageUrl: candidates.imageUrl,
-            positionId: candidates.positionId,
-            order: candidates.order,
-            voteCount: sql<number>`count(${electionVotes.id})::int`,
-          })
-          .from(candidates)
-          .innerJoin(positions, eq<any>(candidates.positionId, positions.id))
-          .leftJoin(electionVotes, eq<any>(electionVotes.candidateId, candidates.id))
-          .where(eq<any>(positions.electionId, electionId))
-          .groupBy(candidates.id, candidates.name, candidates.imageUrl, candidates.positionId, candidates.order)
-          .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
+//         // Query 4: Aggregate candidate results via outer grouping joins directly inside SQL nodes
+//         db
+//           .select({
+//             id: candidates.id,
+//             name: candidates.name,
+//             imageUrl: candidates.imageUrl,
+//             positionId: candidates.positionId,
+//             order: candidates.order,
+//             voteCount: sql<number>`count(${electionVotes.id})::int`,
+//           })
+//           .from(candidates)
+//           .innerJoin(positions, eq<any>(candidates.positionId, positions.id))
+//           .leftJoin(electionVotes, eq<any>(electionVotes.candidateId, candidates.id))
+//           .where(eq<any>(positions.electionId, electionId))
+//           .groupBy(candidates.id, candidates.name, candidates.imageUrl, candidates.positionId, candidates.order)
+//           .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
   
-        // Query 5: Fetch the 15 most recent real-time voting audit entries from the ledger
-        db
-          .select({
-            id: electionVotes.id,
-            positionTitle: positions.title,
-            candidateName: candidates.name,
-            createdAt: electionVotes.createdAt,
-          })
-          .from(electionVotes)
-          .innerJoin(positions, eq<any>(electionVotes.positionId, positions.id))
-          .innerJoin(candidates, eq<any>(electionVotes.candidateId, candidates.id))
-          .where(eq<any>(electionVotes.electionId, electionId))
-          .orderBy(desc(electionVotes.createdAt))
-          .limit(15)
-      ]);
+//         // Query 5: Fetch the 15 most recent real-time voting audit entries from the ledger
+//         db
+//           .select({
+//             id: electionVotes.id,
+//             positionTitle: positions.title,
+//             candidateName: candidates.name,
+//             createdAt: electionVotes.createdAt,
+//           })
+//           .from(electionVotes)
+//           .innerJoin(positions, eq<any>(electionVotes.positionId, positions.id))
+//           .innerJoin(candidates, eq<any>(electionVotes.candidateId, candidates.id))
+//           .where(eq<any>(electionVotes.electionId, electionId))
+//           .orderBy(desc(electionVotes.createdAt))
+//           .limit(15)
+//       ]);
   
-      if (!electionRecord) {
-        throw new Error(`Election resource instance with ID [${electionId}] was not discovered.`);
-      }
+//       if (!electionRecord) {
+//         throw new Error(`Election resource instance with ID [${electionId}] was not discovered.`);
+//       }
   
-      // Helper Utility 1: Mask sensitive phone strings or crypto keys securely
-      const generateVoterMask = (index: number): string => {
-        return `voter_id_****_${1000 + (index % 9000)}`;
-      };
+//       // Helper Utility 1: Mask sensitive phone strings or crypto keys securely
+//       const generateVoterMask = (index: number): string => {
+//         return `voter_id_****_${1000 + (index % 9000)}`;
+//       };
   
-      // Helper Utility 2: Format elapsed runtime timestamps
-      const formatElapsedTime = (pastDate: Date): string => {
-        const now = new Date();
-        const diffMs = now.getTime() - pastDate.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
+//       // Helper Utility 2: Format elapsed runtime timestamps
+//       const formatElapsedTime = (pastDate: Date): string => {
+//         const now = new Date();
+//         const diffMs = now.getTime() - pastDate.getTime();
+//         const diffMins = Math.floor(diffMs / 60000);
         
-        if (diffMins < 1) return "Just now";
-        if (diffMins < 60) return `${diffMins}m ago`;
-        const diffHours = Math.floor(diffMins / 60);
-        return `${diffHours}h ago`;
-      };
+//         if (diffMins < 1) return "Just now";
+//         if (diffMins < 60) return `${diffMins}m ago`;
+//         const diffHours = Math.floor(diffMins / 60);
+//         return `${diffHours}h ago`;
+//       };
   
-      // 4. Group and structure candidate tallies by their respective position blocks
-      const formattedTallies: any[] = rawPositions.map((pos) => {
+//       // 4. Group and structure candidate tallies by their respective position blocks
+//       const formattedTallies: any[] = rawPositions.map((pos) => {
+//         const positionCandidates = rawCandidateTallies
+//           .filter((cand) => cand.positionId === pos.id)
+//           .map((cand) => ({
+//             id: cand.id,
+//             name: cand.name,
+//             imageUrl: cand.imageUrl ?? "",
+//             votes: cand.voteCount,
+//           }));
+  
+//         const totalVotesForPosition = positionCandidates.reduce((sum, c) => sum + c.votes, 0);
+  
+//         return {
+//           id: pos.id,
+//           title: pos.title,
+//           slots: pos.slots,
+//           totalVotesForPosition,
+//           candidates: positionCandidates,
+//         };
+//       });
+  
+//       // 5. Structure masked ledger row sequences safely
+//       const formattedLedger: any[] = rawRecentVotes.map((log, index) => ({
+//         id: `tx_${log.id}`,
+//         positionTitle: `${log.positionTitle} (${log.candidateName})`,
+//         voterMask: generateVoterMask(log.id + index), 
+//         channel: "WEB", 
+//         timestamp: formatElapsedTime(log.createdAt),
+//       }));
+  
+//       return {
+//         electionDetails: {
+//           title: electionRecord.title,
+//           tag: electionRecord.tag,
+//           totalEligibleVoters: votersCountResult?.count ?? 0
+//         },
+//         tallies: formattedTallies,
+//         auditLedger: formattedLedger,
+//       };
+//   });
+
+
+export const getUnifiedElectionTelemetry = createServerFn({
+  method: "GET",
+}).handler(async ({ data: electionId }): Promise<any> => {
+    
+    // Concurrently fetch telemetry data from your database layers
+    const [
+      [electionRecord], 
+      [votersCountResult],
+      rawPositions, 
+      rawCandidateTallies, 
+      rawRecentVotes
+    ] = await Promise.all([
+      db.select().from(elections).where(eq(elections.id, electionId)),
+      db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq(voters.electionId, electionId)),
+      db.select().from(positions).where(eq(positions.electionId, electionId)),
+      db
+        .select({
+          id: candidates.id,
+          name: candidates.name,
+          imageUrl: candidates.imageUrl,
+          positionId: candidates.positionId,
+          order: candidates.order,
+          voteCount: sql<number>`count(${electionVotes.id})::int`,
+        })
+        .from(candidates)
+        .innerJoin(positions, eq(candidates.positionId, positions.id))
+        .leftJoin(
+          electionVotes, 
+          and(
+            eq(electionVotes.candidateId, candidates.id),
+            eq(electionVotes.positionId, candidates.positionId)
+          )
+        )
+        .where(eq(positions.electionId, electionId))
+        .groupBy(candidates.id, candidates.name, candidates.imageUrl, candidates.positionId, candidates.order)
+        .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
+      db
+        .select({
+          id: electionVotes.id,
+          positionTitle: positions.title,
+          candidateName: candidates.name,
+          createdAt: electionVotes.createdAt,
+        })
+        .from(electionVotes)
+        .innerJoin(positions, eq(electionVotes.positionId, positions.id))
+        .leftJoin(candidates, eq(electionVotes.candidateId, candidates.id))
+        .where(eq(electionVotes.electionId, electionId))
+        .orderBy(desc(electionVotes.createdAt))
+        .limit(15)
+    ]);
+
+    if (!electionRecord) {
+      throw new Error(`Election instance [${electionId}] not found.`);
+    }
+
+    const generateVoterMask = (index: number): string => {
+      return `voter_id_****_${1000 + (Math.abs(index) % 9000)}`;
+    };
+
+    const formatElapsedTime = (pastDate: Date): string => {
+      const now = new Date();
+      const diffMs = now.getTime() - pastDate.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      return `${Math.floor(diffMins / 60)}h ago`;
+    };
+
+    const formattedTallies: any[] = await Promise.all(
+      rawPositions.map(async (pos) => {
         const positionCandidates = rawCandidateTallies
           .filter((cand) => cand.positionId === pos.id)
           .map((cand) => ({
@@ -373,37 +483,48 @@ export const getElectionOverview = createServerFn({
             imageUrl: cand.imageUrl ?? "",
             votes: cand.voteCount,
           }));
-  
-        const totalVotesForPosition = positionCandidates.reduce((sum, c) => sum + c.votes, 0);
-  
+
+        const [abstentionTally] = await db
+          .select({ count: sql<number>`count(${electionVotes.id})::int` })
+          .from(electionVotes)
+          .where(and(eq(electionVotes.positionId, pos.id), sql`${electionVotes.candidateId} IS NULL`));
+
+        positionCandidates.push({
+          id: null,
+          name: "Abstained (Blank Ballots)",
+          imageUrl: "",
+          votes: abstentionTally?.count || 0
+        });
+
         return {
           id: pos.id,
           title: pos.title,
           slots: pos.slots,
-          totalVotesForPosition,
+          totalVotesForPosition: positionCandidates.reduce((sum, c) => sum + c.votes, 0),
           candidates: positionCandidates,
         };
-      });
-  
-      // 5. Structure masked ledger row sequences safely
-      const formattedLedger: any[] = rawRecentVotes.map((log, index) => ({
+      })
+    );
+
+    return {
+      electionDetails: {
+        title: electionRecord.title,
+        tag: electionRecord.tag,
+        totalEligibleVoters: votersCountResult?.count ?? 0
+      },
+      tallies: formattedTallies,
+      auditLedger: rawRecentVotes.map((log, index) => ({
         id: `tx_${log.id}`,
-        positionTitle: `${log.positionTitle} (${log.candidateName})`,
+        positionTitle: log.candidateName ? `${log.positionTitle} (${log.candidateName})` : `${log.positionTitle} (Explicit Abstention)`,
         voterMask: generateVoterMask(log.id + index), 
         channel: "WEB", 
         timestamp: formatElapsedTime(log.createdAt),
-      }));
-  
-      return {
-        electionDetails: {
-          title: electionRecord.title,
-          tag: electionRecord.tag,
-          totalEligibleVoters: votersCountResult?.count ?? 0
-        },
-        tallies: formattedTallies,
-        auditLedger: formattedLedger,
-      };
-    });
+      })),
+    };
+});
+
+
+
 
 
     // POSITION FUNCTIONS
