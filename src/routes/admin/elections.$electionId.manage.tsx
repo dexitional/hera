@@ -3,9 +3,11 @@ import React, { useState } from "react";
 import { 
   Sliders, Users, Award, ShieldCheck, ArrowUpRight, Plus, 
   Calendar, Key, ToggleLeft, ToggleRight, CheckCircle2, LayoutGrid, BarChart3, 
-  Loader2
+  Loader2,
+  FileSpreadsheet,
+  Activity
 } from "lucide-react";
-import { getElectionOverview } from "#/server/tenant-elections";
+import { exportElectionResultsToExcelFn, exportElectionResultsToFormatExcelFn, getElectionOverview } from "#/server/tenant-elections";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import moment from "moment";
 
@@ -42,6 +44,53 @@ function ManageElectionConsole() {
   const [isLive, setIsLive] = useState(election.isActive);
   // Computes active mathematical voter turnout percentage on runtime execution profiles
   const turnoutPercentage = ((election.counts.votesCast / election.counts.voters) * 100).toFixed(1);
+  const [isExportingResults, setIsExportingResults] = useState(false);
+
+  const handleExportCertifiedResults = async () => {
+    try {
+      setIsExportingResults(true);
+      
+      const result = await exportElectionResultsToFormatExcelFn({
+        data: { electionId: electionId }
+      } as any);
+      
+      if (!result.success || !result.base64Data) {
+        alert(result.error || "Export failed to execute correctly.");
+        return;
+      }
+
+      // Unpack base64 data stream to system blobs
+      const byteCharacters = atob(result.base64Data);
+      const byteArrays = [];
+      const sliceSize = 512;
+
+      for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+        const slice = byteCharacters.slice(offset, offset + sliceSize);
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+          byteNumbers[i] = slice.charCodeAt(i);
+        }
+        byteArrays.push(new Uint8Array(byteNumbers));
+      }
+
+      const fileBlob = new Blob(byteArrays, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const downloadUrl = window.URL.createObjectURL(fileBlob);
+      const linkElement = document.createElement('a');
+      
+      linkElement.href = downloadUrl;
+      linkElement.download = result.filename;
+      document.body.appendChild(linkElement);
+      linkElement.click();
+      
+      document.body.removeChild(linkElement);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err: any) {
+      console.error("Client layer download generation logic crash exception:", err);
+    } finally {
+      setIsExportingResults(false);
+    }
+  };
+
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -250,12 +299,27 @@ function ManageElectionConsole() {
               </p>
             </div>
           </div>
-          <Link
-            to={`/admin/elections/${election?.id}/feed`}
-            className="w-full sm:w-auto text-center px-4 py-2 bg-purple-600 hover:bg-purple-500 text-xs font-semibold text-white rounded-lg transition-all shadow-sm shrink-0"
-          >
-            Open Live Stream
-          </Link>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleExportCertifiedResults}
+                disabled={election.status && ['staged','started'].includes(election?.status)}
+                className="w-full sm:w-auto flex items-center gap-1 text-center px-4 py-2 disabled:bg-zinc-600 disabled:text-zinc-400 disabled:cursor-not-allowed bg-green-600 hover:bg-purple-500 text-xs font-semibold text-white rounded-lg transition-all shadow-sm shrink-0"
+              >
+                <FileSpreadsheet className="h-4" />
+                <span>Export Final Results</span>
+              </button>
+
+              <Link
+                to={`/admin/elections/${election?.id}/feed`}
+                className="w-full sm:w-auto flex items-center gap-1 text-center px-4 py-2 bg-purple-600 hover:bg-purple-500 text-xs font-semibold text-white rounded-lg transition-all shadow-sm shrink-0"
+              >
+                <Activity className="h-4 animate-pulse" />
+                <span className="">Open Live Stream</span>
+              </Link>
+
+          </div>
+          
         </div>
 
     </div>

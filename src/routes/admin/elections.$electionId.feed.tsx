@@ -35,8 +35,8 @@ interface AuditLogEntry {
 const electionsQueryOptions = (electionId: any) => ({
   queryKey: ['election-telemetry', electionId ],
   queryFn: () => getUnifiedElectionTelemetry({ data: electionId }),
-  refetchInterval: 10 * 60 * 1000, 
-  staleTime: 10 * 60 * 1000,
+  refetchInterval: 30 * 1000, 
+  staleTime: 30 * 1000,
   refetchIntervalInBackground: true, 
 });
 

@@ -8,7 +8,7 @@ import {
   Smartphone
 } from "lucide-react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { deleteVoterFn, getVotersByElectionFn, getVotersFn, inviteVoterFn, inviteVotersFn, uploadVotersFn } from "#/server/tenant-elections";
+import { deleteVoterFn, exportVotersToExcelFn, getVotersByElectionFn, getVotersFn, inviteVoterFn, inviteVotersFn, uploadVotersFn } from "#/server/tenant-elections";
 import * as XLSX from 'xlsx';
 import { generateSixDigitCode } from "#/lib/utils";
 
@@ -37,6 +37,7 @@ function VotersDirectory() {
   const queryClient = useQueryClient();
   const { electionId } = Route.useParams(); 
   const { data }:any = useSuspenseQuery(electionsQueryOptions(electionId));
+  const [isExporting, setIsExporting] = useState(false);
   
   const voters:any = data?.map((r: any) => ({ 
     id: r?.voters?.id,
@@ -128,6 +129,55 @@ function VotersDirectory() {
     }
   };
 
+
+  const handleExportToExcel = async () => {
+      try {
+          setIsExporting(true);
+          
+          const result = await exportVotersToExcelFn({
+            data: {
+              electionId: electionId,
+              statusFilter: statusFilter // Automatically uses your URL search status state
+            }
+          } as any);
+          
+          if (!result.success || !result.base64Data) {
+            alert(result.error || "Export failed.");
+            return;
+          }
+      
+          // Convert the base64 payload into a file download trigger
+          const byteCharacters = atob(result.base64Data);
+          const byteArrays = [];
+          const sliceSize = 512;
+      
+          for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+            const slice = byteCharacters.slice(offset, offset + sliceSize);
+            const byteNumbers = new Array(slice.length);
+            for (let i = 0; i < slice.length; i++) {
+              byteNumbers[i] = slice.charCodeAt(i);
+            }
+            byteArrays.push(new Uint8Array(byteNumbers));
+          }
+      
+          const fileBlob = new Blob(byteArrays, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+          const downloadUrl = window.URL.createObjectURL(fileBlob);
+          const linkElement = document.createElement('a');
+          
+          linkElement.href = downloadUrl;
+          linkElement.download = result.filename;
+          document.body.appendChild(linkElement);
+          linkElement.click();
+          
+          document.body.removeChild(linkElement);
+          window.URL.revokeObjectURL(downloadUrl);
+      } catch (err: any) {
+          console.error("Client side download processing execution exception:", err);
+      } finally {
+          setIsExporting(false);
+      }
+  };
+
   const handleExcelUploadSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!excelFile) return;
@@ -166,31 +216,32 @@ function VotersDirectory() {
         setIsExcelModalOpen(false);
         setExcelFile(null);
       }
-
-
+    }
   }
-  }
+
 
   return (
     <>
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* ================= HEADER RIBBON CONTROLS ================= */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
-          <div>
+        <div className="grid grid-cols-5 gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
+          <div className="col-span-2">
             <h1 className="text-xl font-bold text-white tracking-tight">Voters Manager</h1>
             <p className="text-xs text-zinc-400 mt-1">
-              Manage eligibility list frameworks, trace authentication access keys, and send invitation codes to voters.
+              Manage eligibility list, trace authentication access, and send invitation codes to voters.
             </p>
           </div>
           
-          <div className="flex flex-col md:flex-row items-center gap-3 shrink-0">
+          <div className="col-span-3 flex flex-col md:flex-row items-center gap-3 shrink-0">
 
             <button
               className="flex items-center gap-2 bg-[#E3F09B] text-black text-xs font-bold hover:bg-zinc-800 hover:text-white border border-zinc-800 px-3.5 py-2 rounded-lg transition-all"
             >
              <span>{voters?.length} Voters</span>
             </button>
+            
+           
             {/* Send Bulk Invite */}
             <button
               onClick={handleInviteVoters}
@@ -200,13 +251,23 @@ function VotersDirectory() {
               <span>Send Invites</span>
             </button>
 
-            {/* Excel Upload Action Toggle Button */}
+
+            {/* Excel Download Action Toggle Button */}
             <button
+              onClick={handleExportToExcel}
+              className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs px-3.5 py-2 rounded-lg font-medium text-zinc-300 transition-all"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+              <span>Export Voters</span>
+            </button>
+
+             {/* Excel Upload Action Toggle Button */}
+             <button
               onClick={() => setIsExcelModalOpen(true)}
               className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs px-3.5 py-2 rounded-lg font-medium text-zinc-300 transition-all"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
-              <span>Import Excel</span>
+              <span>Import Voters</span>
             </button>
 
             {/* Create Single Voter Route Anchor Link */}

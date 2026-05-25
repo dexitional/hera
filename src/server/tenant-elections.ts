@@ -7,6 +7,8 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 import { chunkArray, stripCountryCode } from '#/lib/utils';
 import { authMiddleware } from '#/lib/middleware';
+// import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 import moment from 'moment';
 
 
@@ -259,6 +261,7 @@ export const getElectionOverview = createServerFn({
       id: electionRecord.id,
       tag: electionRecord.tag,
       title: electionRecord.title,
+      status: electionRecord.status,
       description: electionRecord.description,
       // Standardizing JavaScript native Date timestamps cleanly to localized string strings
       startAt: electionRecord?.startAt.toISOString(),
@@ -276,252 +279,520 @@ export const getElectionOverview = createServerFn({
 
 
 
-
-//  export const getUnifiedElectionTelemetry = createServerFn({
-//     method: "GET",
-//   }).handler(async ({ data: electionId }): Promise<any> => {
+  export const getUnifiedElectionTelemetry = createServerFn({
+    method: "GET",
+  }).handler(async ({ data: electionId }): Promise<any> => {
       
-//       // Execute data retrieval paths concurrently using Promise.all to maximize pipeline throughput
-//       const [
-//         [electionRecord], 
-//         [votersCountResult],
-//         rawPositions, 
-//         rawCandidateTallies, 
-//         rawRecentVotes
-//       ] = await Promise.all([
-        
-//         // Query 1: Fetch primary election properties from the 'elections' table core node
-//         db
-//           .select()
-//           .from(elections)
-//           .where(eq<any>(elections.id, electionId)),
-  
-//         // Query 2: Count eligible registered voters enrolled for this election index
-//         db
-//           .select({ count: sql<number>`count(${voters.id})::int` })
-//           .from(voters)
-//           .where(eq<any>(voters.electionId, electionId)),
-  
-//         // Query 3: Fetch structural portfolios matching this active election ID
-//         db
-//           .select()
-//           .from(positions)
-//           .where(eq<any>(positions.electionId, electionId)),
-  
-//         // Query 4: Aggregate candidate results via outer grouping joins directly inside SQL nodes
-//         db
-//           .select({
-//             id: candidates.id,
-//             name: candidates.name,
-//             imageUrl: candidates.imageUrl,
-//             positionId: candidates.positionId,
-//             order: candidates.order,
-//             voteCount: sql<number>`count(${electionVotes.id})::int`,
-//           })
-//           .from(candidates)
-//           .innerJoin(positions, eq<any>(candidates.positionId, positions.id))
-//           .leftJoin(electionVotes, eq<any>(electionVotes.candidateId, candidates.id))
-//           .where(eq<any>(positions.electionId, electionId))
-//           .groupBy(candidates.id, candidates.name, candidates.imageUrl, candidates.positionId, candidates.order)
-//           .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
-  
-//         // Query 5: Fetch the 15 most recent real-time voting audit entries from the ledger
-//         db
-//           .select({
-//             id: electionVotes.id,
-//             positionTitle: positions.title,
-//             candidateName: candidates.name,
-//             createdAt: electionVotes.createdAt,
-//           })
-//           .from(electionVotes)
-//           .innerJoin(positions, eq<any>(electionVotes.positionId, positions.id))
-//           .innerJoin(candidates, eq<any>(electionVotes.candidateId, candidates.id))
-//           .where(eq<any>(electionVotes.electionId, electionId))
-//           .orderBy(desc(electionVotes.createdAt))
-//           .limit(15)
-//       ]);
-  
-//       if (!electionRecord) {
-//         throw new Error(`Election resource instance with ID [${electionId}] was not discovered.`);
-//       }
-  
-//       // Helper Utility 1: Mask sensitive phone strings or crypto keys securely
-//       const generateVoterMask = (index: number): string => {
-//         return `voter_id_****_${1000 + (index % 9000)}`;
-//       };
-  
-//       // Helper Utility 2: Format elapsed runtime timestamps
-//       const formatElapsedTime = (pastDate: Date): string => {
-//         const now = new Date();
-//         const diffMs = now.getTime() - pastDate.getTime();
-//         const diffMins = Math.floor(diffMs / 60000);
-        
-//         if (diffMins < 1) return "Just now";
-//         if (diffMins < 60) return `${diffMins}m ago`;
-//         const diffHours = Math.floor(diffMins / 60);
-//         return `${diffHours}h ago`;
-//       };
-  
-//       // 4. Group and structure candidate tallies by their respective position blocks
-//       const formattedTallies: any[] = rawPositions.map((pos) => {
-//         const positionCandidates = rawCandidateTallies
-//           .filter((cand) => cand.positionId === pos.id)
-//           .map((cand) => ({
-//             id: cand.id,
-//             name: cand.name,
-//             imageUrl: cand.imageUrl ?? "",
-//             votes: cand.voteCount,
-//           }));
-  
-//         const totalVotesForPosition = positionCandidates.reduce((sum, c) => sum + c.votes, 0);
-  
-//         return {
-//           id: pos.id,
-//           title: pos.title,
-//           slots: pos.slots,
-//           totalVotesForPosition,
-//           candidates: positionCandidates,
-//         };
-//       });
-  
-//       // 5. Structure masked ledger row sequences safely
-//       const formattedLedger: any[] = rawRecentVotes.map((log, index) => ({
-//         id: `tx_${log.id}`,
-//         positionTitle: `${log.positionTitle} (${log.candidateName})`,
-//         voterMask: generateVoterMask(log.id + index), 
-//         channel: "WEB", 
-//         timestamp: formatElapsedTime(log.createdAt),
-//       }));
-  
-//       return {
-//         electionDetails: {
-//           title: electionRecord.title,
-//           tag: electionRecord.tag,
-//           totalEligibleVoters: votersCountResult?.count ?? 0
-//         },
-//         tallies: formattedTallies,
-//         auditLedger: formattedLedger,
-//       };
-//   });
-
-
-export const getUnifiedElectionTelemetry = createServerFn({
-  method: "GET",
-}).handler(async ({ data: electionId }): Promise<any> => {
-    
-    // Concurrently fetch telemetry data from your database layers
-    const [
-      [electionRecord], 
-      [votersCountResult],
-      rawPositions, 
-      rawCandidateTallies, 
-      rawRecentVotes
-    ] = await Promise.all([
-      db.select().from(elections).where(eq(elections.id, electionId)),
-      db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq(voters.electionId, electionId)),
-      db.select().from(positions).where(eq(positions.electionId, electionId)),
-      db
-        .select({
-          id: candidates.id,
-          name: candidates.name,
-          imageUrl: candidates.imageUrl,
-          positionId: candidates.positionId,
-          order: candidates.order,
-          voteCount: sql<number>`count(${electionVotes.id})::int`,
-        })
-        .from(candidates)
-        .innerJoin(positions, eq(candidates.positionId, positions.id))
-        .leftJoin(
-          electionVotes, 
-          and(
-            eq(electionVotes.candidateId, candidates.id),
-            eq(electionVotes.positionId, candidates.positionId)
+      // Concurrently fetch telemetry data from your database layers
+      const [
+        [electionRecord], 
+        [votersCountResult],
+        rawPositions, 
+        rawCandidateTallies, 
+        rawRecentVotes
+      ] = await Promise.all([
+        db.select().from(elections).where(eq(elections.id, electionId)),
+        db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq(voters.electionId, electionId)),
+        db.select().from(positions).where(eq(positions.electionId, electionId)),
+        db
+          .select({
+            id: candidates.id,
+            name: candidates.name,
+            imageUrl: candidates.imageUrl,
+            positionId: candidates.positionId,
+            order: candidates.order,
+            voteCount: sql<number>`count(${electionVotes.id})::int`,
+          })
+          .from(candidates)
+          .innerJoin(positions, eq(candidates.positionId, positions.id))
+          .leftJoin(
+            electionVotes, 
+            and(
+              eq(electionVotes.candidateId, candidates.id),
+              eq(electionVotes.positionId, candidates.positionId)
+            )
           )
-        )
-        .where(eq(positions.electionId, electionId))
-        .groupBy(candidates.id, candidates.name, candidates.imageUrl, candidates.positionId, candidates.order)
-        .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
-      db
-        .select({
-          id: electionVotes.id,
-          positionTitle: positions.title,
-          candidateName: candidates.name,
-          createdAt: electionVotes.createdAt,
+          .where(eq(positions.electionId, electionId))
+          .groupBy(candidates.id, candidates.name, candidates.imageUrl, candidates.positionId, candidates.order)
+          .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
+        db
+          .select({
+            id: electionVotes.id,
+            positionTitle: positions.title,
+            candidateName: candidates.name,
+            createdAt: electionVotes.createdAt,
+          })
+          .from(electionVotes)
+          .innerJoin(positions, eq(electionVotes.positionId, positions.id))
+          .leftJoin(candidates, eq(electionVotes.candidateId, candidates.id))
+          .where(eq(electionVotes.electionId, electionId))
+          .orderBy(desc(electionVotes.createdAt))
+          .limit(15)
+      ]);
+
+      if (!electionRecord) {
+        throw new Error(`Election instance [${electionId}] not found.`);
+      }
+
+      const generateVoterMask = (index: number): string => {
+        return `voter_id_****_${1000 + (Math.abs(index) % 9000)}`;
+      };
+
+      const formatElapsedTime = (pastDate: Date): string => {
+        const now = new Date();
+        const diffMs = now.getTime() - pastDate.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return "Just now";
+        if (diffMins < 60) return `${diffMins}m ago`;
+        return `${Math.floor(diffMins / 60)}h ago`;
+      };
+
+      const formattedTallies: any[] = await Promise.all(
+        rawPositions.map(async (pos) => {
+          const positionCandidates = rawCandidateTallies
+            .filter((cand) => cand.positionId === pos.id)
+            .map((cand) => ({
+              id: cand.id,
+              name: cand.name,
+              imageUrl: cand.imageUrl ?? "",
+              votes: cand.voteCount,
+            }));
+
+          const [abstentionTally] = await db
+            .select({ count: sql<number>`count(${electionVotes.id})::int` })
+            .from(electionVotes)
+            .where(and(eq(electionVotes.positionId, pos.id), sql`${electionVotes.candidateId} IS NULL`));
+
+          positionCandidates.push({
+            id: null,
+            name: "Abstained (Blank Ballots)",
+            imageUrl: "",
+            votes: abstentionTally?.count || 0
+          });
+
+          return {
+            id: pos.id,
+            title: pos.title,
+            slots: pos.slots,
+            totalVotesForPosition: positionCandidates.reduce((sum, c) => sum + c.votes, 0),
+            candidates: positionCandidates,
+          };
         })
-        .from(electionVotes)
-        .innerJoin(positions, eq(electionVotes.positionId, positions.id))
-        .leftJoin(candidates, eq(electionVotes.candidateId, candidates.id))
-        .where(eq(electionVotes.electionId, electionId))
-        .orderBy(desc(electionVotes.createdAt))
-        .limit(15)
-    ]);
+      );
 
-    if (!electionRecord) {
-      throw new Error(`Election instance [${electionId}] not found.`);
-    }
+      return {
+        electionDetails: {
+          title: electionRecord.title,
+          tag: electionRecord.tag,
+          totalEligibleVoters: votersCountResult?.count ?? 0
+        },
+        tallies: formattedTallies,
+        auditLedger: rawRecentVotes.map((log, index) => ({
+          id: `tx_${log.id}`,
+          positionTitle: log.candidateName ? `${log.positionTitle} (${log.candidateName})` : `${log.positionTitle} (Explicit Abstention)`,
+          voterMask: generateVoterMask(log.id + index), 
+          channel: "WEB", 
+          timestamp: formatElapsedTime(log.createdAt),
+        })),
+      };
+  });
 
-    const generateVoterMask = (index: number): string => {
-      return `voter_id_****_${1000 + (Math.abs(index) % 9000)}`;
-    };
 
-    const formatElapsedTime = (pastDate: Date): string => {
-      const now = new Date();
-      const diffMs = now.getTime() - pastDate.getTime();
-      const diffMins = Math.floor(diffMs / 60000);
-      if (diffMins < 1) return "Just now";
-      if (diffMins < 60) return `${diffMins}m ago`;
-      return `${Math.floor(diffMins / 60)}h ago`;
-    };
+  /* EXPORT ELECTION RESULTS */
 
-    const formattedTallies: any[] = await Promise.all(
-      rawPositions.map(async (pos) => {
-        const positionCandidates = rawCandidateTallies
-          .filter((cand) => cand.positionId === pos.id)
-          .map((cand) => ({
-            id: cand.id,
-            name: cand.name,
-            imageUrl: cand.imageUrl ?? "",
-            votes: cand.voteCount,
-          }));
+  export const exportElectionResultsToExcelFn = createServerFn({ method: 'GET' })
+   .handler(async ({ data }: any) => {
+    const { electionId } = data;
 
+    try {
+      // 1. Fetch telemetry data concurrently using your identical query matrix structure
+      const [
+        [electionRecord], 
+        [votersCountResult],
+        rawPositions, 
+        rawCandidateTallies, 
+        rawRecentVotes
+      ] = await Promise.all([
+        db.select().from(elections).where(eq(elections.id, electionId)),
+        db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq(voters.electionId, electionId)),
+        db.select().from(positions).where(eq(positions.electionId, electionId)),
+        db
+          .select({
+            id: candidates.id,
+            name: candidates.name,
+            positionId: candidates.positionId,
+            order: candidates.order,
+            voteCount: sql<number>`count(${electionVotes.id})::int`,
+          })
+          .from(candidates)
+          .innerJoin(positions, eq(candidates.positionId, positions.id))
+          .leftJoin(
+            electionVotes, 
+            and(
+              eq(electionVotes.candidateId, candidates.id),
+              eq(electionVotes.positionId, candidates.positionId)
+            )
+          )
+          .where(eq(positions.electionId, electionId))
+          .groupBy(candidates.id, candidates.name, candidates.positionId, candidates.order)
+          .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
+        db
+          .select({
+            id: electionVotes.id,
+            positionTitle: positions.title,
+            candidateName: candidates.name,
+            createdAt: electionVotes.createdAt,
+          })
+          .from(electionVotes)
+          .innerJoin(positions, eq(electionVotes.positionId, positions.id))
+          .leftJoin(candidates, eq(electionVotes.candidateId, candidates.id))
+          .where(eq(electionVotes.electionId, electionId))
+          .orderBy(desc(electionVotes.createdAt))
+          .limit(100) // Expanded limit context for richer reporting audits
+      ]);
+
+      if (!electionRecord) {
+        throw new Error(`Election instances index [${electionId}] not found.`);
+      }
+
+      // Initialize workbook target instance
+      const workbook = XLSX.utils.book_new();
+
+      // ================= SHEET 1: EXECUTIVE SUMMARY =================
+      const summaryRows = [
+        { 'Election Metric Description': 'Election Title', 'Value / Metric Tally': electionRecord.title },
+        { 'Election Metric Description': 'Election Identifier Tag', 'Value / Metric Tally': electionRecord.tag },
+        { 'Election Metric Description': 'Total Registered Eligible Voters', 'Value / Metric Tally': votersCountResult?.count ?? 0 },
+        { 'Election Metric Description': 'Configured Positions Scope Count', 'Value / Metric Tally': rawPositions.length },
+        { 'Election Metric Description': 'Registered Candidates Count', 'Value / Metric Tally': rawCandidateTallies.length },
+        { 'Election Metric Description': 'Export Generation Timestamp', 'Value / Metric Tally': new Date().toLocaleString() }
+      ];
+      const summarySheet = XLSX.utils.json_to_sheet(summaryRows);
+      summarySheet['!cols'] = [{ wch: 35 }, { wch: 45 }];
+      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
+
+
+      // ================= SHEET 2: FINAL RESULTS TALLIES =================
+      const talliesRows: any[] = [];
+      
+      // Iterate over your structure synchronously to match abstentions accurately
+      for (const pos of rawPositions) {
+        // Find position candidates
+        const positionCandidates = rawCandidateTallies.filter((cand) => cand.positionId === pos.id);
+        
+        // Fetch blank ballot tallies for the current positional layout chunk
         const [abstentionTally] = await db
           .select({ count: sql<number>`count(${electionVotes.id})::int` })
           .from(electionVotes)
           .where(and(eq(electionVotes.positionId, pos.id), sql`${electionVotes.candidateId} IS NULL`));
 
-        positionCandidates.push({
-          id: null,
-          name: "Abstained (Blank Ballots)",
-          imageUrl: "",
-          votes: abstentionTally?.count || 0
+        const abstentionCount = abstentionTally?.count || 0;
+        const totalVotesForPos = positionCandidates.reduce((sum, c) => sum + c.voteCount, 0) + abstentionCount;
+
+        // Header Row for each Position Block
+        talliesRows.push({
+          'Target Position': pos.title.toUpperCase(),
+          'Candidate Name': `Available Slots: ${pos.slots}`,
+          'Votes Counted': `Total Position Ballots: ${totalVotesForPos}`,
+          'Percentage Share': ''
         });
 
-        return {
-          id: pos.id,
-          title: pos.title,
-          slots: pos.slots,
-          totalVotesForPosition: positionCandidates.reduce((sum, c) => sum + c.votes, 0),
-          candidates: positionCandidates,
-        };
-      })
-    );
+        // Map individual candidates inside this block
+        positionCandidates.forEach((cand) => {
+          const sharePct = totalVotesForPos > 0 ? ((cand.voteCount / totalVotesForPos) * 100).toFixed(2) + '%' : '0.00%';
+          talliesRows.push({
+            'Target Position': '',
+            'Candidate Name': cand.name,
+            'Votes Counted': cand.voteCount,
+            'Percentage Share': sharePct
+          });
+        });
 
-    return {
-      electionDetails: {
-        title: electionRecord.title,
-        tag: electionRecord.tag,
-        totalEligibleVoters: votersCountResult?.count ?? 0
-      },
-      tallies: formattedTallies,
-      auditLedger: rawRecentVotes.map((log, index) => ({
-        id: `tx_${log.id}`,
-        positionTitle: log.candidateName ? `${log.positionTitle} (${log.candidateName})` : `${log.positionTitle} (Explicit Abstention)`,
-        voterMask: generateVoterMask(log.id + index), 
-        channel: "WEB", 
-        timestamp: formatElapsedTime(log.createdAt),
-      })),
-    };
-});
+        // Add the Abstention context metrics tracking metric rows
+        const abstentionSharePct = totalVotesForPos > 0 ? ((abstentionCount / totalVotesForPos) * 100).toFixed(2) + '%' : '0.00%';
+        talliesRows.push({
+          'Target Position': '',
+          'Candidate Name': 'Abstained (Blank Ballots)',
+          'Votes Counted': abstentionCount,
+          'Percentage Share': abstentionSharePct
+        });
+
+        // Blank separator spacer row to ease readability between positions
+        talliesRows.push({ 'Target Position': '', 'Candidate Name': '', 'Votes Counted': '', 'Percentage Share': '' });
+      }
+
+      const talliesSheet = XLSX.utils.json_to_sheet(talliesRows);
+      talliesSheet['!cols'] = [{ wch: 25 }, { wch: 32 }, { wch: 22 }, { wch: 18 }];
+      XLSX.utils.book_append_sheet(workbook, talliesSheet, 'Final Results Tallies');
+
+
+      // ================= SHEET 3: RECENT AUDIT LEDGER =================
+      const generateVoterMask = (index: number): string => `voter_id_****_${1000 + (Math.abs(index) % 9000)}`;
+
+      const auditRows = rawRecentVotes.map((log, index) => ({
+        'Transaction Hash ID': `tx_${log.id}`,
+        'Action Description Reference': log.candidateName ? `${log.positionTitle} (${log.candidateName})` : `${log.positionTitle} (Explicit Abstention)`,
+        'Anonymous Voter Identifier': generateVoterMask(log.id + index),
+        'Channel System Route': 'WEB',
+        'Casting Date Log': new Date(log.createdAt).toLocaleString()
+      }));
+
+      const auditSheet = XLSX.utils.json_to_sheet(auditRows);
+      auditSheet['!cols'] = [{ wch: 16 }, { wch: 42 }, { wch: 26 }, { wch: 20 }, { wch: 24 }];
+      XLSX.utils.book_append_sheet(workbook, auditSheet, 'Recent Audit Ledger');
+
+
+      // 2. Generate multi-sheet binary base64 payloads data stream package
+      const excelBuffer64 = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+      const cleanTag = electionRecord.tag.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+
+      return {
+        success: true,
+        filename: `election_${cleanTag}_certified_results.xlsx`,
+        base64Data: excelBuffer64
+      };
+
+    } catch (error: any) {
+      console.error('Export Election Results Server Function Error:', error);
+      return {
+        success: false,
+        error: error?.message || 'Failed to securely generate election analytics report workbook.',
+        filename: '',
+        base64Data: ''
+      };
+    }
+  });
+
+
+  export const exportElectionResultsToFormatExcelFn = createServerFn({ method: 'GET' })
+  .handler(async ({ data }: any) => {
+    const { electionId } = data;
+    console.log("ëxport", electionId);
+    try {
+      // Fetch telemetry data layers concurrently
+      const [
+        [electionRecord], 
+        [votersCountResult],
+        rawPositions, 
+        rawCandidateTallies, 
+        rawRecentVotes
+      ] = await Promise.all([
+        db.select().from(elections).where(eq(elections.id, electionId)),
+        db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq(voters.electionId, electionId)),
+        db.select().from(positions).where(eq(positions.electionId, electionId)),
+        db
+          .select({
+            id: candidates.id,
+            name: candidates.name,
+            positionId: candidates.positionId,
+            order: candidates.order,
+            voteCount: sql<number>`count(${electionVotes.id})::int`,
+          })
+          .from(candidates)
+          .innerJoin(positions, eq(candidates.positionId, positions.id))
+          .leftJoin(
+            electionVotes, 
+            and(
+              eq(electionVotes.candidateId, candidates.id),
+              eq(electionVotes.positionId, candidates.positionId)
+            )
+          )
+          .where(eq(positions.electionId, electionId))
+          .groupBy(candidates.id, candidates.name, candidates.positionId, candidates.order)
+          .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
+        db
+          .select({
+            id: electionVotes.id,
+            positionTitle: positions.title,
+            candidateName: candidates.name,
+            createdAt: electionVotes.createdAt,
+          })
+          .from(electionVotes)
+          .innerJoin(positions, eq(electionVotes.positionId, positions.id))
+          .leftJoin(candidates, eq(electionVotes.candidateId, candidates.id))
+          .where(eq(electionVotes.electionId, electionId))
+          .orderBy(desc(electionVotes.createdAt))
+          .limit(100)
+      ]);
+
+      if (!electionRecord) {
+        throw new Error(`Election instances index [${electionId}] not found.`);
+      }
+
+      const workbook = XLSX.utils.book_new();
+
+      // Common style definitions helper configurations
+      const STYLES = {
+        mainHeader: {
+          font: { name: 'Arial', size: 11, bold: true, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: '0A192A' } }, // Clean indigo background shade
+          alignment: { horizontal: 'left', vertical: 'center' }
+        },
+        positionRow: {
+          font: { name: 'Arial', size: 11, bold: true, color: { rgb: '1E1B4B' } },
+          fill: { fgColor: { rgb: 'E0E7FF' } }, // Light soft purple/blue section marker fill
+          alignment: { horizontal: 'left', vertical: 'center' }
+        },
+        voterAbstentionRow: {
+          font: { name: 'Arial', size: 10, italic: true, color: { rgb: '4B5563' } },
+          alignment: { horizontal: 'left', vertical: 'center' }
+        },
+        defaultText: {
+          font: { name: 'Arial', size: 10 },
+          alignment: { horizontal: 'left', vertical: 'center' }
+        }
+      };
+
+      // Helper function to format an array of objects to sheet cells with specific custom styling weights applied
+      const createStyledSheet = (headers: string[], rows: any[], columnWidths: { wch: number }[]) => {
+        const ws: XLSX.WorkSheet = {};
+        ws['!cols'] = columnWidths;
+
+        // 1. Generate Bold Header Row Elements
+        headers.forEach((header, colIndex) => {
+          const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIndex });
+          ws[cellRef] = { v: header, t: 's', s: STYLES.mainHeader };
+        });
+
+        // 2. Loop and map dataset records onto spreadsheet cells
+        rows.forEach((row, rowIndex) => {
+          const sheetRowIndex = rowIndex + 1;
+          
+          // Check if this row represents an explicit structural position divider row block
+          const isPositionDivider = row._type === 'POSITION_HEADER';
+          const isAbstention = row._type === 'ABSTENTION_ROW';
+
+          let currentStyle = STYLES.defaultText;
+          if (isPositionDivider) currentStyle = STYLES.positionRow;
+          if (isAbstention) currentStyle = STYLES.voterAbstentionRow;
+
+          headers.forEach((_, colIndex) => {
+            const cellKey = Object.keys(row).filter(k => k !== '_type')[colIndex];
+            if (!cellKey) return;
+
+            const cellValue = row[cellKey];
+            const cellRef = XLSX.utils.encode_cell({ r: sheetRowIndex, c: colIndex });
+
+            ws[cellRef] = {
+              v: cellValue,
+              t: typeof cellValue === 'number' ? 'n' : 's',
+              s: currentStyle
+            };
+          });
+        });
+
+        // Set range limits safely
+        const maxRow = rows.length;
+        const maxCol = headers.length - 1;
+        ws['!ref'] = XLSX.utils.encode_range({ r: 0, c: 0 }, { r: maxRow, c: maxCol });
+
+        return ws;
+      };
+
+
+      // ================= SHEET 1: EXECUTIVE SUMMARY =================
+      const summaryHeaders = ['Election Metric Description', 'Value / Metric Tally'];
+      const summaryRows = [
+        { desc: 'Election Title', val: electionRecord.title },
+        { desc: 'Election Identifier Tag', val: electionRecord.tag },
+        { desc: 'Total Registered Eligible Voters', val: votersCountResult?.count ?? 0 },
+        { desc: 'Configured Positions Scope Count', val: rawPositions.length },
+        { desc: 'Registered Candidates Count', val: rawCandidateTallies.length },
+        { desc: 'Export Generation Timestamp', val: new Date().toLocaleString() }
+      ];
+      const summarySheet = createStyledSheet(summaryHeaders, summaryRows, [{ wch: 35 }, { wch: 45 }]);
+      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
+
+
+      // ================= SHEET 2: FINAL RESULTS TALLIES =================
+      const talliesHeaders = ['Target Position', 'Candidate Name', 'Votes Counted', 'Percentage Share'];
+      const talliesRows: any[] = [];
+      
+      for (const pos of rawPositions) {
+        const positionCandidates = rawCandidateTallies.filter((cand) => cand.positionId === pos.id);
+        const [abstentionTally] = await db
+          .select({ count: sql<number>`count(${electionVotes.id})::int` })
+          .from(electionVotes)
+          .where(and(eq(electionVotes.positionId, pos.id), sql`${electionVotes.candidateId} IS NULL`));
+
+        const abstentionCount = abstentionTally?.count || 0;
+        const totalVotesForPos = positionCandidates.reduce((sum, c) => sum + c.voteCount, 0) + abstentionCount;
+
+        // Position Section Banner Row (receives positionRow styling automatically)
+        talliesRows.push({
+          _type: 'POSITION_HEADER',
+          posTitle: pos.title.toUpperCase(),
+          candName: `Available Slots: ${pos.slots}`,
+          vCount: `Total Ballots: ${totalVotesForPos}`,
+          pct: ''
+        });
+
+        // Map candidates rows
+        positionCandidates.forEach((cand) => {
+          const sharePct = totalVotesForPos > 0 ? ((cand.voteCount / totalVotesForPos) * 100).toFixed(2) + '%' : '0.00%';
+          talliesRows.push({
+            _type: 'DEFAULT',
+            posTitle: '',
+            candName: cand.name,
+            vCount: cand.voteCount,
+            pct: sharePct
+          });
+        });
+
+        // Add Blank Ballots Metric Context Row
+        const abstentionSharePct = totalVotesForPos > 0 ? ((abstentionCount / totalVotesForPos) * 100).toFixed(2) + '%' : '0.00%';
+        talliesRows.push({
+          _type: 'ABSTENTION_ROW',
+          posTitle: '',
+          candName: 'Abstained (Blank Ballots)',
+          vCount: abstentionCount,
+          pct: abstentionSharePct
+        });
+
+        // Empty row space element wrapper
+        talliesRows.push({ _type: 'DEFAULT', posTitle: '', candName: '', vCount: '', pct: '' });
+      }
+
+      const talliesSheet = createStyledSheet(talliesHeaders, talliesRows, [{ wch: 25 }, { wch: 32 }, { wch: 22 }, { wch: 18 }]);
+      XLSX.utils.book_append_sheet(workbook, talliesSheet, 'Final Results Tallies');
+
+
+      // ================= SHEET 3: RECENT AUDIT LEDGER =================
+      const auditHeaders = ['Transaction Hash ID', 'Action Description Reference', 'Anonymous Voter Identifier', 'Channel System Route', 'Casting Date Log'];
+      const generateVoterMask = (index: number): string => `voter_id_****_${1000 + (Math.abs(index) % 9000)}`;
+
+      const auditRows = rawRecentVotes.map((log, index) => ({
+        _type: 'DEFAULT',
+        txId: `tx_${log.id}`,
+        desc: log.candidateName ? `${log.positionTitle} (${log.candidateName})` : `${log.positionTitle} (Explicit Abstention)`,
+        mask: generateVoterMask(log.id + index),
+        channel: 'WEB',
+        date: new Date(log.createdAt).toLocaleString()
+      }));
+
+      const auditSheet = createStyledSheet(auditHeaders, auditRows, [{ wch: 18 }, { wch: 42 }, { wch: 26 }, { wch: 20 }, { wch: 24 }]);
+      XLSX.utils.book_append_sheet(workbook, auditSheet, 'Recent Audit Ledger');
+
+
+      // Convert styled document structures matrix to Base64 delivery package
+      const excelBuffer64 = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+      const cleanTag = electionRecord.tag.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+
+      return {
+        success: true,
+        filename: `election_${cleanTag}_formatted_results.xlsx`,
+        base64Data: excelBuffer64
+      };
+
+    } catch (error: any) {
+      console.error('Export Election Results Style Script Error:', error);
+      return { 
+        success: false,
+        error: error?.message || 'Failed to safely style generated excel workbook sheets content.',
+        filename: '',base64Data: ''
+      };
+    }
+  });
 
 
 
@@ -778,97 +1049,7 @@ export const getUnifiedElectionTelemetry = createServerFn({
         }
     );
 
-    // interface FetchVotersParams {
-    //   electionId: number;
-    //   page?: number;
-    //   limit?: number;
-    //   searchQuery?: string;
-    //   statusFilter?: 'ALL' | 'VOTED' | 'PENDING';
-    // }
-    
-    // export async function getVotersByElectionFn({
-    //   electionId,
-    //   page = 1,
-    //   limit = 25,
-    //   searchQuery = '',
-    //   statusFilter = 'ALL',
-    // }: FetchVotersParams) {
-    //   try {
-    //     // 1. Safe Pagination Index Boundary Math
-    //     const sanitizedPage = Math.max(1, page);
-    //     const offset = (sanitizedPage - 1) * limit;
-    
-    //     // 2. Build Dynamic SQL Filters Array
-    //     const conditions: any = [eq(voters.electionId, electionId)];
-    
-    //     // Apply Case-Insensitive Fuzzy Search via ILIKE if search query is provided
-    //     if (searchQuery.trim() !== '') {
-    //       const searchPattern:any = `%${searchQuery.trim()}%`;
-    //       conditions.push(
-    //         or(
-    //           ilike(voters.name, searchPattern),
-    //           ilike(voters.username, searchPattern),
-    //           ilike(voters.email, searchPattern)
-    //         )
-    //       );
-    //     }
-    
-    //     // Apply Has Voted boolean toggle filters
-    //     if (statusFilter === 'VOTED') {
-    //       conditions.push(eq(voters.hasVoted, true));
-    //     } else if (statusFilter === 'PENDING') {
-    //       conditions.push(eq(voters.hasVoted, false));
-    //     }
-    
-    //     // Combine all active database clauses using AND logical evaluation wrapper
-    //     const whereClause = and(...conditions);
-    
-    //     // 3. Run Count Query and Data Row Query Concurrently (Improves Performance)
-    //     const [totalRowsResult, records] = await Promise.all([
-    //       db.select({ total: count() }).from(voters).where(whereClause),
-    //       db
-    //         .select({
-    //           voters: {
-    //             id: voters.id,
-    //             name: voters.name,
-    //             username: voters.username,
-    //             phoneNumber: voters.phoneNumber,
-    //             email: voters.email,
-    //             inviteToken: voters.inviteToken,
-    //             isVerified: voters.isVerified,
-    //             hasVoted: voters.hasVoted,
-    //           },
-    //         })
-    //         .from(voters)
-    //         .where(whereClause)
-    //         .limit(limit)
-    //         .offset(offset),
-    //     ]);
-    
-    //     // 4. Calculate Derived Structural Properties
-    //     const totalItems = totalRowsResult[0]?.total ?? 0;
-    //     const totalPages = Math.ceil(totalItems / limit) || 1;
-    
-    //     return {
-    //       success: true,
-    //       data: records, // Array containing the targeted chunk of 25 items
-    //       meta: {
-    //         totalItems,
-    //         totalPages,
-    //         currentPage: sanitizedPage,
-    //         limit,
-    //       },
-    //     };
-    //   } catch (error: any) {
-    //     console.error('Server error executing getVotersByElectionFn:', error);
-    //     return {
-    //       success: false,
-    //       error: error?.message || 'Failed to fetch election registry data records.',
-    //       data: [],
-    //       meta: { totalItems: 0, totalPages: 1, currentPage: 1, limit },
-    //     };
-    //   }
-    // }
+   
 
 
     export const getVoterFn = createServerFn({ method: 'GET'}).handler( 
@@ -945,22 +1126,7 @@ export const getUnifiedElectionTelemetry = createServerFn({
     export const uploadVotersFn = createServerFn({ method: 'POST'}).handler( 
       async ({ data }: any) => {
         try {
-          // const data = { ... mdata[0] }
-          // const sm = await db.insert(voters)
-          //       .values(data)
-          //        .onConflictDoUpdate({
-          //         target: [voters.electionId, voters.username],
-          //         set: {
-          //           name: sql`EXCLUDED.name`,
-          //           phoneNumber: sql`EXCLUDED.phone_number`,
-          //           username: sql`EXCLUDED.username`,
-          //           email: sql`EXCLUDED.email`,
-          //           inviteToken: sql`EXCLUDED.invite_token`
-          //         },
-          //       })
-          //       // .returning();
-          //       console.log("SM: ", sm);
-          const chunks:any = chunkArray(data, 300);
+          const chunks:any = chunkArray(data, 1000);
           await db.transaction(async (tx) => {
             for (const chunk of chunks) {
               console.log("data: ", chunk)
@@ -1102,6 +1268,81 @@ export const getUnifiedElectionTelemetry = createServerFn({
         }
       }
     );
+
+
+    export const exportVotersToExcelFn = createServerFn({ method: 'GET' })
+      .handler(async ({ data }: any) => {
+        const { electionId, statusFilter } = data;
+
+        try {
+          // 1. Establish core dynamic SQL filter conditions array
+          const conditions = [eq(voters.electionId, electionId)];
+
+          // Target specific voting boolean states conditionally 
+          if (statusFilter === 'VOTED') {
+            conditions.push(eq(voters.hasVoted, true));
+          } else if (statusFilter === 'PENDING') {
+            conditions.push(eq(voters.hasVoted, false));
+          }
+
+          // 2. Fetch full matching registry set using the and-wrapped criteria
+          const filteredVoters = await db
+            .select({
+              name: voters.name,
+              username: voters.username,
+              phoneNumber: voters.phoneNumber,
+              email: voters.email,
+              inviteToken: voters.inviteToken,
+              hasVoted: voters.hasVoted,
+              isVerified: voters.isVerified,
+              invitedAt: voters.invitedAt,
+            })
+            .from(voters)
+            .where(and(...conditions));
+
+          if (filteredVoters.length === 0) {
+            throw new Error(`No records matching the '${statusFilter.toLowerCase()}' condition were found to export.`);
+          }
+
+          // 3. Convert records array into organized worksheet mapping matrices
+          const formattedRows = filteredVoters.map((voter) => ({
+            'Full Name': voter.name,
+            'Access Username': voter.username,
+            'Phone Number': voter.phoneNumber,
+            'Email Address': voter.email,
+            'Invitation Code': voter.inviteToken,
+            'Voting Status': voter.hasVoted ? 'Voted' : 'Pending',
+            'Account Verified': voter.isVerified ? 'Yes' : 'No',
+            'Date Invited': voter.invitedAt ? new Date(voter.invitedAt).toLocaleDateString() : 'N/A',
+          }));
+
+          const worksheet = XLSX.utils.json_to_sheet(formattedRows);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Registry');
+
+          worksheet['!cols'] = [
+            { wch: 24 }, { wch: 18 }, { wch: 16 }, { wch: 28 }, 
+            { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 14 }
+          ];
+
+          const excelBuffer64 = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+          const stateLabel = statusFilter.toLowerCase();
+
+          return {
+            success: true,
+            filename: `election_${electionId}_voters_${stateLabel}_export.xlsx`,
+            base64Data: excelBuffer64,
+          };
+        } catch (error: any) {
+          console.error('Server Function Error:', error);
+          return {
+            success: false,
+            error: error?.message || 'Failed to safely compile data structures to Excel.',
+            filename: '',
+            base64Data: '',
+          };
+        }
+    });
 
     
     export const deleteVoterFn = createServerFn({ method: 'POST'}).handler( 
