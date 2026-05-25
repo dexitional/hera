@@ -612,7 +612,7 @@ export const getElectionOverview = createServerFn({
           .leftJoin(candidates, eq(electionVotes.candidateId, candidates.id))
           .where(eq(electionVotes.electionId, electionId))
           .orderBy(desc(electionVotes.createdAt))
-          .limit(100)
+          // .limit(100)
       ]);
 
       if (!electionRecord) {
