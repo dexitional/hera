@@ -77,27 +77,34 @@ export default function AuthElection({ data }: any) {
         <main className="w-full">
           <section className="w-full max-w-7xl bg-blue-950/10 rounded-4xl mx-auto sm:mt-24 px-4 sm:px-10 lg:px-6 pt-6 sm:pt-6 lg:pt-6 pb-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
-              
-              {/* Logo */}
-              <div className="relative my-6 mx-auto py-4 h-40 w-40 flex items-center justify-center text-center">
-                { data?.imageUrl && (
-                    <img
-                      alt={data.title}
-                      decoding="async"
-                      className="h-40 object-cover object-top"
-                      sizes="100vw"
-                      src={data?.imageUrl}
-                      style={{ position: "absolute", height: "100%", width: "100%", inset: 0, color: "transparent" }}
-                      srcSet={data?.imageUrl}
-                    />
-                  )}
-                </div>
+              <div>
+                  <div className="flex gap-3 mb-6">
+                    <h1 className="w-full text-3xl md:text-2xl items-center font-bold tracking-tight text-zinc-400 mb-6 leading-tight text-center font-sans">
+                      {data?.tag?.replaceAll("-"," ")?.toUpperCase()}
+                    </h1>
+                  </div>
+                   {/* Logo */}
+                  <div className="relative my-6 mx-auto py-4 h-40 w-40 flex items-center justify-center text-center">
+                    { data?.imageUrl && (
+                      <img
+                        alt={data.title}
+                        decoding="async"
+                        className="h-28 sm:h-48 w-28 sm:w-48 object-contain object-center"
+                        sizes="100vw"
+                        src={data?.imageUrl}
+                        style={{ position: "absolute", height: "100%", width: "100%", inset: 0, color: "transparent" }}
+                        srcSet={data?.imageUrl}
+                      />
+                    )}
+                  </div>
+              </div>
+               
               
               {/*  Login */}
               <div>
                 <div className="bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 rounded-3xl p-8 shadow-xl">
                   <div className="mb-6">
-                    <h2 className="text-xl font-bold tracking-wide text-white mb-2 rel font-sans">
+                    <h2 className="text-xl italic font-bold tracking-wide text-white mb-2 rel font-sans">
                       VOTER LOGIN
                     </h2>
                     <p className="text-zinc-400 font-bold text-sm"> {data?.title}</p>
@@ -132,7 +139,7 @@ export default function AuthElection({ data }: any) {
 
                   
                   { ["credential","otp"].includes(data?.authMode?.toLowerCase()) && (
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  <form onSubmit={handleSubmit} className="space-y-4">
                    
                     {/* Credentials Strategy */}
 
@@ -144,7 +151,7 @@ export default function AuthElection({ data }: any) {
                         name="username"
                         value={formData.username}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 bg-slate-600/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 pl-10 border border-slate-600/20 group-hover:border-slate-600/40 transition-colors text-sm text-white placeholder-zinc-400" 
+                        className="w-full px-4 py-2 bg-slate-600/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 pl-10 border border-slate-600/20 group-hover:border-slate-600/40 transition-colors text-sm text-white placeholder-zinc-400" 
                         placeholder="Username" 
                       />
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 group-hover:text-purple-400 transition-colors w-4 h-4" />
@@ -159,7 +166,7 @@ export default function AuthElection({ data }: any) {
                         name="password"
                         value={formData.password}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 bg-slate-600/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 pl-10 border border-slate-600/20 group-hover:border-slate-600/40 transition-colors text-sm text-white placeholder-zinc-400" 
+                        className="w-full px-4 py-2 bg-slate-600/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 pl-10 border border-slate-600/20 group-hover:border-slate-600/40 transition-colors text-sm text-white placeholder-zinc-400" 
                         placeholder="Password" 
                       />
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 group-hover:text-purple-400 transition-colors w-4 h-4" />
@@ -175,7 +182,7 @@ export default function AuthElection({ data }: any) {
                         name="phone"
                         value={formData.phone}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 bg-slate-600/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 pl-10 border border-slate-600/20 group-hover:border-slate-600/40 transition-colors text-sm text-white placeholder-zinc-400" 
+                        className="w-full px-4 py-1 bg-slate-600/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 pl-10 border border-slate-600/20 group-hover:border-slate-600/40 transition-colors text-sm text-white placeholder-zinc-400" 
                         placeholder="Phone Number" 
                       />
                       <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 group-hover:text-purple-400 transition-colors w-4 h-4" />
@@ -200,8 +207,9 @@ export default function AuthElection({ data }: any) {
                     <div>
                       <button 
                         type="submit" 
-                        disabled={ data.status && ['staged','ended'].includes(data.status) }
-                        className="w-full px-4 py-3 bg-[#E3F09B] text-black rounded-xl hover:bg-purple-600 transition-all duration-300 flex items-center justify-center gap-2 group text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                        // disabled={ data.status && ['staged','ended'].includes(data.status) }
+                        disabled={ true }
+                        className="w-full px-4 py-3 bg-[#E3F09B] hover:bg-purple-600 disabled:bg-zinc-400 disabled:hover:bg-zinc-400  text-black disabled:text-zinc-100 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 group text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                       >
                         Login to Vote
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -225,17 +233,13 @@ export default function AuthElection({ data }: any) {
 
               {/* Notice */}
               <div>
-                <div className="flex items-center gap-3 mb-6">
-                  <h1 className="text-3xl md:text-2xl font-bold tracking-tight text-zinc-300 mb-6 leading-tight text-center font-sans">
-                  {data?.tag?.replaceAll("-"," ")?.toUpperCase()}
-                  </h1>
-                </div>
+                
                 
                 <div className="grid grid-cols-1 gap-4 mb-8">
                      <div className="rounded-xl bg-[#f59e42]/8 py-4 px-6 flex items-center gap-4">
                       <Calendar className="w-8 h-8 text-orange-400 shrink-0" />
                       <div>
-                        <h3 className="text-lg font-bold text-white">Period of Voting</h3>
+                        <h3 className="text-lg italic font-bold text-white">Period of Voting</h3>
                         <p className="text-sm text-zinc-300">Opens: { moment(data?.startAt).format("LLL") } <br/>Closes:  { moment(data?.endAt).format("LLL") }</p>
                       </div>
                     </div>
@@ -247,7 +251,7 @@ export default function AuthElection({ data }: any) {
                         <p className="text-sm text-zinc-300">Please use OTP method to login into the system or portal credentials</p>
                       </div> */}
                       <div>
-                        <h3 className="text-lg font-bold text-white">Election Status</h3>
+                        <h3 className="text-lg italic font-bold text-white">Election Status</h3>
                         <p className="text-sm text-zinc-300">{ data.status == 'staged' ? 'NOT STARTED': data.status == 'started'? 'LIVE & ON-GOING' : 'CLOSED'  }</p>
                       </div>
                     </div>
