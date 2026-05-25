@@ -1,74 +1,23 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import React, { useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { 
-  CheckCircle2, ShieldCheck, ArrowRight, RotateCcw, 
-  Lock, Award, User, Layers, Fingerprint, AlertCircle, ShieldAlert, Home 
+  CheckCircle2, RotateCcw, 
+  Lock, Award, User, Layers, Fingerprint, AlertCircle, ShieldAlert, Home, 
+  ShieldCheck
 } from "lucide-react";
 import { castBallotServerFn } from "#/server/tenant-elections";
 
-interface VoterContext {
-  id: number;
-  electionId: number;
-  name: string;
-  username: string;
-  phoneNumber: string;
-  email: string;
-  hasVoted: boolean; // Enforcing Drizzle Table constraint flag check
-}
 
-interface CandidateNode {
-  id: number;
-  positionId: number;
-  name: string;
-  teaser: string | null;
-  imageUrl: string | null;
-  order: number | null;
-}
-
-interface PositionGroup {
-  id: number;
-  electionId: number;
-  title: string;
-  slots: number;
-  candidates: CandidateNode[];
-}
-
-
-// Mock voter context representing an already verified/closed voting lifecycle row entry
-const MOCK_VOTER: VoterContext = {
-  id: 842,
-  electionId: 101,
-  name: "Kwame Mensah",
-  username: "kwame_m",
-  phoneNumber: "+233241234567",
-  email: "kwame@domain.edu.gh",
-  hasVoted: false, // Simulation trigger: Toggle to 'false' to view open active ballot sheet
-};
-
-const MOCK_BALLOT_STRUCTURE: PositionGroup[] = [
-  {
-    id: 1,
-    electionId: 101,
-    title: "Presidential Portfolio",
-    slots: 1,
-    candidates: [
-      { id: 10, positionId: 1, name: "Jane Afia Mensah", teaser: "Digital inclusion sovereignty blueprint lines.", imageUrl: "https://unsplash.com", order: 1 },
-      { id: 11, positionId: 1, name: "Michael K. Koomson", teaser: "Multi-tenant workspace fiscal frameworks.", imageUrl: "https://unsplash.com", order: 2 },
-    ]
-  }
-];
 
 export default function LiveBallotSimulation({ user, data: ballotPositions }: any) {
 
-  console.log(ballotPositions);
-  
+  const navigate = useNavigate();
   const [voter] = useState<any>(user);
   // const [ballotPositions] = useState<PositionGroup[]>(data);
-  
   const [selections, setSelections] = useState<Record<number, number>>({});
   const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [ ballotSuccess, setBallotSuccess ] = useState(true);
+  const [ ballotSuccess, setBallotSuccess ] = useState(false);
 
   const handleSelectCandidate = (positionId: number, candidateId: number) => {
     setSelections((prev) => ({ ...prev, [positionId]: candidateId }));
@@ -90,19 +39,18 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
   const handleFinalizeVotesSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // 1. Build the list of active selections (excluding skipped portfolios)
-      const formattedSelections = Object.entries(selections)
-        .filter(([_, candidateId]) => candidateId !== -1) 
-        .map(([positionId, candidateId]) => ({
+     
+        const formattedSelections: any = Object.entries(selections).map(([positionId, candidateId]) => ({
           positionId: parseInt(positionId),
-          candidateId: candidateId,
-          // Generate an un-alterable tracking token for auditability
+          // Transforms frontend flag value -1 into null for compliance with Drizzle schema
+          candidateId: candidateId === -1 ? null : candidateId,
           receiptSignature: `sig_sha256_${crypto.randomUUID().replace(/-/g, "")}`
         }));
+  
 
       // 2. Invoke the type-safe RPC action directly over the network network pipeline
       const response = await castBallotServerFn({
-        data: {
+         data: {
           voterId: voter.id,
           electionId: voter.electionId,
           selections: formattedSelections
@@ -111,6 +59,7 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
 
       if (response.success) {
         setBallotSuccess(true);
+        setTimeout(() => { navigate({ to: `/elections`}) },3000)
       }
     } catch (err) {
       console.error("Ballot submission failed:", err);
@@ -159,6 +108,21 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
   }
 
   const showReviewSummary = activeStepIndex === ballotPositions.length;
+
+  if (ballotSuccess) {
+    return (
+      <div className="w-full max-w-md mx-auto my-20 p-6 bg-[#0a192a]/50 border border-zinc-800 rounded-xl text-center font-sans animate-in fade-in zoom-in-95 duration-200">
+        <div className="w-12 h-12 rounded-full bg-emerald-950/40 border border-emerald-900/30 flex items-center justify-center mx-auto mb-4">
+          <ShieldCheck className="w-6 h-6 text-emerald-400" />
+        </div>
+        <h3 className="text-xl font-bold text-white tracking-tight">Ballot Submitted Securely</h3>
+        <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+          Thank you, <span className="text-purple-400 font-semibold">{voter?.name}</span>. Your choices have been cryptographically signed and serialized onto the main audit ledger. Your access eligibility status has been set to closed.
+        </p>
+       
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-h-screen bg-[#18181b] text-zinc-200 font-sans p-4 md:p-6 overflow-x-hidden relative select-none">
@@ -279,7 +243,7 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {ballotPositions?.map((position: any) => {
                     const chosenId = selections[position.id];
                     const chosenCandidate = position?.candidates?.find((c: any) => c.id === chosenId);
@@ -294,9 +258,9 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
                           )}
                         </div>
                         <div className="min-w-0">
-                          <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold block">{position.title}</span>
+                          <span className="text-[10px] text-purple-200 uppercase tracking-wider font-bold block">{position.title}</span>
                           <span className={`text-xs font-bold block truncate mt-0.5 ${chosenId === -1 ? 'text-amber-400 italic' : 'text-white'}`}>
-                            {chosenId === -1 ? "Abstained" : chosenCandidate?.name}
+                            {chosenId === -1 ? "ABSTAINED / SKIPPED" : chosenCandidate?.name}
                           </span>
                         </div>
                       </div>
@@ -304,14 +268,14 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
                   })}
                 </div>
 
-                <div className="flex items-center justify-between gap-4 border-t border-zinc-900 pt-4">
+                <div className="flex items-center justify-between gap-4 border-t border-zinc-600 pt-4">
                   <button
                     type="button"
                     onClick={handleResetBallot}
                     disabled={isSubmitting}
                     className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 text-xs font-semibold px-2 py-1.5 transition-colors"
                   >
-                    <RotateCcw className="w-3.5 h-3.5" /> Reset Ballot
+                    <RotateCcw className="w-3.5 h-3.5" /> RESET BALLOT
                   </button>
 
                   <button
@@ -320,7 +284,7 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
                     disabled={isSubmitting}
                     className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow-xl disabled:opacity-40 transition-all"
                   >
-                    {isSubmitting ? "Signing Ledger..." : "Confirm & Cast Ballot"}
+                    {isSubmitting ? "Signing Ledger..." : "CONFIRM & CAST BALLOT"}
                   </button>
                 </div>
 

@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, serial, text, integer, timestamp, varchar, boolean, doublePrecision, unique, index } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, integer, timestamp, varchar, boolean, doublePrecision } from 'drizzle-orm/pg-core';
 
 // ==========================================
 // BETTER AUTH REQUIRED CORE TABLES
@@ -10,10 +10,12 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull(),
   image: text("image"),
+  // Add the custom role field here
   role: text("role").notNull().default("user"), 
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
 });
+
 
 export const session = pgTable('session', {
   id: text('id').primaryKey(),
@@ -52,8 +54,38 @@ export const verification = pgTable('verification', {
 });
 
 // ==========================================
+//  GENERAL TABLES 
+// ==========================================
+
+// export const users = pgTable('users', {
+//   id: serial('id').primaryKey(),
+//   email: text('email').notNull().unique(),
+//   phone: text('phone').notNull().unique(),
+//   paystackCustomerCode: text('paystack_customer_code'),
+//   isSubscribed: boolean('is_subscribed').default(false).notNull(),
+//   subscriptionPlan: text('subscription_plan'),
+// }); 
+
+// export const userProfiles = pgTable('user_profiles', {
+//   id: serial('id').primaryKey(),
+//   userId: text('user_id').notNull(),
+//   avatarUrl: text('avatar_url'), // Stores the CDN/S3 image link
+// });
+
+
+// export const organizations = pgTable('organizations', {
+//   id: serial('id').primaryKey(),
+//   name: text('name').notNull(),
+//   imageUrl: text('image_url'),
+//   email: text('email').notNull().unique(),
+//   phone: text('phone').notNull().unique(),
+// });
+
+
+// ==========================================
 //  EVENTS APP TABLES 
 // ==========================================
+
 export const events = pgTable('events', {
   id: serial('id').primaryKey(),
   title: text('title').notNull(),
@@ -61,55 +93,49 @@ export const events = pgTable('events', {
   unitPrice: doublePrecision('unit_price'),
   paymentAmount: doublePrecision('payment_amount'),
   paymentDeduction: doublePrecision('payment_deduction'),
-  isActive: boolean('is_active').default(true).notNull(),
-  adminId: text('admin_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
+  isActive: integer('is_active').default(1).notNull(),
+  adminId: text('admin_id').references(() => user.id, { onDelete: 'cascade' }).notNull(), // Linked to Better Auth User
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const categories = pgTable('categories', {
   id: serial('id').primaryKey(),
-  eventId: integer('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
-  name: text('name').notNull(),
+  eventId: integer('event_id').references(() => events.id).notNull(),
+  name: text('name').notNull(), // e.g., "Artist of the Year", "Best Rapper"
   description: text('description').notNull(),
-  code: text('code').notNull(), 
+  code: text('code').notNull(), // e.g., "1", "2"
   createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (t) => ({
-  eventCodeUniq: unique().on(t.eventId, t.code) 
-}));
+});
 
 export const contestants = pgTable('contestants', {
   id: serial('id').primaryKey(),
-  categoryId: integer('category_id').references(() => categories.id, { onDelete: 'cascade' }).notNull(),
+  categoryId: integer('category_id').references(() => categories.id).notNull(),
   name: text('name').notNull(),
   tagline: text('tagline').notNull(),
   order: integer('order'),
   imageUrl: text('image_url'),
-  code: text('code').notNull(), 
+  code: text('code').notNull(), // e.g., "1", "2"
   createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (t) => ({
-  categoryContestantCodeUniq: unique().on(t.categoryId, t.code)
-}));
+});
 
 export const votes = pgTable('votes', {
   id: serial('id').primaryKey(),
-  eventId: integer('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
-  categoryId: integer('category_id').references(() => categories.id, { onDelete: 'cascade' }).notNull(),
-  contestantId: integer('contestant_id').references(() => contestants.id, { onDelete: 'cascade' }).notNull(),
+  eventId: integer('event_id').notNull(),
+  categoryId: integer('category_id').references(() => categories.id).notNull(),
+  contestantId: integer('contestant_id').references(() => contestants.id).notNull(),
   voterPhone: text('voter_phone').notNull(),
   voteCount: integer('vote_count').default(1).notNull(),
-  channel: text('channel').notNull(), 
+  channel: text('channel').notNull(), // "USSD" or "WEB"
   createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (t) => ({
-  voterPhoneIdx: index('votes_voter_phone_idx').on(t.voterPhone),
-  contestantVotesIdx: index('votes_contestant_idx').on(t.contestantId)
-}));
+});
 
 // ==========================================
 // ELECTION APP TABLES 
 // ==========================================
+
 export const elections = pgTable('elections', {
   id: serial('id').primaryKey(),
-  adminId: text('admin_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
+  adminId: text('admin_id').references(() => user.id, { onDelete: 'cascade' }).notNull(), // Linked to Better Auth User
   tag: text('tag').notNull(),
   title: text('title').notNull(),
   description: text('description').notNull(),
@@ -119,11 +145,11 @@ export const elections = pgTable('elections', {
   billVoters: integer('bill_voters'),
   billAmount: doublePrecision('bill_amount'),
   billPaid: boolean('bill_paid').default(false).notNull(),
-  authMode: text('auth_mode'), 
-  status: text('status').default('staged').notNull(), 
+  authMode: text('auth_mode'), // google, credential, otp, 
+  status: text('status').default('staged').notNull(), // staged, started, ended, 
   makePublic: boolean('make_public').default(false).notNull(),
   showFeed: boolean('show_feed').default(false).notNull(),
-  isActive: boolean('is_active'),
+  isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -150,122 +176,34 @@ export const candidates = pgTable('candidates', {
 export const voters = pgTable('voters', {
   id: serial('id').primaryKey(),
   electionId: integer('election_id').references(() => elections.id, { onDelete: 'cascade' }).notNull(),
-  name: text('name').notNull(), 
-  username: varchar('username', { length: 50 }).notNull(), 
+  name: text('name').notNull(), // e.g. "Kwame Mensah"
+  username: varchar('username', { length: 50 }).notNull(), // e.g. "kwame_m"
   phoneNumber: text('phone_number').notNull(),
-  email: text('email').notNull(),
+  email: text('email').notNull().unique(),
   inviteToken: varchar('invite_token', { length: 64 }).notNull().unique(),
   isVerified: boolean('is_verified').default(false).notNull(),
   hasVoted: boolean('has_voted').default(false).notNull(),
   invitedAt: timestamp('invited_at').defaultNow().notNull(),
-}, (t) => ({
-  electionEmailUniq: unique().on(t.electionId, t.email),
-  electionUsernameUniq: unique().on(t.electionId, t.username),
-}));
+});
 
 export const electionVotes = pgTable('election_votes', {
   id: serial('id').primaryKey(),
   electionId: integer('election_id').references(() => elections.id, { onDelete: 'cascade' }).notNull(),
   positionId: integer('position_id').references(() => positions.id, { onDelete: 'cascade' }).notNull(),
-  // candidateId is nullable to natively represent explicit voter abstentions
-  candidateId: integer('candidate_id').references(() => candidates.id, { onDelete: 'cascade' }), 
-  receiptSignature: text('receipt_signature').notNull(), 
+  candidateId: integer('candidate_id').references(() => candidates.id, { onDelete: 'cascade' }).notNull(),
+  receiptSignature: text('receipt_signature').notNull(), // Digital cryptographic signature hash string
   createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (t) => ({
-  electionVotesPerfIdx: index('election_votes_lookup_idx').on(t.electionId, t.positionId)
-}));
+});
 
 
 
-// ==========================================
-// 1. BETTER & SYSTEM AUTH CORE RELATIONS
-// ==========================================
-
-export const userRelations = relations(user, ({ many }) => ({
-  sessions: many(session),
-  accounts: many(account),
-  events: many(events),       // Admin owns many events
-  elections: many(elections), // Admin owns many elections
-}));
-
-export const sessionRelations = relations(session, ({ one }) => ({
-  user: one(user, {
-    fields: [session.userId],
-    references: [user.id],
-  }),
-}));
-
-export const accountRelations = relations(account, ({ one }) => ({
-  user: one(user, {
-    fields: [account.userId],
-    references: [user.id],
-  }),
-}));
-
-// Optional: Kept for reference in case you reactivate the userProfiles table
-// export const userProfilesRelations = relations(userProfiles, ({ one }) => ({
-//   user: one(user, {
-//     fields: [userProfiles.userId],
-//     references: [user.id],
-//   }),
-// }));
 
 
 // ==========================================
-// 2. EVENTS APP RELATIONS
+// ELECTION APP RELATIONS
 // ==========================================
 
-export const eventsRelations = relations(events, ({ one, many }) => ({
-  admin: one(user, {
-    fields: [events.adminId],
-    references: [user.id],
-  }),
-  categories: many(categories),
-  votes: many(votes), // Secure fix: Allows finding total votes within an event container
-}));
-
-export const categoriesRelations = relations(categories, ({ one, many }) => ({
-  event: one(events, {
-    fields: [categories.eventId],
-    references: [events.id],
-  }),
-  contestants: many(contestants),
-  votes: many(votes),
-}));
-
-export const contestantsRelations = relations(contestants, ({ one, many }) => ({
-  category: one(categories, {
-    fields: [contestants.categoryId],
-    references: [categories.id],
-  }),
-  votes: many(votes),
-}));
-
-export const votesRelations = relations(votes, ({ one }) => ({
-  event: one(events, {
-    fields: [votes.eventId],
-    references: [events.id],
-  }),
-  category: one(categories, {
-    fields: [votes.categoryId],
-    references: [categories.id],
-  }),
-  contestant: one(contestants, {
-    fields: [votes.contestantId],
-    references: [contestants.id],
-  }),
-}));
-
-
-// ==========================================
-// 3. ELECTION APP RELATIONS
-// ==========================================
-
-export const electionsRelations = relations(elections, ({ one, many }) => ({
-  admin: one(user, {
-    fields: [elections.adminId],
-    references: [user.id],
-  }),
+export const electionsRelations = relations(elections, ({ many }) => ({
   positions: many(positions),
   voters: many(voters),
   electionVotes: many(electionVotes),
@@ -276,7 +214,7 @@ export const positionsRelations = relations(positions, ({ one, many }) => ({
     fields: [positions.electionId],
     references: [elections.id],
   }),
-  candidates: many(candidates),
+  candidates: many(candidates), // 👈 This fixes your exact error!
   electionVotes: many(electionVotes),
 }));
 
@@ -307,5 +245,42 @@ export const electionVotesRelations = relations(electionVotes, ({ one }) => ({
   candidate: one(candidates, {
     fields: [electionVotes.candidateId],
     references: [candidates.id],
+  }),
+}));
+
+
+// ==========================================
+// EVENTS APP RELATIONS
+// ==========================================
+
+export const eventsRelations = relations(events, ({ many }) => ({
+  categories: many(categories),
+}));
+
+export const categoriesRelations = relations(categories, ({ one, many }) => ({
+  event: one(events, {
+    fields: [categories.eventId],
+    references: [events.id],
+  }),
+  contestants: many(contestants),
+  votes: many(votes),
+}));
+
+export const contestantsRelations = relations(contestants, ({ one, many }) => ({
+  category: one(categories, {
+    fields: [contestants.categoryId],
+    references: [categories.id],
+  }),
+  votes: many(votes),
+}));
+
+export const votesRelations = relations(votes, ({ one }) => ({
+  category: one(categories, {
+    fields: [votes.categoryId],
+    references: [categories.id],
+  }),
+  contestant: one(contestants, {
+    fields: [votes.contestantId],
+    references: [contestants.id],
   }),
 }));

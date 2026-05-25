@@ -9,7 +9,6 @@ export default function VoterAdminForm({ data: { data, elections }}: any) {
   
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  console.log(data);
   
   const [formData, setFormData] = useState<any>({
     electionId: data?.electionId || elections && elections[0]?.id,
@@ -49,16 +48,20 @@ export default function VoterAdminForm({ data: { data, elections }}: any) {
 
   const createMutation = useMutation({
     mutationFn: createVoterFn,
-    onSuccess: () => {
+    onSuccess: (resp: any) => {
+      alert(JSON.stringify(resp))
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
+      setTimeout(()=> navigate({ to:  `/admin/elections/${resp && resp[0]?.electionId}/voters` }), 2000)
     },
     onError: (error) => console.error(error.message)
   });
 
 const editMutation = useMutation({
     mutationFn: updateVoterFn,
-    onSuccess: () => {
+    onSuccess: (resp:any) => {
+      alert(JSON.stringify(resp))
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
+      setTimeout(()=> navigate({ to:  `/admin/elections/${resp && resp[0]?.electionId}/voters` }), 2000)
     },
     onError: (error) => console.error(error.message)
 });
@@ -79,8 +82,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
           data: formData,
         });
       }
-     setSubmitSuccess(true);
-     setTimeout(()=> navigate({ to:  '/admin/voters' }), 2000)
+    //  setSubmitSuccess(true);
+    //  setTimeout(()=> navigate({ to:  '/admin/voters' }), 2000)
 
   } catch (err) {
     console.error(err);

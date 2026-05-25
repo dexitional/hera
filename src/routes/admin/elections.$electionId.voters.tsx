@@ -8,21 +8,22 @@ import {
   Smartphone
 } from "lucide-react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { deleteVoterFn, getVotersFn, inviteVoterFn, inviteVotersFn, uploadVotersFn } from "#/server/tenant-elections";
+import { deleteVoterFn, getVotersByElectionFn, getVotersFn, inviteVoterFn, inviteVotersFn, uploadVotersFn } from "#/server/tenant-elections";
 import * as XLSX from 'xlsx';
 import { generateSixDigitCode } from "#/lib/utils";
 
 
-const electionsQueryOptions = () => ({
+const electionsQueryOptions = (electionId: any) => ({
   queryKey: ['voters-admin'],
-  queryFn: () => getVotersFn(),
+  queryFn: () => getVotersByElectionFn({ data: electionId }),
 });
 
 
-export const Route = createFileRoute("/admin/voters/")({
+export const Route = createFileRoute("/admin/elections/$electionId/voters")({
   component: VotersDirectory,
-  loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(electionsQueryOptions());
+  loader: async ({ context,params }) => {
+    const { electionId } = params; 
+    await context.queryClient.ensureQueryData(electionsQueryOptions(electionId));
   },
   pendingComponent: () => (
     <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
@@ -34,9 +35,9 @@ export const Route = createFileRoute("/admin/voters/")({
 function VotersDirectory() {
   
   const queryClient = useQueryClient();
-  const { data }:any = useSuspenseQuery(electionsQueryOptions());
+  const { electionId } = Route.useParams(); 
+  const { data }:any = useSuspenseQuery(electionsQueryOptions(electionId));
   
-  const electionId = data && data[0].elections.id;
   const voters:any = data?.map((r: any) => ({ 
     id: r?.voters?.id,
     name: r?.voters?.name,
@@ -48,6 +49,7 @@ function VotersDirectory() {
     isVerified: r?.voters?.isVerified,
     hasVoted: r?.voters?.hasVoted,
   }))
+
 
   
   // const [voters, setVoters] = useState<VoterRecord[]>(INITIAL_VOTERS);
@@ -74,7 +76,7 @@ function VotersDirectory() {
     mutationFn: deleteVoterFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
-      return redirect({ to: '/admin/voters' })
+      return redirect({ to: `/admin/elections/${electionId}/voters` })
     },
     onError: (error: any) => console.error(error.message)
   });
@@ -83,7 +85,7 @@ function VotersDirectory() {
     mutationFn: inviteVoterFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
-      return redirect({ to: '/admin/voters' })
+      return redirect({ to: `/admin/elections/${electionId}/voters` })
     },
     onError: (error: any) => console.error(error.message)
   });
@@ -92,7 +94,7 @@ function VotersDirectory() {
     mutationFn: inviteVotersFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
-      return redirect({ to: '/admin/voters' })
+      return redirect({ to: `/admin/elections/${electionId}/voters` })
     },
     onError: (error: any) => console.error(error.message)
   });
@@ -101,7 +103,7 @@ function VotersDirectory() {
     mutationFn: uploadVotersFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
-      return redirect({ to: '/admin/voters' })
+      return redirect({ to: `/admin/elections/${electionId}/voters` })
     },
     onError: (error: any) => console.error(error.message)
   });
@@ -141,20 +143,21 @@ function VotersDirectory() {
         const rawJson = XLSX.utils.sheet_to_json<any>(worksheet);
         // Sanitize and format the raw rows for your Arkesel Payload
         const sanitizedJson = rawJson.map((row) => {
-          let rawPhone = String(row.phone || '').trim();
+          let rawPhone = String(row?.phone || '').trim();
               rawPhone = rawPhone.replace(/[\s\-\(\)]/g, '');
           const cleanPhone = rawPhone.startsWith('233') ? "0"+(rawPhone.slice(3)) : rawPhone;
 
           return {
             username: row.username,
-            name: row.name,
-            phoneNumber: cleanPhone || null,
-            electionId,
+            name: row.name?.trim(),
+            phoneNumber: cleanPhone || '0000000000',
+            electionId: Number(electionId),
             inviteToken: generateSixDigitCode(),
-            email:`${row.username}@internal.local`
+            email: row?.email ? row?.email?.trim() : `${row?.username?.replaceAll(" ","")}@vote.local`
           };
         });
 
+        //console.log(sanitizedJson);
         importExcelMutation.mutate({ data: sanitizedJson } as any);
         
       } catch (error) {
@@ -181,7 +184,13 @@ function VotersDirectory() {
             </p>
           </div>
           
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-col md:flex-row items-center gap-3 shrink-0">
+
+            <button
+              className="flex items-center gap-2 bg-[#E3F09B] text-black text-xs font-bold hover:bg-zinc-800 hover:text-white border border-zinc-800 px-3.5 py-2 rounded-lg transition-all"
+            >
+             <span>{voters?.length} Voters</span>
+            </button>
             {/* Send Bulk Invite */}
             <button
               onClick={handleInviteVoters}
@@ -311,6 +320,7 @@ function VotersDirectory() {
 
                       {/* Row Action Blocks: Edit and Delete Buttons */}
                       <td className="px-6 py-4 align-middle text-right">
+                      { !voter.hasVoted && (<>
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleInviteVoter(voter.id)}
@@ -326,14 +336,16 @@ function VotersDirectory() {
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </Link>
-                          <button
-                            onClick={() => handleDeleteVoter(voter.id)}
-                            title="Delete Record"
-                            className="p-1.5 rounded text-zinc-500 hover:text-red-400 hover:bg-red-950/20 transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                         
+                            <button
+                              onClick={() => handleDeleteVoter(voter.id)}
+                              title="Delete Record"
+                              className="p-1.5 rounded text-zinc-500 hover:text-red-400 hover:bg-red-950/20 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                         </div>
+                        </>)}
                       </td>
 
                     </tr>

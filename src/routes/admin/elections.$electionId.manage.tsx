@@ -225,7 +225,7 @@ function ManageElectionConsole() {
                   <Plus className="w-3.5 h-3.5" /> <span>Add New Voter</span>
                 </Link>
                 <Link
-                  to="/admin/voters"
+                  to={`/admin/elections/${election?.id}/voters`}
                   className="inline-flex items-center justify-center w-10 h-8 rounded-lg border border-zinc-800 bg-[#0a192a]/50 text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
                   title="Open Voters Directory"
                 >

@@ -1,11 +1,11 @@
 import { createServerFn } from '@tanstack/react-start';
 import { elections, positions, candidates, voters, electionVotes } from '../db/schema';
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { db } from '../db';
 import { BUCKET_NAME, s3Client } from '#/lib/s3';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
-import { stripCountryCode } from '#/lib/utils';
+import { chunkArray, stripCountryCode } from '#/lib/utils';
 import { authMiddleware } from '#/lib/middleware';
 import moment from 'moment';
 
@@ -18,14 +18,14 @@ export const getElectionsFn = createServerFn({ method: 'GET'})
     const admin:any = context?.user;
     const resp = await db.select()
     .from(elections)
-    .where(eq(elections.adminId, admin.id));
+    .where(eq<any>(elections.adminId, admin.id));
     
     return resp;
 });
 
 export const getElectionFn = createServerFn({ method: 'GET'}).handler( 
   async ({ data: electionId }: any) => {
-    return await db.select().from(elections).where(eq(elections.id, electionId));
+    return await db.select().from(elections).where(eq<any>(elections.id, electionId));
   }
 );
 
@@ -35,7 +35,7 @@ export const getElectionDataFn = createServerFn({ method: 'GET'}).handler(
   try {
     // Queries database matching positions to your raw election id parameter
     const ballotData:any = await db.query.positions.findMany({
-      where: eq(positions.electionId, electionId),
+      where: eq<any>(positions.electionId, electionId),
       orderBy: [asc(positions.order)],
       with: {
         candidates: {
@@ -74,7 +74,7 @@ export const getActiveElectionsFn = createServerFn({ method: 'GET'}).handler(
   async () => {
     return await db.select()
     .from(elections)
-    .where(eq(elections.isActive, true));
+    .where(eq<any>(elections.isActive, true));
 });
 
 
@@ -188,7 +188,7 @@ export const updateElectionFn = createServerFn({ method: 'POST'}).handler(
           startAt: new Date(data.get("startAt") as string) ,
           endAt: new Date(data.get("endAt") as string),
           ...(finalAvatarUrl && { imageUrl: finalAvatarUrl })
-        }).where(eq(elections.id, data.get("id") as number)).returning();
+        }).where(eq<any>(elections.id, data.get("id") as number)).returning();
 
         console.log("resp", resp);
 
@@ -202,7 +202,7 @@ export const updateElectionFn = createServerFn({ method: 'POST'}).handler(
 
 export const deleteElectionFn = createServerFn({ method: 'POST'}).handler( 
   async ({ data: electionId }: any) => {
-    return await db.delete(elections).where(eq(elections.id, electionId)).returning();
+    return await db.delete(elections).where(eq<any>(elections.id, electionId)).returning();
   }
 );
 
@@ -213,10 +213,10 @@ export const getElectionOverview = createServerFn({
 })
   .handler(async ({ data: electionId }): Promise<any> => {
     // 1. Fetch primary election properties from the 'elections' table core node
-    const [electionRecord] = await db
+    const [electionRecord]: any = await db
       .select()
       .from(elections)
-      .where(eq(elections.id, electionId));
+      .where(eq<any>(elections.id, electionId));
 
     if (!electionRecord) {
       throw new Error(`Election resource instance with ID [${electionId}] was not discovered.`);
@@ -228,31 +228,31 @@ export const getElectionOverview = createServerFn({
       [candidatesCountResult],
       [votersCountResult],
       [votesCountResult],
-    ] = await Promise.all([
+    ]:any = await Promise.all([
       // Count positions linked to this election instance
       db
         .select({ count: sql<number>`count(${positions.id})::int` })
         .from(positions)
-        .where(eq(positions.electionId, electionId)),
+        .where(eq<any>(positions.electionId, electionId)),
 
       // Count candidates linked to this election by joining through positions
       db
         .select({ count: sql<number>`count(${candidates.id})::int` })
         .from(candidates)
-        .innerJoin(positions, eq(candidates.positionId, positions.id))
-        .where(eq(positions.electionId, electionId)),
+        .innerJoin(positions, eq<any>(candidates.positionId, positions.id))
+        .where(eq<any>(positions.electionId, electionId)),
 
       // Count eligible registered voters enrolled for this election index
       db
         .select({ count: sql<number>`count(${voters.id})::int` })
         .from(voters)
-        .where(eq(voters.electionId, electionId)),
+        .where(eq<any>(voters.electionId, electionId)),
 
       // Count total digital cryptographic ballots cast
       db
         .select({ count: sql<number>`count(${electionVotes.id})::int` })
         .from(electionVotes)
-        .where(eq(electionVotes.electionId, electionId)),
+        .where(eq<any>(electionVotes.electionId, electionId)),
     ]);
 
     return {
@@ -261,8 +261,8 @@ export const getElectionOverview = createServerFn({
       title: electionRecord.title,
       description: electionRecord.description,
       // Standardizing JavaScript native Date timestamps cleanly to localized string strings
-      startAt: electionRecord.startAt.toISOString(),
-      endAt: electionRecord.endAt.toISOString(),
+      startAt: electionRecord?.startAt.toISOString(),
+      endAt: electionRecord?.endAt.toISOString(),
       authMode: electionRecord.authMode ?? "OTP",
       isActive: electionRecord.isActive,
       counts: {
@@ -295,19 +295,19 @@ export const getElectionOverview = createServerFn({
         db
           .select()
           .from(elections)
-          .where(eq(elections.id, electionId)),
+          .where(eq<any>(elections.id, electionId)),
   
         // Query 2: Count eligible registered voters enrolled for this election index
         db
           .select({ count: sql<number>`count(${voters.id})::int` })
           .from(voters)
-          .where(eq(voters.electionId, electionId)),
+          .where(eq<any>(voters.electionId, electionId)),
   
         // Query 3: Fetch structural portfolios matching this active election ID
         db
           .select()
           .from(positions)
-          .where(eq(positions.electionId, electionId)),
+          .where(eq<any>(positions.electionId, electionId)),
   
         // Query 4: Aggregate candidate results via outer grouping joins directly inside SQL nodes
         db
@@ -320,9 +320,9 @@ export const getElectionOverview = createServerFn({
             voteCount: sql<number>`count(${electionVotes.id})::int`,
           })
           .from(candidates)
-          .innerJoin(positions, eq(candidates.positionId, positions.id))
-          .leftJoin(electionVotes, eq(electionVotes.candidateId, candidates.id))
-          .where(eq(positions.electionId, electionId))
+          .innerJoin(positions, eq<any>(candidates.positionId, positions.id))
+          .leftJoin(electionVotes, eq<any>(electionVotes.candidateId, candidates.id))
+          .where(eq<any>(positions.electionId, electionId))
           .groupBy(candidates.id, candidates.name, candidates.imageUrl, candidates.positionId, candidates.order)
           .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
   
@@ -335,9 +335,9 @@ export const getElectionOverview = createServerFn({
             createdAt: electionVotes.createdAt,
           })
           .from(electionVotes)
-          .innerJoin(positions, eq(electionVotes.positionId, positions.id))
-          .innerJoin(candidates, eq(electionVotes.candidateId, candidates.id))
-          .where(eq(electionVotes.electionId, electionId))
+          .innerJoin(positions, eq<any>(electionVotes.positionId, positions.id))
+          .innerJoin(candidates, eq<any>(electionVotes.candidateId, candidates.id))
+          .where(eq<any>(electionVotes.electionId, electionId))
           .orderBy(desc(electionVotes.createdAt))
           .limit(15)
       ]);
@@ -415,8 +415,8 @@ export const getElectionOverview = createServerFn({
         
         return await db.select()
         .from(positions)
-        .innerJoin(elections, eq(positions.electionId, elections.id))
-        .where(eq(elections.adminId, admin.id))
+        .innerJoin(elections, eq<any>(positions.electionId, elections.id))
+        .where(eq<any>(elections.adminId, admin.id))
         .orderBy(asc(positions.order), asc(positions.createdAt));
     });
     
@@ -432,9 +432,9 @@ export const getElectionOverview = createServerFn({
             candidatesCount: sql<number>`count(${candidates.id})::int`,
           })
           .from(positions)
-          .innerJoin(elections, eq(positions.electionId, elections.id))
-          .leftJoin(candidates, eq(candidates.positionId, positions.id))
-          .where(eq(elections.adminId, admin.id))
+          .innerJoin(elections, eq<any>(positions.electionId, elections.id))
+          .leftJoin(candidates, eq<any>(candidates.positionId, positions.id))
+          .where(eq<any>(elections.adminId, admin.id))
           .groupBy(positions.id, elections.id)
           .orderBy(asc(positions.id));
       }
@@ -442,7 +442,7 @@ export const getElectionOverview = createServerFn({
 
     export const getPositionFn = createServerFn({ method: 'GET'}).handler( 
       async ({ data: positionId }: any) => {
-        return await db.select().from(positions).where(eq(positions.id, positionId));
+        return await db.select().from(positions).where(eq<any>(positions.id, positionId));
       }
     );
     
@@ -467,13 +467,13 @@ export const getElectionOverview = createServerFn({
           title: data.title, 
           slots: data.slots, 
         })
-        .where(eq(positions.id, data.id)).returning();
+        .where(eq<any>(positions.id, data.id)).returning();
     });
     
     
     export const deletePositionFn = createServerFn({ method: 'POST'}).handler( 
       async ({ data: positionId }: any) => {
-        return await db.delete(positions).where(eq(positions.id, positionId)).returning();
+        return await db.delete(positions).where(eq<any>(positions.id, positionId)).returning();
       }
     );
 
@@ -484,20 +484,20 @@ export const getElectionOverview = createServerFn({
     .middleware([authMiddleware])
     .handler(async ({ context }) => {
         //const admin = { id: '1' };
-        const admin: any = context?.user?.id
+        const admin: any = context?.user
         // const admin = await assertAuthenticatedAdmin();
         return await db.select()
         .from(candidates)
-        .leftJoin(positions, eq(candidates.positionId, positions.id))
-        .leftJoin(elections, eq(positions.electionId, elections.id))
-        .where(eq(elections.adminId, admin.id))
+        .leftJoin(positions, eq<any>(candidates.positionId, positions.id))
+        .leftJoin(elections, eq<any>(positions.electionId, elections.id))
+        .where(eq<any>(elections.adminId, admin.id))
         .orderBy(asc(positions.order), asc(positions.createdAt),asc(candidates.order));
     });
     
     
     export const getCandidateFn = createServerFn({ method: 'GET'}).handler( 
       async ({ data: candidateId }: any) => {
-        return await db.select().from(candidates).where(eq(candidates.id, candidateId));
+        return await db.select().from(candidates).where(eq<any>(candidates.id, candidateId));
       }
     );
     
@@ -602,7 +602,7 @@ export const getElectionOverview = createServerFn({
                isActive: data.get("isActive") as boolean, 
                ...(finalAvatarUrl && { imageUrl: finalAvatarUrl })
              })
-             .where(eq(candidates.id, Number(data.get("id")))).returning();
+             .where(eq<any>(candidates.id, Number(data.get("id")))).returning();
         
         } catch (error) {
           console.log(error)
@@ -612,7 +612,7 @@ export const getElectionOverview = createServerFn({
     
     export const deleteCandidateFn = createServerFn({ method: 'POST'}).handler( 
       async ({ data: candidateId }: any) => {
-        return await db.delete(candidates).where(eq(candidates.id, candidateId)).returning();
+        return await db.delete(candidates).where(eq<any>(candidates.id, candidateId)).returning();
       }
     );
 
@@ -626,8 +626,8 @@ export const getElectionOverview = createServerFn({
         const admin:any = context.user.id;
         return await db.select()
         .from(voters)
-        .innerJoin(elections, eq(positions.electionId, elections.id))
-        .where(eq(elections.adminId, admin.id))
+        .innerJoin(elections, eq<any>(positions.electionId, elections.id))
+        .where(eq<any>(elections.adminId, admin.id))
         .orderBy(asc(positions.order), asc(positions.createdAt));
     });
     
@@ -639,21 +639,126 @@ export const getElectionOverview = createServerFn({
         return await db
           .select()
           .from(voters)
-          .innerJoin(elections, eq(voters.electionId, elections.id))
-          .where(eq(elections.adminId, admin.id))
+          .innerJoin(elections, eq<any>(voters.electionId, elections.id))
+          .where(eq<any>(elections.adminId, admin.id))
           .orderBy(asc(voters.id));
         }
     );
 
+    export const getVotersByElectionFn = createServerFn({ method: 'GET' })
+    .middleware([authMiddleware])
+    .handler(async ({ data: electionId }) => {
+        return await db
+          .select()
+          .from(voters)
+          .innerJoin(elections, eq<any>(voters.electionId, elections.id))
+          .where(eq<any>(elections.id, electionId))
+          .orderBy(asc(voters.id));
+        }
+    );
+
+    // interface FetchVotersParams {
+    //   electionId: number;
+    //   page?: number;
+    //   limit?: number;
+    //   searchQuery?: string;
+    //   statusFilter?: 'ALL' | 'VOTED' | 'PENDING';
+    // }
+    
+    // export async function getVotersByElectionFn({
+    //   electionId,
+    //   page = 1,
+    //   limit = 25,
+    //   searchQuery = '',
+    //   statusFilter = 'ALL',
+    // }: FetchVotersParams) {
+    //   try {
+    //     // 1. Safe Pagination Index Boundary Math
+    //     const sanitizedPage = Math.max(1, page);
+    //     const offset = (sanitizedPage - 1) * limit;
+    
+    //     // 2. Build Dynamic SQL Filters Array
+    //     const conditions: any = [eq(voters.electionId, electionId)];
+    
+    //     // Apply Case-Insensitive Fuzzy Search via ILIKE if search query is provided
+    //     if (searchQuery.trim() !== '') {
+    //       const searchPattern:any = `%${searchQuery.trim()}%`;
+    //       conditions.push(
+    //         or(
+    //           ilike(voters.name, searchPattern),
+    //           ilike(voters.username, searchPattern),
+    //           ilike(voters.email, searchPattern)
+    //         )
+    //       );
+    //     }
+    
+    //     // Apply Has Voted boolean toggle filters
+    //     if (statusFilter === 'VOTED') {
+    //       conditions.push(eq(voters.hasVoted, true));
+    //     } else if (statusFilter === 'PENDING') {
+    //       conditions.push(eq(voters.hasVoted, false));
+    //     }
+    
+    //     // Combine all active database clauses using AND logical evaluation wrapper
+    //     const whereClause = and(...conditions);
+    
+    //     // 3. Run Count Query and Data Row Query Concurrently (Improves Performance)
+    //     const [totalRowsResult, records] = await Promise.all([
+    //       db.select({ total: count() }).from(voters).where(whereClause),
+    //       db
+    //         .select({
+    //           voters: {
+    //             id: voters.id,
+    //             name: voters.name,
+    //             username: voters.username,
+    //             phoneNumber: voters.phoneNumber,
+    //             email: voters.email,
+    //             inviteToken: voters.inviteToken,
+    //             isVerified: voters.isVerified,
+    //             hasVoted: voters.hasVoted,
+    //           },
+    //         })
+    //         .from(voters)
+    //         .where(whereClause)
+    //         .limit(limit)
+    //         .offset(offset),
+    //     ]);
+    
+    //     // 4. Calculate Derived Structural Properties
+    //     const totalItems = totalRowsResult[0]?.total ?? 0;
+    //     const totalPages = Math.ceil(totalItems / limit) || 1;
+    
+    //     return {
+    //       success: true,
+    //       data: records, // Array containing the targeted chunk of 25 items
+    //       meta: {
+    //         totalItems,
+    //         totalPages,
+    //         currentPage: sanitizedPage,
+    //         limit,
+    //       },
+    //     };
+    //   } catch (error: any) {
+    //     console.error('Server error executing getVotersByElectionFn:', error);
+    //     return {
+    //       success: false,
+    //       error: error?.message || 'Failed to fetch election registry data records.',
+    //       data: [],
+    //       meta: { totalItems: 0, totalPages: 1, currentPage: 1, limit },
+    //     };
+    //   }
+    // }
+
+
     export const getVoterFn = createServerFn({ method: 'GET'}).handler( 
       async ({ data: voterId }: any) => {
-        return await db.select().from(voters).where(eq(voters.id, voterId));
+        return await db.select().from(voters).where(eq<any>(voters.id, voterId));
       }
     );
 
     export const getElectionByTagFn = createServerFn({ method: 'GET'}).handler( 
       async ({ data: tag }: any) => {
-        return await db.select().from(elections).where(eq(elections.tag, tag));
+        return await db.select().from(elections).where(eq<any>(elections.tag, tag));
       }
     );
 
@@ -686,7 +791,7 @@ export const getElectionOverview = createServerFn({
           inviteToken: data.inviteToken, 
           isVerified: data.isVerified, 
         })
-        .where(eq(voters.id, data.id)).returning();
+        .where(eq<any>(voters.id, data.id)).returning();
     });
 
 
@@ -696,8 +801,8 @@ export const getElectionOverview = createServerFn({
           const [ voter ] = await db
               .select()
               .from(voters)
-              .innerJoin(elections, eq(voters.electionId, elections.id))
-              .where(and(eq(voters.username, data.username), eq(voters.inviteToken, data.password || data.phone)))
+              .innerJoin(elections, eq<any>(voters.electionId, elections.id))
+              .where(and(eq<any>(voters.username, data.username), eq<any>(voters.inviteToken, data.password || data.phone)))
               .orderBy(asc(voters.id));
           
               console.log(voter);
@@ -719,7 +824,46 @@ export const getElectionOverview = createServerFn({
     export const uploadVotersFn = createServerFn({ method: 'POST'}).handler( 
       async ({ data }: any) => {
         try {
-           return await db.insert(voters).values(data).onConflictDoNothing().returning();
+          // const data = { ... mdata[0] }
+          // const sm = await db.insert(voters)
+          //       .values(data)
+          //        .onConflictDoUpdate({
+          //         target: [voters.electionId, voters.username],
+          //         set: {
+          //           name: sql`EXCLUDED.name`,
+          //           phoneNumber: sql`EXCLUDED.phone_number`,
+          //           username: sql`EXCLUDED.username`,
+          //           email: sql`EXCLUDED.email`,
+          //           inviteToken: sql`EXCLUDED.invite_token`
+          //         },
+          //       })
+          //       // .returning();
+          //       console.log("SM: ", sm);
+          const chunks:any = chunkArray(data, 300);
+          await db.transaction(async (tx) => {
+            for (const chunk of chunks) {
+              console.log("data: ", chunk)
+          
+              const sm = await tx.insert(voters)
+                .values(chunk)
+                .onConflictDoUpdate({
+                  target: [voters.electionId, voters.username],
+                  set: {
+                    name: sql`EXCLUDED.name`,
+                    phoneNumber: sql`EXCLUDED.phone_number`,
+                    username: sql`EXCLUDED.username`,
+                    email: sql`EXCLUDED.email`,
+                    inviteToken: sql`EXCLUDED.invite_token`
+                  },
+                })
+                .returning();
+
+                console.log(sm);
+            }
+          });
+
+          return true;
+
         } catch (error: any) {
           console.log(error.message)
         }
@@ -735,8 +879,8 @@ export const getElectionOverview = createServerFn({
           // Fetch Voter
             const [ rec ] = await db.select()
             .from(voters)
-            .innerJoin(elections, eq(voters.electionId, elections.id))
-            .where(eq(voters.id, voterId));
+            .innerJoin(elections, eq<any>(voters.electionId, elections.id))
+            .where(eq<any>(voters.id, voterId));
 
             // Send Invite Code via SMS
             const phone = rec?.voters?.phoneNumber.replaceAll("+","").replaceAll(" ","0");
@@ -770,7 +914,7 @@ export const getElectionOverview = createServerFn({
               .set({ 
                 isVerified: true, 
               })
-              .where(eq(voters.id, voterId)).returning();
+              .where(eq<any>(voters.id, voterId)).returning();
             }
             
         } catch (error: any) {
@@ -778,7 +922,7 @@ export const getElectionOverview = createServerFn({
           
         }
         
-        //return await db.select().from(voters).where(eq(voters.id, voterId));
+        //return await db.select().from(voters).where(eq<any>(voters.id, voterId));
       }
     );
 
@@ -790,8 +934,8 @@ export const getElectionOverview = createServerFn({
           // Fetch Voter
             const rec = await db.select()
             .from(voters)
-            .innerJoin(elections, eq(voters.electionId, elections.id))
-            .where(eq(elections.id, electionId));
+            .innerJoin(elections, eq<any>(voters.electionId, elections.id))
+            .where(eq<any>(elections.id, electionId));
 
             let mdata: any = {};
             rec.map((r: any) => {
@@ -841,7 +985,7 @@ export const getElectionOverview = createServerFn({
     
     export const deleteVoterFn = createServerFn({ method: 'POST'}).handler( 
       async ({ data: voterId }: any) => {
-        return await db.delete(voters).where(eq(voters.id, voterId)).returning();
+        return await db.delete(voters).where(eq<any>(voters.id, voterId)).returning();
       }
     );
 
@@ -849,63 +993,143 @@ export const getElectionOverview = createServerFn({
 
     // CAST VOTE BALLOT
 
-    interface CastBallotPayload {
-      voterId: number;
-      electionId: number;
-      selections: {
-        positionId: number;
-        candidateId: number;
-        receiptSignature: string;
-      }[];
-    }
+    // interface CastBallotPayload {
+    //   voterId: number;
+    //   electionId: number;
+    //   selections: {
+    //     positionId: number;
+    //     candidateId: number;
+    //     receiptSignature: string;
+    //   }[];
+    // }
     
     
-    export const castBallotServerFn = createServerFn({ method: 'POST' })
-      .inputValidator((payload: CastBallotPayload) => payload)
-      .handler(async ({ data }: any) => {
-        const { voterId, electionId, selections } = data;
+    // export const castBallotServerFn = createServerFn({ method: 'POST' })
+    //   .inputValidator((payload: CastBallotPayload) => payload)
+    //   .handler(async ({ data }: any) => {
+    //     const { voterId, electionId, selections } = data;
     
-        console.log(`Initializing atomic ballot transaction for voter node: ${voterId}`);
+    //     console.log(`Initializing atomic ballot transaction for voter node: ${voterId}`);
     
-        // Execute within an atomic SQL transaction block
-        return await db.transaction(async (tx) => {
+    //     // Execute within an atomic SQL transaction block
+    //     return await db.transaction(async (tx) => {
           
-          // 1. CRITICAL SECURITY GUARD: Verify the user has not already voted
-          const [voterRecord] = await tx
-            .select()
-            .from(voters)
-            .where(and(eq(voters.id, voterId), eq(voters.electionId, electionId)))
-            .limit(1);
+    //       // 1. CRITICAL SECURITY GUARD: Verify the user has not already voted
+    //       const [voterRecord] = await tx
+    //         .select()
+    //         .from(voters)
+    //         .where(and(eq<any>(voters.id, voterId), eq<any>(voters.electionId, electionId)))
+    //         .limit(1);
     
-          if (!voterRecord) {
-            throw new Error('Voter profile configuration not found.');
+    //       if (!voterRecord) {
+    //         throw new Error('Voter profile configuration not found.');
+    //       }
+    
+    //       if (voterRecord.hasVoted) {
+    //         throw new Error('Security Breach: This account token has already cast a ballot.');
+    //       }
+    
+    //       // 2. BULK INSERTS: If the voter didn't completely abstain, map into the db rows
+    //       if (selections.length > 0) {
+    //         const rowsToInsert = selections.map((vote: any) => ({
+    //           electionId: electionId,
+    //           positionId: vote.positionId,
+    //           candidateId: vote.candidateId,
+    //           receiptSignature: vote.receiptSignature,
+    //         }));
+    
+    //         await tx.insert(electionVotes).values(rowsToInsert);
+    //       }
+    
+    //       // 3. FLIP ACCOUNT STATE FLAG: Set hasVoted to true to block double voting
+    //       await tx
+    //         .update(voters)
+    //         .set({ hasVoted: true })
+    //         .where(eq<any>(voters.id, voterId));
+    
+    //       return { 
+    //         success: true, 
+    //         message: "Ballot cleanly parsed and written to immutable transaction log tables." 
+    //       };
+    //     });
+    //   });
+
+
+      interface VoteSelectionInput {
+        positionId: number;
+        candidateId: number | null; // Natively receives 'null' directly from our UI for Abstentions
+        receiptSignature: string;
+      }
+
+      interface CastBallotPayload {
+        voterId: number;
+        electionId: number;
+        selections: VoteSelectionInput[];
+      }
+      
+      export const castBallotServerFn = createServerFn({
+        method: "POST",
+      })
+        .inputValidator((data: unknown) => {
+          // Basic type runtime safety guard structure
+          return data as { data: CastBallotPayload };
+        })
+        .handler(async ({ data }: any) => {
+          console.log("voter data: ", data);
+          const { voterId, electionId, selections } = data;
+      
+          try {
+            // Execute the entire ballot block inside an atomic SQL transaction isolation container
+            const result = await db.transaction(async (tx) => {
+              
+              // 1. Critical Concurrency Guard: Fetch the voter and place an exclusive row-level lock (FOR UPDATE)
+              // This stops two parallel automated fetch cycles from registering rapid spam requests simultaneously
+              const [voterCheck] = await tx
+                .select()
+                .from(voters)
+                .where(
+                  and(
+                    eq<any>(voters.id, voterId),
+                    eq<any>(voters.electionId, electionId)
+                  )
+                )
+                .for('update'); // Exclusive Postgres row lock engine trigger
+      
+              // 2. Fallback defensive structural intercept check
+              if (!voterCheck) {
+                throw new Error("Voter registration identity record not found for this election.");
+              }
+      
+              if (voterCheck.hasVoted) {
+                throw new Error("Security Alert: This voter credential index has already cast a ballot.");
+              }
+      
+              // 3. Batch insert the ballot selections into the database ledger block
+              const ballotPayloads = selections.map((vote: any) => ({
+                electionId: electionId,
+                positionId: vote.positionId,
+                candidateId: vote.candidateId, // If null, writes gracefully to Postgres to log an intentional Abstention
+                receiptSignature: vote.receiptSignature,
+              }));
+      
+              await tx.insert(electionVotes).values(ballotPayloads);
+      
+              // 4. Close and lock the voting gate immediately
+              await tx
+                .update(voters)
+                .set({ hasVoted: true })
+                .where(eq<any>(voters.id, voterId));
+      
+              return { success: true };
+            });
+      
+            return result;
+      
+          } catch (error) {
+            console.error("[CRITICAL DB BALLOT EXCEPTION]:", error);
+            return {
+              success: false,
+              message: error instanceof Error ? error.message : "An unexpected server database transaction error occurred.",
+            };
           }
-    
-          if (voterRecord.hasVoted) {
-            throw new Error('Security Breach: This account token has already cast a ballot.');
-          }
-    
-          // 2. BULK INSERTS: If the voter didn't completely abstain, map into the db rows
-          if (selections.length > 0) {
-            const rowsToInsert = selections.map((vote: any) => ({
-              electionId: electionId,
-              positionId: vote.positionId,
-              candidateId: vote.candidateId,
-              receiptSignature: vote.receiptSignature,
-            }));
-    
-            await tx.insert(electionVotes).values(rowsToInsert);
-          }
-    
-          // 3. FLIP ACCOUNT STATE FLAG: Set hasVoted to true to block double voting
-          await tx
-            .update(voters)
-            .set({ hasVoted: true })
-            .where(eq(voters.id, voterId));
-    
-          return { 
-            success: true, 
-            message: "Ballot cleanly parsed and written to immutable transaction log tables." 
-          };
         });
-      });

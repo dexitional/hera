@@ -16,6 +16,12 @@ export const auth = betterAuth({
     enabled: true,
     autoSignIn: true,
   },
+  advanced: {
+    cookieOptions: {
+      sameSite: "none", 
+      secure: true,
+    }
+  },
   plugins: [
     tanstackStartCookies() // Manages server-side and client-side cookie hydration
   ]

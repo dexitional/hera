@@ -163,7 +163,7 @@ export default function CandidateAdminForm({ data: { data, positions }}: any) {
             <section className="relative mx-auto my-10 max-w-2xl w-full px-4">
               <form id="new-candidate-form" onSubmit={handleSubmit}>
                 <div className="relative">
-                  <div className="bg-zinc-900 rounded-xl border border-zinc-800 shadow-xl mb-4 md:mb-8 overflow-hidden">
+                  <div className="bg-zinc-900 rounded-xl border border-zinc-800 shadow-xl mb-4 md:mb-8 overflow-y-auto">
                     
                     {/* Header */}
                     <div className="bg-[#0a192a]/50 border-b border-zinc-800 flex items-center px-6 py-5">
