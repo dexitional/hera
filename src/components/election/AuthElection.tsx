@@ -75,20 +75,12 @@ export default function AuthElection({ data }: any) {
     <main className="relative">
       <div className="min-h-screen bg-[#0a192a]/50 text-white antialiased font-sans">
         <main className="w-full">
-          <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <section className="w-full max-w-7xl bg-blue-950/10 rounded-4xl mx-auto sm:mt-24 px-4 sm:px-10 lg:px-6 pt-6 sm:pt-6 lg:pt-6 pb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
               
-              {/* Left Side: Marketing/Promo Panel */}
-              <div>
-                <div className="flex items-center gap-3 mb-6"></div>
-                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white mb-6 leading-tight text-center font-sans">
-                {data?.tag?.replaceAll("-"," ")?.toUpperCase()}
-                </h1>
-                <p className="text-lg md:text-xl text-zinc-300 mb-8 text-center max-w-lg">
-                  {data?.title}.
-                </p>
-                <div className="relative my-6 mx-auto py-4 h-40 w-40 flex items-center justify-center text-center">
-                { data.imageUrl && (
+              {/* Logo */}
+              <div className="relative my-6 mx-auto py-4 h-40 w-40 flex items-center justify-center text-center">
+                { data?.imageUrl && (
                     <img
                       alt={data.title}
                       decoding="async"
@@ -100,50 +92,15 @@ export default function AuthElection({ data }: any) {
                     />
                   )}
                 </div>
-                
-
-                <div className="grid grid-cols-1 gap-4 mb-8">
-                  {/* Secure Access */}
-                  {/* <div className="rounded-3xl bg-[#6d28d9]/8 p-6 flex items-center gap-4">
-                    <Group className="w-8 h-8 text-purple-400 shrink-0" />
-                    <div>
-                      <h3 className="text-lg font-bold text-white">Organisation</h3>
-                      <p className="text-sm text-zinc-300">{data?.title}</p>
-                    </div>
-                  </div> */}
-
-                  {/* Community Driven */}
-                  <div className="rounded-3xl bg-[#f59e42]/8 p-6 flex items-center gap-4">
-                    <Calendar className="w-8 h-8 text-orange-400 shrink-0" />
-                    <div>
-                      <h3 className="text-lg font-bold text-white">Period of Voting</h3>
-                      <p className="text-sm text-zinc-300">Opens On: { moment(data?.startAt).format("LLLL") } <br/>Closes On:  { moment(data?.endAt).format("LLLL") }</p>
-                    </div>
-                  </div>
-
-                  {/* Trusted Platform */}
-                  <div className="rounded-3xl bg-[#6d28d9]/8 p-6 flex items-center gap-4">
-                    <Info className="w-8 h-8 text-purple-400 shrink-0" />
-                    {/* <div>
-                      <h3 className="text-lg font-bold text-white">Instructions</h3>
-                      <p className="text-sm text-zinc-300">Please use OTP method to login into the system or portal credentials</p>
-                    </div> */}
-                    <div>
-                      <h3 className="text-lg font-bold text-white">Election Status</h3>
-                      <p className="text-sm text-zinc-300">{data?.status?.toUpperCase() }</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Side: Sign-In Form */}
+              
+              {/*  Login */}
               <div>
                 <div className="bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 rounded-3xl p-8 shadow-xl">
                   <div className="mb-6">
-                    <h2 className="text-2xl font-extrabold text-white mb-2 rel font-sans">
-                      Voter Login
+                    <h2 className="text-xl font-bold tracking-wide text-white mb-2 rel font-sans">
+                      VOTER LOGIN
                     </h2>
-                    <p className="text-zinc-300">Access your account to vote in elections</p>
+                    <p className="text-zinc-400 font-bold text-sm"> {data?.title}</p>
                   </div>
 
                   {/* Google OAuth Button */}
@@ -169,7 +126,7 @@ export default function AuthElection({ data }: any) {
                       <div className="w-full border-t border-slate-600/20"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-[#1c1c24] text-zinc-400 rounded">or</span>
+                      {/* <span className="px-2 bg-[#1c1c24] text-zinc-400 rounded">or</span> */}
                     </div>
                   </div>
 
@@ -244,7 +201,7 @@ export default function AuthElection({ data }: any) {
                       <button 
                         type="submit" 
                         disabled={ data.status && ['staged','ended'].includes(data.status) }
-                        className="w-full px-4 py-3 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                        className="w-full px-4 py-3 bg-[#E3F09B] text-black rounded-xl hover:bg-purple-600 transition-all duration-300 flex items-center justify-center gap-2 group text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                       >
                         Login to Vote
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -264,6 +221,40 @@ export default function AuthElection({ data }: any) {
                   </p> */}
                 </div>
               </div>
+              
+
+              {/* Notice */}
+              <div>
+                <div className="flex items-center gap-3 mb-6">
+                  <h1 className="text-3xl md:text-2xl font-bold tracking-tight text-zinc-300 mb-6 leading-tight text-center font-sans">
+                  {data?.tag?.replaceAll("-"," ")?.toUpperCase()}
+                  </h1>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4 mb-8">
+                     <div className="rounded-xl bg-[#f59e42]/8 py-4 px-6 flex items-center gap-4">
+                      <Calendar className="w-8 h-8 text-orange-400 shrink-0" />
+                      <div>
+                        <h3 className="text-lg font-bold text-white">Period of Voting</h3>
+                        <p className="text-sm text-zinc-300">Opens: { moment(data?.startAt).format("LLL") } <br/>Closes:  { moment(data?.endAt).format("LLL") }</p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl bg-[#6d28d9]/8 py-4 px-6 flex items-center gap-4">
+                      <Info className="w-8 h-8 text-purple-400 shrink-0" />
+                      {/* <div>
+                        <h3 className="text-lg font-bold text-white">Instructions</h3>
+                        <p className="text-sm text-zinc-300">Please use OTP method to login into the system or portal credentials</p>
+                      </div> */}
+                      <div>
+                        <h3 className="text-lg font-bold text-white">Election Status</h3>
+                        <p className="text-sm text-zinc-300">{ data.status == 'staged' ? 'NOT STARTED': data.status == 'started'? 'LIVE & ON-GOING' : 'CLOSED'  }</p>
+                      </div>
+                    </div>
+                
+                </div>
+              </div>
+
 
             </div>
           </section>
