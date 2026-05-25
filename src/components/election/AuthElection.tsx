@@ -207,8 +207,7 @@ export default function AuthElection({ data }: any) {
                     <div>
                       <button 
                         type="submit" 
-                        // disabled={ data.status && ['staged','ended'].includes(data.status) }
-                        disabled={ true }
+                        disabled={ data.status && ['staged','ended'].includes(data.status) }
                         className="w-full px-4 py-3 bg-[#E3F09B] hover:bg-purple-600 disabled:bg-zinc-400 disabled:hover:bg-zinc-400  text-black disabled:text-zinc-100 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 group text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                       >
                         Login to Vote
