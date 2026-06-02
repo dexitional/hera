@@ -12,6 +12,12 @@ export const auth = betterAuth({
       role: "role", 
     },
   },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+    },
+  },
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
@@ -23,6 +29,6 @@ export const auth = betterAuth({
     }
   },
   plugins: [
-    tanstackStartCookies() // Manages server-side and client-side cookie hydration
+    tanstackStartCookies() 
   ]
 } as any);

@@ -43,6 +43,13 @@
       "when": 1779626409520,
       "tag": "0005_nervous_dreadnoughts",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779899401337,
+      "tag": "0006_classy_wendell_vaughn",
+      "breakpoints": true
     }
   ]
 }

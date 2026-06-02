@@ -304,14 +304,14 @@ export default function ElectionAdminForm({ data }: any) {
                                   <button
                                     type="button"
                                     onClick={() => setDropdowns({ authMode: !dropdowns?.authMode })}
-                                    className="flex items-center justify-between rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white hover:bg-zinc-900 text-left text-sm px-3 py-2 h-[36px] w-full focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                                    className="flex items-center justify-between rounded-md border border-zinc-700 bg-[#0a192a] text-white hover:bg-zinc-900 text-left text-sm px-3 py-2 h-[36px] w-full focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
                                   >
                                     <span>{authModeLabels[formData?.authMode]}</span>
                                     <Settings className="h-3.5 h-3.5 text-zinc-500 shrink-0" />
                                   </button>
       
                                   {dropdowns.authMode && (
-                                    <div className="absolute left-0 mt-1 w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 shadow-xl z-50 overflow-hidden divide-y divide-zinc-800">
+                                    <div className="absolute left-0 mt-1 w-full rounded-md border border-zinc-700 bg-[#0a192a] shadow-xl z-50 overflow-hidden divide-y divide-zinc-800">
                                       {Object.keys(authModeLabels).map((key) => (
                                         <button
                                           key={key}

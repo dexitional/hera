@@ -210,13 +210,13 @@ function App() {
                 <h2 className="text-3xl font-extrabold mb-10 text-white text-left">Trusted by Leading Institutions</h2>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                     <div className="rounded-3xl bg-slate-600/10 p-10 flex flex-col items-center justify-center gap-4 shadow-md">
-                        <div className="w-28 h-28 bg-white rounded-2xl flex items-center justify-center p-4">
+                        <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center p-4">
                             <img src="/ucc-logo1.png" alt="University of Cape Coast Logo" className="w-full h-full object-contain"/>
                         </div>
                         <h3 className="text-xl font-extrabold text-white text-center">UCC</h3>
                     </div>
                     <div className="rounded-3xl bg-slate-600/10 p-10 flex flex-col items-center justify-center gap-4 shadow-md">
-                        <div className="w-28 h-28 bg-white rounded-2xl flex items-center justify-center p-4">
+                        <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center p-4">
                             <img src="/esiama-logo.png" alt="University of Cape Coast Logo" className="w-full h-full object-contain"/>
                         </div>
                         <h3 className="text-xl font-extrabold text-white text-center">NMTC - Esiama</h3>

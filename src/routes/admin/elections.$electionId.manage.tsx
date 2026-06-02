@@ -41,6 +41,7 @@ function ManageElectionConsole() {
     endAt: moment(election.endAt).format('LLL'),
   }
   
+  console.log(election)
   const [isLive, setIsLive] = useState(election.isActive);
   // Computes active mathematical voter turnout percentage on runtime execution profiles
   const turnoutPercentage = ((election.counts.votesCast / election.counts.voters) * 100).toFixed(1);
@@ -102,11 +103,11 @@ function ManageElectionConsole() {
             <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono uppercase tracking-wider">
               <Link to="/admin/elections" className="hover:text-purple-400 transition-colors">Elections</Link>
               <span>/</span>
-              <span className="text-zinc-400 select-all">id: {election.tag}</span>
+              <span className="text-zinc-400 select-all">tag: {election.tag}</span>
             </div>
             <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
               <Sliders className="w-5 h-5 text-purple-400" />
-              <span>Group:&nbsp;&nbsp; {election.title}</span>
+              <span>GROUP ::&nbsp;&nbsp; {election.title}</span>
             </h1>
           </div>
 
@@ -133,7 +134,7 @@ function ManageElectionConsole() {
         {/* ================= QUICK STATS DISCOVERY RIBBON ================= */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           
-          {/* <div className="bg-[#0a192a]/50 border border-zinc-800 p-4 rounded-xl">
+          <div className="bg-[#0a192a]/50 border border-zinc-800 p-4 rounded-xl">
             <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Turnout Density</p>
             <h3 className="text-2xl font-black text-white mt-1 font-mono">{!isNaN(parseFloat(turnoutPercentage)) ? turnoutPercentage : 0}%</h3>
             <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-2.5 overflow-hidden border border-zinc-800/40">
@@ -145,7 +146,7 @@ function ManageElectionConsole() {
             <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Total Ballots Cast</p>
             <h3 className="text-2xl font-black text-purple-400 mt-1 font-mono">{election.counts.votesCast.toLocaleString()}</h3>
             <p className="text-[10px] text-zinc-500 mt-2 font-medium">Audited cryptographic receipts</p>
-          </div> */}
+          </div>
 
           <div className="bg-[#0a192a]/50 border border-zinc-800 p-4 rounded-xl">
             <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Timeline Start</p>

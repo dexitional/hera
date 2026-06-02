@@ -1,71 +1,66 @@
-// src/store/authStore.ts
-import { createStore } from '@tanstack/react-store'
+import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
 export interface User {
   id: string
   email: string
   name: string
-} 
+}
 
-export interface AuthState {
+interface AuthState {
   user: User | null
   token: string | null
   isAuthenticated: boolean
+  maskPhone: string | null
+  otp: string | null
+  
+  // Actions
+  loadOtp: (otp: string, maskPhone: string) => void
+  login: (user: User, token: string) => void
+  logout: () => void
+  clearOtp: () => void
 }
 
 const STORAGE_KEY = 'ts_auth_session'
 
-// Helper: Safely load initial persisted state during browser boot
-const getInitialState = (): any => {
-  const defaultState: any = {
-    user: null,
-    token: null,
-    isAuthenticated: false,
-  }
-
-  if (typeof window === 'undefined') return defaultState
-
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    return saved ? JSON.parse(saved) : defaultState
-  } catch (error) {
-    console.error('Failed to parse persisted auth state:', error)
-    return defaultState
-  }
-}
-
-// Initialize the store with local data
-export const authStore:any = createStore<any>({
-  initialState: getInitialState()
-})
-
-// Automatically write changes to localStorage on any store updates
-
-authStore.subscribe(() => {
-    const currentState = authStore.state
-    if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(currentState))
-        } catch (error) {
-          console.error('Failed to persist auth state:', error)
-        }
-      }
-  })
-
-// Dispatchers/Actions remain clean and mutation-free
-export const authActions = {
-  login: (user: User, token: string) => {
-    authStore.setState(() => ({
-      user,
-      token,
-      isAuthenticated: true,
-    }))
-  },
-  logout: () => {
-    authStore.setState(() => ({
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
       user: null,
       token: null,
+      otp: null,
+      maskPhone: null,
       isAuthenticated: false,
-    }))
-  }
+
+      login: (user, token) => set({ user, token, isAuthenticated: true }),
+      logout: () => set({ user: null, token: null, isAuthenticated: false }),
+      loadOtp: (otp, maskPhone) => set({ otp, maskPhone }),
+      clearOtp: () => set({ otp: null, maskPhone: null }),
+    }),
+    {
+      name: STORAGE_KEY,
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+)
+
+/**
+ * Promise-based utility to verify the Zustand store has read from localStorage
+ * inside TanStack Router's beforeLoad hooks.
+ */
+export function waitForHydration(): Promise<AuthState> {
+  return new Promise((resolve) => {
+    // If the storage middleware has initialized on the client, resolve instantly
+    if (useAuthStore.persist.hasHydrated()) {
+      return resolve(useAuthStore.getState())
+    }
+
+    // Otherwise, listen for hydration completion and then resolve
+    const unsub = useAuthStore.persist.onHydrate(() => {
+      setTimeout(() => {
+        unsub()
+        resolve(useAuthStore.getState())
+      }, 0)
+    })
+  })
 }

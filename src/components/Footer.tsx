@@ -5,9 +5,9 @@ export default function Footer() {
       <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20"></div>
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 ">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          <div className="sm:col-span-2 -mt-7 lg:col-span-2">
+          <div className="sm:col-span-2 sm:-mt-7 lg:col-span-2">
             <div className="flex items-center gap-3 mb-2 sm:mb-3">
-              <img src="/logo512.png" alt="Heravote Logo" className="sm:h-20 -ml-3 rounded-xl" />
+              <img src="/logo512.png" alt="Heravote Logo" className="h-14 sm:h-20 -ml-3 rounded-xl" />
             </div>
             <p className="text-sm sm:text-base text-zinc-300 mb-3 sm:mb-4 max-w-md leading-relaxed">
               Secure digital voting platform for awards, elections, and competitions. Create transparent elections and voting events with real-time results.

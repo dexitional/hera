@@ -1,10 +1,7 @@
 import AuthElection from '#/components/election/AuthElection'
-import LiveBallotSimulation from '#/components/election/LiveBallotSimulation'
-import { authStore } from '#/lib/voterStore'
 import { getElectionByTagFn } from '#/server/tenant-elections'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { createFileRoute, Navigate } from '@tanstack/react-router'
-import { useSelector } from '@tanstack/react-store'
+import { createFileRoute, Navigate, redirect } from '@tanstack/react-router'
 import { z } from 'zod'
 
 const searchSchema = z.object({
@@ -22,7 +19,12 @@ const electionsQueryOptions = (tag: any) => ({
 export const Route = createFileRoute('/vote/election')({
   component: RouteComponent,
   validateSearch: searchSchema,
-  beforeLoad: () => {},
+  // beforeLoad: async () => {
+  //   const { isAuthenticated } = authStore.state;
+  //   if (isAuthenticated) {
+  //     throw redirect({ to: '/vote/cast' })
+  //   }
+  // },
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
     const { page } = deps

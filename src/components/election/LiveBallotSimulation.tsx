@@ -2,7 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { 
   CheckCircle2, RotateCcw, 
-  Lock, Award, User, Layers, Fingerprint, AlertCircle, ShieldAlert, Home, 
+  Lock, Award, User, Fingerprint, AlertCircle, ShieldAlert, Home, 
   ShieldCheck
 } from "lucide-react";
 import { castBallotServerFn } from "#/server/tenant-elections";
@@ -40,19 +40,23 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
     setIsSubmitting(true);
     try {
      
-        const formattedSelections: any = Object.entries(selections).map(([positionId, candidateId]) => ({
+      const formattedSelections: any = Object.entries(selections).map(([positionId, candidateId]) => ({
           positionId: parseInt(positionId),
           // Transforms frontend flag value -1 into null for compliance with Drizzle schema
           candidateId: candidateId === -1 ? null : candidateId,
           receiptSignature: `sig_sha256_${crypto.randomUUID().replace(/-/g, "")}`
-        }));
-  
+      }));
 
+      // Check to make sure selections are made for all portfolios
+      if(formattedSelections.length !== ballotPositions.length)
+        throw new Error("Please check your network connection\nReset ballot and reselect candidates.");
+   
+      console.log("Selection Count check: ", formattedSelections.length, ballotPositions.length);
       // 2. Invoke the type-safe RPC action directly over the network network pipeline
       const response = await castBallotServerFn({
          data: {
-          voterId: voter.id,
-          electionId: voter.electionId,
+          voterId: voter?.id,
+          electionId: voter?.electionId,
           selections: formattedSelections
         }
       });
@@ -74,13 +78,13 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
   // If user metadata has structural database parameter flag set to true, block screen instantly
   if (voter?.hasVoted) {
     return (
-      <div className="w-full min-h-screen bg-[#18181b] text-zinc-200 font-sans flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-[#0a192a]/50 border border-red-500/20 rounded-xl p-6 shadow-2xl text-center relative overflow-hidden animate-in zoom-in-95 duration-200">
+      
+      <div className="my-10 mx-auto w-4/5 sm:w-full sm:max-w-md bg-[#0a192a]/50 border border-purple-500/20 rounded-xl p-6 shadow-2xl text-center relative overflow-hidden animate-in zoom-in-95 duration-200">
           
           {/* Accent Danger top layout stripe bar */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 to-amber-500" />
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-600 to-amber-500" />
           
-          <div className="w-12 h-12 rounded-full bg-red-950/30 border border-red-900/30 flex items-center justify-center mx-auto mb-4 text-red-400">
+          <div className="w-12 h-12 rounded-full bg-amber-950/30 border border-amber-900/30 flex items-center justify-center mx-auto mb-4 text-amber-400">
             <ShieldAlert className="w-6 h-6 animate-pulse" />
           </div>
 
@@ -89,7 +93,7 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
           </h2>
           
           <p className="text-xs text-zinc-400 mt-2.5 leading-relaxed">
-            Hello <span className="text-zinc-200 font-semibold">{voter.name}</span>, our security ledger indicates that your credential index <code className="font-mono text-purple-400 bg-zinc-900 px-1 py-0.5 rounded border border-zinc-800">voter_{voter.username}</code> has already executed and signed a final ballot transaction form for this election instance.
+            Hello <span className="text-zinc-200 font-semibold">{voter?.name}</span>, our security ledger indicates that your credential <code className="font-mono text-purple-400 bg-zinc-900 px-1 py-0.5 rounded border border-zinc-800">{voter?.username}</code> has already executed and signed a final ballot transaction form for this election.
           </p>
 
           <div className="mt-6 pt-4 border-t border-zinc-900 flex justify-center">
@@ -102,8 +106,8 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
             </Link>
           </div>
 
-        </div>
       </div>
+      
     );
   }
 
@@ -129,13 +133,13 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* ================= SECURE TERMINAL HEADER ================= */}
-        <div className="bg-[#0a192a]/50 border border-zinc-800 p-4 rounded-xl flex items-center justify-between gap-4 relative z-20">
+        <div className="bg-[#0a192a]/50 border border-zinc-800 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-20">
           <div className="flex items-center gap-3">
             <Lock className="w-4 h-4 text-purple-400" />
             <div>
-              <h1 className="text-sm font-bold text-white tracking-tight">VOTER:: {voter.username}</h1>
+              <h1 className="text-sm font-bold text-white tracking-tight">VOTER:: {voter?.username}</h1>
               <p className="text-[10px] font-mono text-zinc-500 mt-0.5">
-                Voter Name: {voter.name} 
+                Voter Name: {voter?.name} 
               </p>
             </div>
           </div>
@@ -166,7 +170,7 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
               <div key={position.id} className={`w-full transform transition-all duration-500 ease-in-out ${slideTranslateClass}`}>
                 <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-5 space-y-5 shadow-2xl">
                   
-                  <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-900 pb-3">
                     <div className="flex items-center gap-2">
                       <Award className="w-4 h-4 text-purple-400" />
                       <h2 className="text-sm font-bold text-white uppercase tracking-wider text-[11px]">{position.title}</h2>
@@ -233,7 +237,7 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
             <div className="w-full transform transition-all duration-500 ease-in-out translate-x-0 opacity-100 relative z-10 animate-in slide-in-from-right duration-300">
               <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-6 space-y-6 shadow-2xl">
                 
-                <div className="border-b border-zinc-900 pb-3 flex items-center justify-between">
+                <div className="border-b border-zinc-900 pb-3 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
                   <h3 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wider text-[11px]">
                     <Fingerprint className="w-4 h-4 text-purple-400" />
                     <span>Review Final Ballot Selections</span>
@@ -268,7 +272,7 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
                   })}
                 </div>
 
-                <div className="flex items-center justify-between gap-4 border-t border-zinc-600 pt-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-zinc-600 pt-4">
                   <button
                     type="button"
                     onClick={handleResetBallot}
@@ -282,7 +286,7 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
                     type="button"
                     onClick={handleFinalizeVotesSubmit}
                     disabled={isSubmitting}
-                    className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow-xl disabled:opacity-40 transition-all"
+                    className="inline-flex items-center justify-center text-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow-xl disabled:opacity-40 transition-all"
                   >
                     {isSubmitting ? "Signing Ledger..." : "CONFIRM & CAST BALLOT"}
                   </button>

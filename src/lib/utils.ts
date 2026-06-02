@@ -37,7 +37,23 @@ export function convertToFormData(state: Record<string, any>): FormData {
 }
 
 
-export const stripCountryCode = (num: any) => num.startsWith('233') ? num.slice(3) : num;
+export const stripCountryCode = (num: any) => num.startsWith('233') ? num.slice(3) : num.startsWith('00233') ? num.slice(5) : num.startsWith('+233') ? num.slice(4) : num;
+
+export const addCountryCode = (phone: any) => {
+  let rawPhone = String(phone || '').trim();
+  rawPhone = rawPhone.replace(/[\s\-\(\)\+]/g, ''); 
+
+  let cleanPhone = rawPhone;
+  if (rawPhone.startsWith('0')) {
+    cleanPhone = '233' + rawPhone.slice(1); 
+  } else if (rawPhone.startsWith('233')) {
+    cleanPhone = rawPhone;
+  } else if (rawPhone.length === 9) {
+    cleanPhone = '233' + rawPhone; 
+  }
+  return cleanPhone
+}
+
 
 export const generateSixDigitCode = () => {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Omitted easily confused chars like 0, O, 1, I
@@ -70,4 +86,8 @@ export function chunkArray<T>(array: T[], size: number): T[][] {
     chunks.push(array.slice(i, i + size));
   }
   return chunks;
+}
+
+export function maskPhoneNumber(phone: any) {
+  return phone.replace(/(\d{3})\d{4}(\d{3})/, '$1xxxx$2');
 }

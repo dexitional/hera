@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import React, { useState } from "react";
 import { CheckCircle2, ChevronDown, User, Mail, Phone, Key, RefreshCw } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -24,7 +24,7 @@ export default function VoterAdminForm({ data: { data, elections }}: any) {
 
   const [dropdowns, setDropdowns] = useState({ electionId: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitSuccess] = useState(false);
   const isEditMode = data != null;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,7 +49,6 @@ export default function VoterAdminForm({ data: { data, elections }}: any) {
   const createMutation = useMutation({
     mutationFn: createVoterFn,
     onSuccess: (resp: any) => {
-      alert(JSON.stringify(resp))
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
       setTimeout(()=> navigate({ to:  `/admin/elections/${resp && resp[0]?.electionId}/voters` }), 2000)
     },
@@ -59,7 +58,6 @@ export default function VoterAdminForm({ data: { data, elections }}: any) {
 const editMutation = useMutation({
     mutationFn: updateVoterFn,
     onSuccess: (resp:any) => {
-      alert(JSON.stringify(resp))
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
       setTimeout(()=> navigate({ to:  `/admin/elections/${resp && resp[0]?.electionId}/voters` }), 2000)
     },

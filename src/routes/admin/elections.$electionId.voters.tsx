@@ -10,7 +10,7 @@ import {
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { deleteVoterFn, exportVotersToExcelFn, getVotersByElectionFn, getVotersFn, inviteVoterFn, inviteVotersFn, uploadVotersFn } from "#/server/tenant-elections";
 import * as XLSX from 'xlsx';
-import { generateSixDigitCode } from "#/lib/utils";
+import { addCountryCode, generateSixDigitCode } from "#/lib/utils";
 
 
 const electionsQueryOptions = (electionId: any) => ({
@@ -77,7 +77,7 @@ function VotersDirectory() {
     mutationFn: deleteVoterFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
-      return redirect({ to: `/admin/elections/${electionId}/voters` })
+      return redirect({ to: `/admin/elections/${electionId}/voters` } as any)
     },
     onError: (error: any) => console.error(error.message)
   });
@@ -86,7 +86,7 @@ function VotersDirectory() {
     mutationFn: inviteVoterFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
-      return redirect({ to: `/admin/elections/${electionId}/voters` })
+      return redirect({ to: `/admin/elections/${electionId}/voters` } as any)
     },
     onError: (error: any) => console.error(error.message)
   });
@@ -95,7 +95,7 @@ function VotersDirectory() {
     mutationFn: inviteVotersFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
-      return redirect({ to: `/admin/elections/${electionId}/voters` })
+      return redirect({ to: `/admin/elections/${electionId}/voters` } as any)
     },
     onError: (error: any) => console.error(error.message)
   });
@@ -104,7 +104,7 @@ function VotersDirectory() {
     mutationFn: uploadVotersFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
-      return redirect({ to: `/admin/elections/${electionId}/voters` })
+      return redirect({ to: `/admin/elections/${electionId}/voters` } as any)
     },
     onError: (error: any) => console.error(error.message)
   });
@@ -125,7 +125,7 @@ function VotersDirectory() {
 
   const handleInviteVoters = () => {
     if (confirm("Send multiple invitations ?")) {
-      invitesMutation.mutate({ data: electionId });
+      invitesMutation.mutate({ data: electionId } as any);
     }
   };
 
@@ -186,28 +186,27 @@ function VotersDirectory() {
     reader.readAsArrayBuffer(excelFile);
     reader.onload = (e) => {
       try {
+        
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         const rawJson = XLSX.utils.sheet_to_json<any>(worksheet);
+        
         // Sanitize and format the raw rows for your Arkesel Payload
         const sanitizedJson = rawJson.map((row) => {
-          let rawPhone = String(row?.phone || '').trim();
-              rawPhone = rawPhone.replace(/[\s\-\(\)]/g, '');
-          const cleanPhone = rawPhone.startsWith('233') ? "0"+(rawPhone.slice(3)) : rawPhone;
-
+          let cleanPhone = addCountryCode(row.phone);
+          
           return {
             username: row.username,
             name: row.name?.trim(),
-            phoneNumber: cleanPhone || '0000000000',
-            electionId: Number(electionId),
+            phoneNumber: cleanPhone, 
+            electionId: electionId,
             inviteToken: generateSixDigitCode(),
             email: row?.email ? row?.email?.trim() : `${row?.username?.replaceAll(" ","")}@vote.local`
           };
         });
-
-        //console.log(sanitizedJson);
+        // Import Data into Database - voters table
         importExcelMutation.mutate({ data: sanitizedJson } as any);
         
       } catch (error) {
@@ -391,7 +390,7 @@ function VotersDirectory() {
                             <span>Invite</span>
                           </button>
                           <Link
-                            to={`/admin/voters/${voter.id}/edit`}
+                            to={`/admin/voters/${voter?.id}/edit`} 
                             title="Edit Voter Profile"
                             className="p-1.5 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
                           >

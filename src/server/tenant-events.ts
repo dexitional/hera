@@ -1,9 +1,9 @@
 import { authMiddleware } from '#/middleware/authMiddleware';
 import { BUCKET_NAME, s3Client } from '#/lib/s3';
-import { addCountryCode, chunkArray, maskPhoneNumber, stripCountryCode } from '#/lib/utils';
+import { chunkArray, stripCountryCode } from '#/lib/utils';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { createServerFn } from '@tanstack/react-start';
-import { and, asc, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import sharp from 'sharp';
 import { db } from '../db';
 import { candidates, elections, electionVotes, positions, voters } from '../db/schema';
@@ -1109,133 +1109,25 @@ export const updateVoterFn = createServerFn({ method: 'POST' }).middleware([arcj
   });
 
 
-  export const verifyVoterFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-    async ({ data }: any) => {
-      console.log("data: ", data)
-      try {
-        const phoneNumberCode = addCountryCode(data?.phone);
-        const phoneNumberNoCode = stripCountryCode(data?.phone);
+export const verifyVoterFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
+  async ({ data }: any) => {
+    try {
+      const [voter] = await db
+        .select()
+        .from(voters)
+        .innerJoin(elections, eq<any>(voters.electionId, elections.id))
+        .where(and(eq<any>(voters.username, data.username), eq<any>(voters.inviteToken, data.password || data.phone)))
+        .orderBy(asc(voters.id));
 
-        let [voter] = ['credential'].includes(data.authMode)
-        ? await db
-          .select()
-          .from(voters)
-          .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-          .where(
-            and(
-              eq<any>(voters.username, data.username), 
-              eq<any>(voters.inviteToken, data.password),
-              eq<any>(elections.id, data.electionId)
-            )
-          )
-          .orderBy(asc(voters.id))
+      console.log(voter);
 
-        : await db
-          .select()
-          .from(voters)
-          .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-          .where(
-            and(
-              eq<any>(voters.username, data.username),
-              eq<any>(elections.id, data.electionId),
-              or(
-                eq<any>(voters.phoneNumber, phoneNumberCode),
-                eq<any>(voters.phoneNumber, phoneNumberNoCode)
-              )
-            )
-          )
-          .orderBy(asc(voters.id));
+      if (voter) return { success: true, data: voter }
+      return { success: false, data: null }
 
-        // console.log(voter);
-        
-        if (voter){
-          
-          const inviteToken = voter?.voters?.inviteToken || '1234';
-          const isVerified = voter?.voters?.isVerified;
-          const phone = addCountryCode(voter?.voters?.phoneNumber);
-          const fname = voter?.voters?.name?.split(" ")[0];
-          // const username = voter?.voters?.username;
-              
-          // Sent OTP to voter for verification
-          if(data.authMode == 'otp' && !isVerified){
-              const smsPayload: any = {
-                sender: process.env.SMS_SENDER_ID,
-                message: `Hi ${fname}, Your verification OTP is ${inviteToken}. This expires in 15 minutes, Thank you`,
-                recipients: [phone],
-              };
-              const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'api-key': process.env.SMS_API_KEY
-                } as any,
-                body: JSON.stringify(smsPayload)
-              });
-
-              if (!sms.ok) {
-                const errorText = await sms.text();
-                throw new Error(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`);
-              }
-
-              const resp = await sms.json();
-              console.log(resp);
-              if (resp) {
-                await db
-                  .update(voters)
-                  .set({
-                    isVerified: true,
-                    inviteToken
-                  })
-                  .where(eq<any>(voters.id, voter?.voters?.id)).returning();
-                
-                return { success: true, data: voter, otp: inviteToken, maskPhone: maskPhoneNumber(phone) }
-              }
-          
-          } else if(data.authMode == 'otp' && isVerified){
-            return { success: true, data: voter, otp: inviteToken, maskPhone: maskPhoneNumber(phone) }
-          
-          } else {
-            return { success: true, data: voter }
-          }
-        }
-        
-        return { success: false, data: null }
-
-      } catch (error) {
-        console.log(error);
-        return { success: false, data: null }
-      }
-
-  });
-
-
-  export const verifyVoterOtpFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-    async ({ data }: any) => {
-      console.log("data: ", data)
-      try {
-       
-
-        let [voter] = await db
-          .select()
-          .from(voters)
-          .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-          .where(
-            and(
-              eq<any>(voters.username, data.username), 
-              eq<any>(voters.inviteToken, data.otp),
-              eq<any>(elections.id, data.electionId)
-            )
-          )
-          .orderBy(asc(voters.id))
-
-        if (voter)
-          return { success: true, data: voter }
-        return { success: false, data: null }
-
-      } catch (error) {
-        console.log(error);
-        return { success: false, data: null }
-      }
+    } catch (error) {
+      console.log(error);
+      return { success: false, data: null }
+    }
 
   });
 
@@ -1263,6 +1155,13 @@ export const fetchGoogleProfileFromServer = createServerFn({ method: 'POST' })
 
       if (voter) return { success: true, data: voter, message: null }
       return { success: false, data: null, message: 'Voter is not eligible for this election' }
+
+      // setCookie('app_session', 'your-generated-session-token', {
+      //   httpOnly: true,
+      //   secure: true,
+      //   sameSite: 'lax',
+      //   path: '/',
+      // });
 
     } catch (serverError: any) {
       console.error(serverError);

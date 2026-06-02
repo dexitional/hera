@@ -121,6 +121,8 @@ export const elections = pgTable('elections', {
   billPaid: boolean('bill_paid').default(false).notNull(),
   authMode: text('auth_mode'), 
   status: text('status').default('staged').notNull(), 
+  autoStop: boolean('auto_stop').default(false).notNull(),
+  autoSync: boolean('auto_sync').default(false).notNull(),
   makePublic: boolean('make_public').default(false).notNull(),
   showFeed: boolean('show_feed').default(false).notNull(),
   isActive: boolean('is_active'),

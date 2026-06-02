@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Shield, Users, ThumbsUp, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Shield, Users, ThumbsUp, Mail, Lock, ArrowRight, LoaderIcon, Loader2, LoaderCircle } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { authClient } from '#/lib/auth-client';
 
-export default function AuthPage() {
+export default function AuthPage({ error }: any) {
 
   const navigate = useNavigate();
+  const [ loading, setLoading ] = useState(false)
+  const [ msg, setMsg ] = useState(error);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -22,35 +24,60 @@ export default function AuthPage() {
 
   const handleSubmit = async (e:any) => {
     e.preventDefault();
+    setLoading(true)
+
+    try {
+        const { data, error }:any = await authClient.signIn.email({
+            email: formData.email,
+            password: formData.password,
+            rememberMe: formData.rememberMe
+        });
     
-    const { data, error } = await authClient.signIn.email({
-        email: formData.email,
-        password: formData.password,
-        rememberMe: formData.rememberMe
-    });
-
-    console.log(data)
-
-    if (error) {
-      console.error("Authentication failed:", error.message);
-    } else {
-      //   window.location.href = '/admin';
-      navigate({ to: '/admin' })
+        console.log(data)
+    
+        if (error) {
+          setMsg(error?.message);
+          console.error("Authentication failed:", error.message);
+        } else {
+          navigate({ to: '/admin' })
+        }
+    } catch (error: any) {
+        console.error("Authentication failed:", error?.message);
+    } finally {
+        setLoading(false);
     }
+    
   }
   
 
-  const handleGoogleSignIn = () => {
-    alert("working");
-    // Handle Google OAuth logic here
-    console.log('Initiating Google Sign-In');
+  const handleGoogleSignIn = (e: any) => {
+    e.preventDefault();
+    setLoading(true);
+    setTimeout( async() => {
+        await authClient.signIn.social({
+            provider: "google",
+            callbackURL: "/admin",
+            //newUserCallbackURL: "/welcome",  // Newly registered users go here instead
+            // Called if the sign-in process fails
+            onError: (ctx: any) => {
+                setLoading(false);
+                console.error("Sign in failed:", ctx.error.message);
+                alert(`Login error: ${ctx.error.message}`);
+            },
+            // Optional: Called before the request starts
+            onRequest: () => {
+                setLoading(true);
+                console.log("Redirecting to Google...");
+            }
+        } as any);
+    },2000)
   };
 
   
 
   return (
     <main className="relative">
-      <div className="min-h-screen bg-[#18181b] text-white antialiased font-sans">
+      <div className="min-h-screen bg-[#0a192a]/50 text-white antialiased font-sans">
         <main className="w-full">
           <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -109,6 +136,7 @@ export default function AuthPage() {
                   <div className="mb-6">
                     <button 
                       onClick={handleGoogleSignIn}
+                      disabled={loading}
                       type="button"
                       className="w-full px-4 py-3 bg-white text-black rounded-xl hover:bg-zinc-100 transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -116,7 +144,7 @@ export default function AuthPage() {
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                         <path d="M20.945 11a9 9 0 1 1 -3.284 -5.997l-2.655 2.392a5.5 5.5 0 1 0 2.119 6.605h-4.125v-3h7.945"></path>
                       </svg>
-                      Continue with Google
+                      { loading  ? <span className="animate-pulse">Connecting ...</span> : <span>Continue with Google</span> }
                     </button>
                   </div>
 
@@ -126,7 +154,7 @@ export default function AuthPage() {
                       <div className="w-full border-t border-slate-600/20"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-[#1c1c24] text-zinc-400 rounded">or</span>
+                      {/* <span className="px-2 bg-[#1c1c24] text-zinc-400 rounded">or</span> */}
                     </div>
                   </div>
 
@@ -160,6 +188,8 @@ export default function AuthPage() {
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 group-hover:text-purple-400 transition-colors w-4 h-4" />
                     </div>
 
+                    <div className="text-red-500 text-sm " style={{ opacity: 1, transform: "none" }}>{msg}</div>
+
                     {/* Actions Panel */}
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center">
@@ -178,11 +208,21 @@ export default function AuthPage() {
                     <div>
                       <button 
                         type="submit" 
-                        className="w-full px-4 py-3 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                        disabled={loading}
+                        className="w-full px-4 py-3 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-all duration-300 flex items-center justify-center gap-2 group text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                       >
-                        Sign In
-                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </button>
+                        { loading 
+                        ?   <>
+                              <LoaderCircle className="h-4 animate-spin"/>
+                               <span className="animate-pulse">Loading ...</span>
+                            </>
+                        : 
+                            <>
+                               Sign In
+                              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            </>
+                        }
+                        </button>
                     </div>
                   </form>
 

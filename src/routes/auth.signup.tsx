@@ -9,6 +9,8 @@ export const Route = createFileRoute('/auth/signup')({
 
 function RouteComponent() {
 
+  const [ loading, setLoading ] = useState(false)
+  const [ msg, setMsg ] = useState();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -58,14 +60,30 @@ function RouteComponent() {
 
   };
 
-  const handleGoogleSignUp = () => {
-    // Handle Google Registration OAuth logic here
-    console.log('Initiating Google Sign-Up');
+  const handleGoogleSignUp = async(e: any) => {
+    e.preventDefault();
+    
+    await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/admin",
+        newUserCallbackURL: "/welcome",  // Newly registered users go here instead
+        // Called if the sign-in process fails
+        onError: (ctx: any) => {
+            setLoading(false);
+            console.error("Sign in failed:", ctx.error.message);
+            alert(`Login error: ${ctx.error.message}`);
+        },
+        // Optional: Called before the request starts
+        onRequest: () => {
+            setLoading(true);
+            console.log("Redirecting to Google...");
+        }
+    } as any);
   };
 
   return (
     <main className="relative">
-    <div className="min-h-screen bg-[#18181b] text-white antialiased font-sans">
+    <div className="min-h-screen bg-[#0a192a]/50 text-white antialiased font-sans">
       <main className="w-full">
         <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">

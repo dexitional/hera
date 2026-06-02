@@ -16,6 +16,7 @@ import Header from '#/components/Header'
 import Footer from '#/components/Footer'
 import { ErrorComponent } from '@tanstack/react-router'
 import { checkAuthSession } from '#/lib/auth-helper'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 
 
 interface MyRouterContext {
@@ -57,7 +58,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       </div>
     );
   },
-  
+
   beforeLoad: async () => {
     const authState = await checkAuthSession();
     return { user: authState?.user, authenticated: authState?.authenticated };
@@ -74,7 +75,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="__variable_f367f3 __variable_dd5b2f flex flex-col justify-between font-sans antialiased bg-[#0a192a]/60 min-h-screen">
         <Header />
+        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
         {children}
+        </GoogleOAuthProvider>
         <Footer />
         <TanStackDevtools
           config={{

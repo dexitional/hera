@@ -30,19 +30,19 @@ function RouteComponent() {
                       Phone Numbers
                     </h3>
                     <div className="space-y-2 ml-7">
-                      <a href="tel:0246417050" className="block text-zinc-300 hover:text-white transition-colors text-lg">024 641 7050</a>
-                      <a href="tel:0502616100" className="block text-zinc-300 hover:text-white transition-colors text-lg">050 261 6100</a>
+                      <a href="tel:0558641826" className="block text-zinc-300 hover:text-white transition-colors text-lg">055 864 1826</a>
+                      <a href="tel:0277675089" className="block text-zinc-300 hover:text-white transition-colors text-lg">027 767 5089</a>
                     </div>
                   </div>
                 </div>
-                <div className="p-6 space-y-4 md:border-l border-zinc-600/50 border-t border-zinc-600/50 md:border-t-0">
+                <div className="p-6 space-y-4 md:border-l border-zinc-600/50 border-t md:border-t-0">
                   <div>
                     <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="tabler-icon tabler-icon-mail w-5 h-5"><path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10"></path><path d="M3 7l9 6l9 -6"></path></svg>
                       Email Support
                     </h3>
                     <div className="ml-7">
-                      <a href="mailto:support@Heravote.com" className="text-zinc-300 hover:text-white transition-colors text-lg">support@Heravote.com</a>
+                      <a href="mailto:support@Heravote.com" className="text-zinc-300 hover:text-white transition-colors text-lg">support@heravote.com</a>
                     </div>
                   </div>
                 </div>
