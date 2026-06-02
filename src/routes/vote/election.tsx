@@ -29,8 +29,6 @@ export const Route = createFileRoute('/vote/election')({
   loader: async ({ context, deps }) => {
     const { page } = deps
     return await context.queryClient.ensureQueryData(electionsQueryOptions(page));
-    
-  //  return { page, token }
   },
 
 })

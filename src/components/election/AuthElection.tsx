@@ -440,7 +440,8 @@ export default function AuthElection({ data }: any) {
                             <button 
                               type='button'
                               onClick={() => useAuthStore.getState().clearOtp()}
-                              className="cursor-pointer text-purple-400 hover:text-purple-300 transition-colors font-medium" href="/auth/signup">
+                              className="cursor-pointer text-purple-400 hover:text-purple-300 transition-colors font-medium"
+                            >
                               Go back
                             </button>
                           </p>
@@ -463,7 +464,6 @@ export default function AuthElection({ data }: any) {
                 </div>
               </div>
               
-
               {/* Notice */}
               <div className="grid grid-cols-1 gap-4 mb-8">
                      <div className="rounded-xl bg-[#f59e42]/8 py-4 px-6 flex items-center gap-4">
