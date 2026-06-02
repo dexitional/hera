@@ -5,7 +5,7 @@ import { TokensIcon } from '@radix-ui/react-icons';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowRight, Calendar, Info, Lock, Phone, User } from 'lucide-react';
+import { ArrowRight, Calendar, Info, LoaderCircle, Lock, Phone, User } from 'lucide-react';
 import moment from 'moment';
 import { useState } from 'react';
 
@@ -32,9 +32,7 @@ export default function AuthElection({ data }: any) {
       const dt = resp?.data;
       const maskPhone = resp?.maskPhone;
       const dbOtp: any = resp?.otp;
-      // console.log("resp: ", resp);
-      // console.log("dt: ", dt);
-
+     
       if(dt){
         // Initialize Store
         const user:any = {
@@ -54,12 +52,14 @@ export default function AuthElection({ data }: any) {
         }
 
         if(user.electionId != data.id){
+          setLoading(false);
           setMsg(`You are not a permitted voter !`);
           setTimeout(() => setMsg(null),5000);
           return false;
         }
 
         if(user.hasVoted){
+          setLoading(false);
           setMsg(`Voter securely submitted a ballot!`);
           setTimeout(() => setMsg(null),5000);
           return false;
@@ -67,7 +67,7 @@ export default function AuthElection({ data }: any) {
         
         // Is the current time inside the valid election bounds?
         if (rightNow < user.electionStart || rightNow > user.electionEnd) {
-          // alert("Election is inactive !");
+          setLoading(false);
           setMsg("Election is inactive !");
           setTimeout(() => setMsg(null),5000)
           return false;
@@ -87,22 +87,24 @@ export default function AuthElection({ data }: any) {
           navigate({ to: `/vote/cast`});
           queryClient.invalidateQueries({ queryKey: ['voter-page'] });
         }
-       
+        setLoading(false);
+      
       } else {
-        // alert("Invalid credentials. Try again !")
+        setLoading(false);
         setMsg("Invalid credentials. try again !");
         setTimeout(() => setMsg(null),5000)
       }
     },
-     onError: (error) => console.error(error.message)
+    onError: (error) => {
+      setLoading(false);
+      console.error(error.message)
+    }
   });
 
   const verifyMutation = useMutation({
     mutationFn: verifyVoterOtpFn,
     onSuccess: async (resp) => {
       const dt = resp?.data;
-      console.log("dt: ", dt);
-
       if(dt){
         // Initialize Store
         const user:any = {
@@ -124,18 +126,20 @@ export default function AuthElection({ data }: any) {
         if(user.electionId != data.id){
           setMsg(`You are not a permitted voter !`);
           setTimeout(() => setMsg(null),5000);
+          setLoading(false);
           return false;
         }
 
         if(user.hasVoted){
           setMsg(`Voter securely submitted a ballot!`);
           setTimeout(() => setMsg(null),5000);
+          setLoading(false);
           return false;
         }
         
         // Is the current time inside the valid election bounds?
         if (rightNow < user.electionStart || rightNow > user.electionEnd) {
-          // alert("Election is inactive !");
+          setLoading(false);
           setMsg("Election is inactive !");
           setTimeout(() => setMsg(null),5000)
           return false;
@@ -144,18 +148,21 @@ export default function AuthElection({ data }: any) {
         const token = generateTokenCode()
         // authActions.login(user,token);
         useAuthStore.getState().login(user, token);
-        useAuthStore.getState().clearOtp();
+        setTimeout(() => useAuthStore.getState().clearOtp(), 3000);
         navigate({ to: `/vote/cast`});
         queryClient.invalidateQueries({ queryKey: ['voter-page'] });
       
       } else {
-        // alert("Invalid credentials. Try again !")
+        setLoading(false);
         setMsg("Invalid OTP. try again !");
         setTimeout(() => setMsg(null),5000)
       }
       
     },
-     onError: (error) => console.error(error.message)
+     onError: (error) => {
+      setLoading(false);
+      console.error(error.message)
+     }
   });
 
   const handleInputChange = (e:any) => {
@@ -168,6 +175,7 @@ export default function AuthElection({ data }: any) {
 
   const handleSubmit = (e:any) => {
     e.preventDefault();
+    setLoading(true);
     loginMutation.mutate({ data: formData } as any)
   };
 
@@ -376,11 +384,20 @@ export default function AuthElection({ data }: any) {
                       <div>
                         <button 
                           type="submit" 
-                          disabled={ data.status && ['staged','ended'].includes(data.status) }
+                          disabled={ loading || (data.status && ['staged','ended'].includes(data.status)) }
                           className="w-full px-4 py-3 bg-[#E3F09B] hover:bg-purple-600 disabled:bg-zinc-400 disabled:hover:bg-zinc-400  text-black disabled:text-zinc-100 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 group text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                         >
-                          Login to Vote
-                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                           { loading 
+                            ?   <>
+                                  <LoaderCircle className="h-4 animate-spin"/>
+                                  <span className="animate-pulse">Authenticating ...</span>
+                                </>
+                            : 
+                                <>
+                                   Login to Vote
+                                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                </>
+                            }
                         </button>
                       </div>
 
@@ -402,12 +419,21 @@ export default function AuthElection({ data }: any) {
                           <div>
                             <button 
                               onClick={() => verifyMutation.mutate({ data: { otp: formData.otp, electionId: formData.electionId, username: formData.username }} as any) }
-                              disabled={ data.status && ['staged','ended'].includes(data.status) }
+                              disabled={ loading || (data.status && ['staged','ended'].includes(data.status)) }
                               className="w-full px-4 py-3 bg-[#E3F09B] hover:bg-purple-600 disabled:bg-zinc-400 disabled:hover:bg-zinc-400  text-black disabled:text-zinc-100 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 group text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                             >
-                              Verify to Vote
-                              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                            </button>
+                               { loading 
+                                ?   <>
+                                      <LoaderCircle className="h-4 animate-spin"/>
+                                      <span className="animate-pulse">Verifying ...</span>
+                                    </>
+                                : 
+                                    <>
+                                      Verify to Vote
+                                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                    </>
+                                }
+                              </button>
                           </div>
                           <p className="text-center text-sm text-zinc-400 ">
                             Can't verify voter?{' '}&nbsp;&nbsp;
