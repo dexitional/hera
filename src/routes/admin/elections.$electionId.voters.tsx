@@ -102,11 +102,15 @@ function VotersDirectory() {
 
   const importExcelMutation = useMutation({
     mutationFn: uploadVotersFn,
-    onSuccess: () => {
+    onSuccess: (result: any) => {
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
-      return redirect({ to: `/admin/elections/${electionId}/voters` } as any)
+      if (result?.message) alert(result.message);
+      return redirect({ to: `/admin/elections/${electionId}/voters` } as any);
     },
-    onError: (error: any) => console.error(error.message)
+    onError: (error: any) => {
+      console.error(error.message);
+      alert(error?.message || "Voter import failed");
+    },
   });
 
 
@@ -195,15 +199,16 @@ function VotersDirectory() {
         
         // Sanitize and format the raw rows for your Arkesel Payload
         const sanitizedJson = rawJson.map((row) => {
-          let cleanPhone = addCountryCode(row.phone);
-          
+          const username = String(row.username ?? "").replace(/\s+/g, "").trim();
+          const cleanPhone = addCountryCode(row.phone);
+
           return {
-            username: row.username,
+            username,
             name: row.name?.trim(),
-            phoneNumber: cleanPhone, 
+            phoneNumber: cleanPhone,
             electionId: electionId,
             inviteToken: generateSixDigitCode(),
-            email: row?.email ? row?.email?.trim() : `${row?.username?.replaceAll(" ","")}@vote.local`
+            email: row?.email?.trim() || `${username}@vote.local`,
           };
         });
         // Import Data into Database - voters table

@@ -59,13 +59,60 @@ export const generateSixDigitCode = () => {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Omitted easily confused chars like 0, O, 1, I
   let result = "";
   const randomValues = new Uint32Array(6);
-  window.crypto.getRandomValues(randomValues);
-  
+  globalThis.crypto.getRandomValues(randomValues);
+
   for (let i = 0; i < 6; i++) {
     result += chars[randomValues[i] % chars.length];
   }
   return result;
 };
+
+export type VoterImportRow = {
+  electionId: string | number;
+  username?: string;
+  name?: string;
+  phoneNumber?: string;
+  email?: string;
+  inviteToken?: string;
+};
+
+/** Dedupe by election+username and ensure unique invite tokens before bulk insert. */
+export function prepareVotersForBulkImport<T extends VoterImportRow>(rows: T[]) {
+  const byKey = new Map<string, T>();
+  const duplicateUsernames: string[] = [];
+  const usedTokens = new Set<string>();
+
+  for (const row of rows) {
+    const username = String(row.username ?? "").replace(/\s+/g, "").trim();
+    if (!username) continue;
+
+    const electionId = String(row.electionId);
+    const key = `${electionId}:${username.toLowerCase()}`;
+
+    if (byKey.has(key)) {
+      duplicateUsernames.push(username);
+    }
+
+    let inviteToken = row.inviteToken || generateSixDigitCode();
+    while (usedTokens.has(inviteToken)) {
+      inviteToken = generateSixDigitCode();
+    }
+    usedTokens.add(inviteToken);
+
+    byKey.set(key, {
+      ...row,
+      username,
+      name: typeof row.name === "string" ? row.name.trim() : row.name,
+      email: row.email?.trim() || `${username}@vote.local`,
+      inviteToken,
+    } as T);
+  }
+
+  return {
+    voters: Array.from(byKey.values()),
+    duplicateUsernames: [...new Set(duplicateUsernames)],
+  };
+}
 
 
 export const generateTokenCode = () => {
