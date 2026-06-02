@@ -1,6 +1,6 @@
 import { authMiddleware } from '#/middleware/authMiddleware';
 import { BUCKET_NAME, s3Client } from '#/lib/s3';
-import { addCountryCode, chunkArray, maskPhoneNumber, stripCountryCode } from '#/lib/utils';
+import { addCountryCode, chunkArray, maskPhoneNumber, prepareVotersForBulkImport, stripCountryCode } from '#/lib/utils';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { createServerFn } from '@tanstack/react-start';
 import { and, asc, desc, eq, inArray, or, sql } from 'drizzle-orm';
@@ -1272,37 +1272,52 @@ export const fetchGoogleProfileFromServer = createServerFn({ method: 'POST' })
 
 export const uploadVotersFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
   async ({ data }: any) => {
+    const { voters: rows, duplicateUsernames } = prepareVotersForBulkImport(
+      Array.isArray(data) ? data : [],
+    );
+
+    if (rows.length === 0) {
+      throw new Error("No valid voters to import. Each row needs a username.");
+    }
+
     try {
-      const chunks: any = chunkArray(data, 1000);
+      const chunks = chunkArray(rows, 500);
+      let imported = 0;
+
       await db.transaction(async (tx) => {
         for (const chunk of chunks) {
-          console.log("data: ", chunk)
-
-          const sm = await tx.insert(voters)
+          const inserted = await tx
+            .insert(voters)
             .values(chunk)
             .onConflictDoUpdate({
               target: [voters.electionId, voters.username],
               set: {
                 name: sql`EXCLUDED.name`,
                 phoneNumber: sql`EXCLUDED.phone_number`,
-                username: sql`EXCLUDED.username`,
                 email: sql`EXCLUDED.email`,
-                inviteToken: sql`EXCLUDED.invite_token`
               },
             })
-            .returning();
+            .returning({ id: voters.id });
 
-          console.log(sm);
+          imported += inserted.length;
         }
       });
 
-      return true;
-
+      return {
+        success: true,
+        imported,
+        duplicateUsernames,
+        message:
+          duplicateUsernames.length > 0
+            ? `Imported ${imported} voter(s). Skipped ${duplicateUsernames.length} duplicate username(s) in the spreadsheet (kept the last row for each): ${duplicateUsernames.join(", ")}.`
+            : `Imported ${imported} voter(s).`,
+      };
     } catch (error: any) {
-      console.log(error.message)
+      const detail = error?.cause?.detail ?? error?.detail;
+      console.error("uploadVotersFn error:", detail ?? error?.message ?? error);
+      throw new Error(detail || error?.message || "Voter import failed");
     }
-
-  }
+  },
 );
 
 
