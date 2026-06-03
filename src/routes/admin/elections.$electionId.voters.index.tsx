@@ -1,14 +1,13 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import React, { useState } from "react";
 import { 
-  UserPlus, Upload, Search, Filter, Edit2, Trash2, 
-  CheckCircle, XCircle, ChevronDown, FileSpreadsheet, X, 
+  UserPlus, Upload, Search, Edit2, Trash2, 
+  CheckCircle, XCircle, FileSpreadsheet, X, 
   Loader2,
-  Sliders,
   Smartphone
 } from "lucide-react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { deleteVoterFn, exportVotersToExcelFn, getVotersByElectionFn, getVotersFn, inviteVoterFn, inviteVotersFn, uploadVotersFn } from "#/server/tenant-elections";
+import { deleteVoterFn, exportVotersToExcelFn, getVotersByElectionFn, inviteVoterFn, inviteVotersFn, uploadVotersFn } from "#/server/tenant-elections";
 import * as XLSX from 'xlsx';
 import { addCountryCode, generateSixDigitCode } from "#/lib/utils";
 
@@ -19,7 +18,7 @@ const electionsQueryOptions = (electionId: any) => ({
 });
 
 
-export const Route = createFileRoute("/admin/elections/$electionId/voters")({
+export const Route = createFileRoute("/admin/elections/$electionId/voters/")({
   component: VotersDirectory,
   loader: async ({ context,params }) => {
     const { electionId } = params; 

@@ -4,12 +4,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createPositionFn, updatePositionFn } from "#/server/tenant-elections";
 
-export default function PositionAdminForm({ data: { data, elections }}: any) {
+export default function PositionAdminForm({ data: { data, elections, electionId } }: any) {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState<any>({
-      electionId: data?.electionId || elections && elections[0]?.id, 
+      // electionId: data?.electionId || elections && elections[0]?.id, 
+      electionId: electionId, 
       title: data?.title,
       slots: data?.slots,
       order: data?.order,
@@ -73,7 +74,7 @@ export default function PositionAdminForm({ data: { data, elections }}: any) {
             });
           }
          setSubmitSuccess(true);
-         setTimeout(()=> navigate({ to:  '/admin/positions' }), 2000)
+         setTimeout(()=> navigate({ to:  `/admin/elections/${electionId}/positions` }), 2000)
 
       } catch (err) {
         console.error(err);
@@ -129,7 +130,7 @@ export default function PositionAdminForm({ data: { data, elections }}: any) {
                       <div className="divide-y divide-zinc-800/60 bg-zinc-900/40">
                         
                         {/* 1. Election ForeignKey Lookup Dropdown */}
-                        <div className="px-6 py-5">
+                        {/* <div className="px-6 py-5">
                           <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-start">
                             <div className="col-span-4 flex flex-col pt-1.5">
                               <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
@@ -162,7 +163,7 @@ export default function PositionAdminForm({ data: { data, elections }}: any) {
                               )}
                             </div>
                           </div>
-                        </div>
+                        </div> */}
   
                         {/* 2. Position Title Input Row (Not Null) */}
                         <div className="px-6 py-5">

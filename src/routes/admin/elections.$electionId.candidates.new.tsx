@@ -4,10 +4,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 
 
-export const Route = createFileRoute("/admin/candidates/new")({
+const electionsQueryOptions = (electionId: any) => ({
+  queryKey: ['positions-list', electionId ],
+  queryFn: () => getPositionsListFn({ data: electionId }),
+});
+
+export const Route = createFileRoute("/admin/elections/$electionId/candidates/new")({
   component: CreateCandidate,
-  loader: async () => {
-    let positions = await getPositionsListFn();
+  loader: async ({ params, context }) => {
+    const electionId = params.electionId;
+    let positions = await context.queryClient.ensureQueryData(electionsQueryOptions(electionId));
     positions = positions?.map((r:any) => ({
         ...r.positions
     }))

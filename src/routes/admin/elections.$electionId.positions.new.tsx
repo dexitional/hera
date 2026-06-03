@@ -4,10 +4,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 
 
-export const Route = createFileRoute("/admin/positions/new")({
+export const Route = createFileRoute("/admin/elections/$electionId/positions/new")({
   component: CreatePosition,
-  loader: async () => {
-    const elections = await getElectionsFn();
+  loader: async ({params}) => {
+    const electionId = params.electionId;
+    const elections = await getElectionsFn({ data: electionId });
     return { elections }
   },
   pendingComponent: () => (
@@ -18,6 +19,8 @@ export const Route = createFileRoute("/admin/positions/new")({
 });
 
 function CreatePosition() {
+  const { electionId } = Route.useParams(); 
   const { elections  }:any = Route.useLoaderData();
-  return <PositionAdminForm data={{ elections }} />;
+  
+  return <PositionAdminForm data={{ elections, electionId }} />;
 }

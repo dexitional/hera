@@ -3,11 +3,17 @@ import { getCandidateFn, getPositionsListFn } from "#/server/tenant-elections";
 import { Loader2 } from "lucide-react";
 import CandidateAdminForm from "#/components/election/CandidateAdminForm";
 
-export const Route = createFileRoute("/admin/candidates/$candidateId/edit")({
+const electionsQueryOptions = (electionId: any) => ({
+  queryKey: ['positions-list', electionId ],
+  queryFn: () => getPositionsListFn({ data: electionId }),
+});
+
+export const Route = createFileRoute("/admin/elections/$electionId/candidates/$candidateId/edit")({
   component: EditCandidate,
-  loader: async ({ params }:any) => {
+  loader: async ({ params, context }:any) => {
     const candidateId = params.candidateId;
-    let positions = await getPositionsListFn();
+    const electionId = params.electionId;
+    let positions = await context.queryClient.ensureQueryData(electionsQueryOptions(electionId));
     positions = positions?.map((r:any) => ({
         ...r.positions
     }))

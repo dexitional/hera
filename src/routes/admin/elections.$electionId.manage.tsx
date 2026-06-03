@@ -197,13 +197,13 @@ function ManageElectionConsole() {
               
               <div className="flex items-center gap-2 mt-6 border-t border-zinc-900 pt-4 w-full">
                 <Link
-                  to="/admin/positions/new"
+                  to={`/admin/elections/${election?.id}/positions/new`}
                   className="flex-1 inline-flex items-center justify-center gap-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs py-2 rounded-lg font-medium transition-all"
                 >
                   <Plus className="w-3.5 h-3.5" /> <span>Add New Position</span>
                 </Link>
                 <Link
-                  to="/admin/positions"
+                  to={`/admin/elections/${election?.id}/positions`}
                   className="inline-flex items-center justify-center w-10 h-8 rounded-lg border border-zinc-800 bg-[#0a192a]/50 text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
                   title="View Registry List"
                 >
@@ -233,13 +233,13 @@ function ManageElectionConsole() {
               
               <div className="flex items-center gap-2 mt-6 border-t border-zinc-900 pt-4 w-full">
                 <Link
-                  to="/admin/candidates/new"
+                  to={`/admin/elections/${election?.id}/candidates/new`}
                   className="flex-1 inline-flex items-center justify-center gap-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs py-2 rounded-lg font-medium transition-all"
                 >
                   <Plus className="w-3.5 h-3.5" /> <span>Add New Candidate</span>
                 </Link>
                 <Link
-                  to="/admin/candidates"
+                  to={`/admin/elections/${election?.id}/candidates`}
                   className="inline-flex items-center justify-center w-10 h-8 rounded-lg border border-zinc-800 bg-[#0a192a]/50 text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
                   title="Open Candidates Grid"
                 >

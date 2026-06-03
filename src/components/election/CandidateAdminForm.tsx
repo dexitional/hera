@@ -122,8 +122,6 @@ export default function CandidateAdminForm({ data: { data, positions }}: any) {
           });
         }
       setSubmitSuccess(true);
-      setTimeout(()=> navigate({ to:  '/admin/candidates' }), 2000)
-
     } catch (err) {
       console.error(err);
     } finally {
@@ -140,17 +138,28 @@ export default function CandidateAdminForm({ data: { data, positions }}: any) {
         <p className="text-sm text-zinc-400 mt-2">
           Candidate <span className="text-purple-400 font-semibold">"{formData.name}"</span> record has been saved.
         </p>
-        <button
-          onClick={() => {
-            setSubmitSuccess(false);
-            setSelectedFile(null);
-            setUploadProgress(0);
-            setFormData({ positionId: positions && positions[0].id, name: "", imageUrl: "" });
-          }}
-          className="mt-6 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-white rounded-lg transition-colors"
-        >
-          Add Another Candidate
-        </button>
+        <div className="flex flex-col sm:flex-row sm:justify-center gap-4">
+          <button
+              onClick={() => {
+                navigate({ to:  `/admin/elections/${positions && positions[0]?.electionId}/candidates` })
+              }}
+              className="mt-6 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-white rounded-lg transition-colors"
+          >
+            Goto Candidates
+          </button>
+          <button
+            onClick={() => {
+              setSubmitSuccess(false);
+              setSelectedFile(null);
+              setUploadProgress(0);
+              setFormData({ positionId: positions && positions[0].id, name: "", imageUrl: "" });
+              navigate({ to:  `/admin/elections/${positions && positions[0]?.electionId}/candidates/new` })
+            }}
+            className="mt-6 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-white rounded-lg transition-colors"
+          >
+            Add Another Candidate
+          </button>
+        </div>
       </div>
     );
   }

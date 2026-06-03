@@ -11,16 +11,17 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 import { Link } from "@tanstack/react-router";
 
 
-const electionsQueryOptions = () => ({
-  queryKey: ['candidates-admin'],
-  queryFn: () => getCandidatesFn(),
+const electionsQueryOptions = (electionId: any) => ({
+  queryKey: ['candidates-admin', electionId],
+  queryFn: () => getCandidatesFn({ data: electionId }),
 });
 
 
-export const Route = createFileRoute("/admin/candidates/")({
+export const Route = createFileRoute("/admin/elections/$electionId/candidates/")({
   component: CandidatesDirectory,
-  loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(electionsQueryOptions());
+  loader: async ({ context, params }) => {
+    const electionId = params.electionId;
+    return await context.queryClient.ensureQueryData(electionsQueryOptions(electionId));
   },
   pendingComponent: () => (
     <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
@@ -31,7 +32,8 @@ export const Route = createFileRoute("/admin/candidates/")({
 function CandidatesDirectory() {
 
   const queryClient = useQueryClient();
-  const { data }:any = useSuspenseQuery(electionsQueryOptions());
+  const { electionId } = Route.useParams(); 
+  const { data }:any = useSuspenseQuery(electionsQueryOptions(electionId));
   const candidates:any = data?.map((r: any) => ({ 
     id: r?.candidates.id,
     teaser: r?.candidates.teaser,
@@ -75,7 +77,7 @@ function CandidatesDirectory() {
     mutationFn: deleteCandidateFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['candidates-admin'] });
-      return redirect({ to: '/admin/candidates' })
+      return redirect({ to: `/admin/elections/${electionId}/candidates` })
     },
     onError: (error: any) => console.error(error.message)
   });
@@ -100,13 +102,13 @@ function CandidatesDirectory() {
           </div>
           
           <div className="flex items-center gap-3 shrink-0">
-            <a
-              href="/admin/candidates/new"
+            <Link
+              to={`/admin/elections/${electionId}/candidates/new`}
               className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs px-3.5 py-2 rounded-lg font-medium shadow-md transition-all"
             >
               <UserPlus className="w-4 h-4" />
               <span>Enroll Candidate</span>
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -239,7 +241,7 @@ function CandidatesDirectory() {
                       <td className="px-6 py-4 align-middle text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Link
-                            to={`/admin/candidates/${candidate?.id}/edit`}
+                            to={`/admin/elections/${electionId}/candidates/${candidate?.id}/edit`}
                             title="Edit Candidate Meta"
                             className="p-1.5 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
                           >

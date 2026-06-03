@@ -37,11 +37,11 @@ export function convertToFormData(state: Record<string, any>): FormData {
 }
 
 
-export const stripCountryCode = (num: any) => num.startsWith('233') ? num.slice(3) : num.startsWith('00233') ? num.slice(5) : num.startsWith('+233') ? num.slice(4) : num;
+export const stripCountryCode = (num: any) => num?.toString()?.startsWith('233') ? num?.toString()?.slice(3) : num?.toString()?.startsWith('00233') ? num?.toString()?.slice(5) : num?.toString()?.startsWith('+233') ? num?.toString()?.slice(4) : num?.toString();
 
 export const addCountryCode = (phone: any) => {
   let rawPhone = String(phone || '').trim();
-  rawPhone = rawPhone.replace(/[\s\-\(\)\+]/g, ''); 
+  rawPhone = rawPhone?.replace(/[\s\-\(\)\+]/g, ''); 
 
   let cleanPhone = rawPhone;
   if (rawPhone.startsWith('0')) {

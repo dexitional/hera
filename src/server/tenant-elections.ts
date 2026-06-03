@@ -814,19 +814,19 @@ export const exportElectionResultsToFormatExcelFn = createServerFn({ method: 'GE
 
 export const getPositionsListFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware,authMiddleware])
-  .handler(async ({ context }) => {
+  .handler(async ({ data: electionId, context }) => {
     const admin: any = context?.user
 
     return await db.select()
       .from(positions)
       .innerJoin(elections, eq<any>(positions.electionId, elections.id))
-      .where(eq<any>(elections.adminId, admin.id))
+      .where(and(eq<any>(elections.adminId, admin.id), eq<any>(elections.id, electionId)))
       .orderBy(asc(positions.order), asc(positions.createdAt));
   });
 
 export const getPositionsFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware,authMiddleware])
-  .handler(async ({ context }) => {
+  .handler(async ({ data: electionId, context }) => {
     const admin: any = context?.user
 
     return await db
@@ -838,11 +838,10 @@ export const getPositionsFn = createServerFn({ method: 'GET' })
       .from(positions)
       .innerJoin(elections, eq<any>(positions.electionId, elections.id))
       .leftJoin(candidates, eq<any>(candidates.positionId, positions.id))
-      .where(eq<any>(elections.adminId, admin.id))
+      .where(and(eq<any>(elections.adminId, admin.id), eq<any>(elections.id, electionId)))
       .groupBy(positions.id, elections.id)
       .orderBy(asc(positions.id));
-  }
-  );
+});
 
 export const getPositionFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
   async ({ data: positionId }: any) => {
@@ -886,15 +885,13 @@ export const deletePositionFn = createServerFn({ method: 'POST' }).middleware([a
 
 export const getCandidatesFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware,authMiddleware])
-  .handler(async ({ context }) => {
-    //const admin = { id: '1' };
+  .handler(async ({ data: electionId, context }) => {
     const admin: any = context?.user
-    // const admin = await assertAuthenticatedAdmin();
     return await db.select()
       .from(candidates)
       .leftJoin(positions, eq<any>(candidates.positionId, positions.id))
       .leftJoin(elections, eq<any>(positions.electionId, elections.id))
-      .where(eq<any>(elections.adminId, admin.id))
+      .where(and(eq<any>(elections.adminId, admin.id), eq<any>(elections.id, electionId)))
       .orderBy(asc(positions.order), asc(positions.createdAt), asc(candidates.order));
   });
 
