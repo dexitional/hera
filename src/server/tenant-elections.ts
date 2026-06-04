@@ -1540,8 +1540,10 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
               message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken} . Try and Visit ${electionUrl} to vote!`,
               recipients: [phone],
             };
+
+            console.log("smsPayload: ", smsPayload)
             
-            const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/template/send`, {
+            const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
