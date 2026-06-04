@@ -1522,7 +1522,7 @@ export const inviteVoterFn = createServerFn({ method: 'GET' }).middleware([arcje
         .where(eq<any>(voters.id, voterId));
 
       // Send Invite Code via SMS
-      const phone = rec?.voters?.phoneNumber.replaceAll("+", "").replaceAll(" ", "0");
+      const phone = addCountryCode(rec?.voters?.phoneNumber);
       const inviteToken = rec?.voters?.inviteToken;
       const fname = rec?.voters?.name?.split(" ")[0];
       const username = rec?.voters?.username;
@@ -1532,6 +1532,12 @@ export const inviteVoterFn = createServerFn({ method: 'GET' }).middleware([arcje
         message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken} . Visit ${electionUrl} to vote!`,
         recipients: [phone],
       };
+      console.log("Single Invite: ", smsPayload)
+      
+      if (!phone.length) {
+        throw new Error(`Phone number is Invalid, ${phone}`);
+      }
+      
       const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
         method: 'POST',
         headers: {
