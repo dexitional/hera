@@ -341,8 +341,8 @@ function VotersDirectory() {
                       </td>
 
                       {/* Phone metadata info */}
-                      <td className="px-6 py-4 align-middle text-xs font-mono text-zinc-400">
-                        {voter?.phoneNumber}
+                      <td className={`px-6 py-4 align-middle text-xs font-mono text-zinc-400 ${!voter?.phoneNumber && 'italic'}`}>
+                        {voter?.phoneNumber || '-- No Phone Number --'}
                       </td>
 
                       {/* 6-Digit invite token element slot */}
