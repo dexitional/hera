@@ -297,32 +297,10 @@ export const getElectionOverview = createServerFn({
       [electionRecord],
       [votersCountResult],
       rawPositions,
-      rawCandidateTallies,
     ] = await Promise.all([
       db.select().from(elections).where(eq<any>(elections.id, electionId)),
       db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq<any>(voters.electionId, electionId)),
       db.select().from(positions).where(eq<any>(positions.electionId, electionId)),
-      db
-        .select({
-          id: candidates.id,
-          name: candidates.name,
-          imageUrl: candidates.imageUrl,
-          positionId: candidates.positionId,
-          order: candidates.order,
-          voteCount: sql<number>`count(${electionVotes.id})::int`,
-        })
-        .from(candidates)
-        .innerJoin(positions, eq(candidates.positionId, positions.id))
-        .leftJoin(
-          electionVotes,
-          and(
-            eq(electionVotes.candidateId, candidates.id),
-            eq(electionVotes.positionId, candidates.positionId)
-          )
-        )
-        .where(eq<any>(positions.electionId, electionId))
-        .groupBy(candidates.id, candidates.name, candidates.imageUrl, candidates.positionId, candidates.order)
-        .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`))
     ]);
 
     if (!electionRecord) {
@@ -363,22 +341,27 @@ export const getElectionOverview = createServerFn({
         }
     })
 
-    
     const result = await db.transaction(async (tx:any) => {
-
-      // Run Bulk Inserts
-      await tx.insert(electionVotes).values(ballotPayloads);
-
-     // Run Batch/ Bulk Deletes
-     
-
-      return { success: true };
+       // Run Bulk Inserts
+       await tx.insert(electionVotes).values(insertData);
+       // Run Batch/ Bulk Deletes
+       await tx.batch(
+          deleteData?.map((r: any) =>  tx
+          .delete(electionVotes)
+          .where(
+            and(
+              eq(electionVotes.positionId, r.positionId),
+              eq(electionVotes.electionId, r.electionId),
+            )
+          )
+          .orderBy(asc(electionVotes.createdAt))
+          .limit(1)
+        
+       ));
+       return { success: true };
     });
-
-
-  
-  
-
+       
+     return result;
   });
   
 
@@ -1815,7 +1798,6 @@ export const castBallotServerFn = createServerFn({
 
         return { success: true };
       });
-
       return result;
 
     } catch (error) {
