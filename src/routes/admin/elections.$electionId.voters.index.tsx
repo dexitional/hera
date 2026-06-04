@@ -5,7 +5,8 @@ import {
   CheckCircle, XCircle, FileSpreadsheet, X, 
   Loader2,
   Smartphone,
-  MessageCircleWarning
+  MessageCircleWarning,
+  PhoneForwarded
 } from "lucide-react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { deleteVoterFn, exportVotersToExcelFn, getVotersByElectionFn, inviteVoterFn, inviteVotersFn, uploadVotersFn } from "#/server/tenant-elections";
@@ -343,8 +344,11 @@ function VotersDirectory() {
 
                       {/* Phone metadata info */}
                       <td className={`px-6 py-4 align-middle text-xs font-mono ${voter?.phoneNumber.length < 9 ? 'text-red-300 font-bold italic' : 'text-zinc-400'} `}>
-                        <div className="inline-flex justify-center items-center gap-2">
-                          <MessageCircleWarning className="w-3 h-3" /> 
+                        <div className="inline-flex justify-center items-center gap-1">
+                          { voter?.phoneNumber.length < 9 
+                            ? <MessageCircleWarning className="w-3 h-3" /> 
+                            : <PhoneForwarded className="w-3 h-3" /> 
+                          }
                           <span className={`${voter?.phoneNumber.length < 9 ? 'text-red-300 font-bold italic' : 'text-zinc-400'} `}>{voter?.phoneNumber || '-- No Phone Number --'} </span>
                         </div>
                       </td>
