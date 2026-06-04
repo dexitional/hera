@@ -343,7 +343,7 @@ function VotersDirectory() {
 
                       {/* Phone metadata info */}
                       <td className={`px-6 py-4 align-middle text-xs font-mono ${voter?.phoneNumber.length < 9 ? 'text-red-300 font-bold italic' : 'text-zinc-400'} `}>
-                        <div className="inline-flex justify-center items-center">
+                        <div className="inline-flex justify-center items-center gap-2">
                           <MessageCircleWarning className="w-3 h-3" /> 
                           <span className={`${voter?.phoneNumber.length < 9 ? 'text-red-300 font-bold italic' : 'text-zinc-400'} `}>{voter?.phoneNumber || '-- No Phone Number --'} </span>
                         </div>

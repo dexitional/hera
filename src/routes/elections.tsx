@@ -129,7 +129,7 @@ function RouteComponent() {
                         Opens : {moment(row.startAt).format("LLL")}
                       </button>
                       <button className="px-1 py-1 bg-slate-600/20 hover:bg-slate-600/30 text-zinc-300  transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-medium border border-slate-600/30">
-                        Closes : {moment(row.startAt).format("LLL")}
+                        Closes : {moment(row.endAt).format("LLL")}
                       </button>
                     </p>
                   </div>
