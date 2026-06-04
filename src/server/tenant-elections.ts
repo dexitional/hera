@@ -344,7 +344,10 @@ export const getElectionOverview = createServerFn({
           const diff = votersCountResult?.count - positionTally?.count;
           for(let i = 0; i < diff; i++){
             insertData.push({
-
+              electionId: electionId,
+              positionId: pos.id,
+              candidateId: null, 
+              receiptSignature: `sig_sha256_${crypto.randomUUID().replace(/-/g, "")}`
             })
           }
 
@@ -353,11 +356,24 @@ export const getElectionOverview = createServerFn({
           const diff = positionTally?.count - votersCountResult?.count;
           for(let i = 0; i < diff; i++){
             deleteData.push({
-              
+              positionId: pos.id,
+              electionId: electionId,
             })
           }
         }
     })
+
+    
+    const result = await db.transaction(async (tx:any) => {
+
+      // Run Bulk Inserts
+      await tx.insert(electionVotes).values(ballotPayloads);
+
+     // Run Batch/ Bulk Deletes
+     
+
+      return { success: true };
+    });
 
 
   
@@ -883,8 +899,6 @@ export const exportElectionResultsToFormatExcelFn = createServerFn({ method: 'GE
       };
     }
   });
-
-
 
 
 
