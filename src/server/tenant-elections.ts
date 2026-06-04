@@ -287,6 +287,84 @@ export const getElectionOverview = createServerFn({
   });
 
 
+  export const syncElectionData = createServerFn({
+    method: "GET",
+  })
+  .middleware([arcjetMiddleware])
+  .handler(async ({ data: electionId }): Promise<any> => {
+
+    const [
+      [electionRecord],
+      [votersCountResult],
+      rawPositions,
+      rawCandidateTallies,
+    ] = await Promise.all([
+      db.select().from(elections).where(eq<any>(elections.id, electionId)),
+      db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq<any>(voters.electionId, electionId)),
+      db.select().from(positions).where(eq<any>(positions.electionId, electionId)),
+      db
+        .select({
+          id: candidates.id,
+          name: candidates.name,
+          imageUrl: candidates.imageUrl,
+          positionId: candidates.positionId,
+          order: candidates.order,
+          voteCount: sql<number>`count(${electionVotes.id})::int`,
+        })
+        .from(candidates)
+        .innerJoin(positions, eq(candidates.positionId, positions.id))
+        .leftJoin(
+          electionVotes,
+          and(
+            eq(electionVotes.candidateId, candidates.id),
+            eq(electionVotes.positionId, candidates.positionId)
+          )
+        )
+        .where(eq<any>(positions.electionId, electionId))
+        .groupBy(candidates.id, candidates.name, candidates.imageUrl, candidates.positionId, candidates.order)
+        .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`))
+    ]);
+
+    if (!electionRecord) {
+      throw new Error(`Election instance [${electionId}] not found.`);
+    }
+
+    const insertData: any = [];
+    const deleteData: any = [];
+    
+    rawPositions.map(async (pos) => {
+     
+        const [positionTally] = await db
+          .select({ count: sql<number>`count(${electionVotes.id})::int` })
+          .from(electionVotes)
+          .where(eq(electionVotes.positionId, pos.id));
+
+        if(positionTally?.count < votersCountResult?.count){
+          // Turnout Greater than Candidates vote Total - Increase Candidates Vote Total
+          const diff = votersCountResult?.count - positionTally?.count;
+          for(let i = 0; i < diff; i++){
+            insertData.push({
+
+            })
+          }
+
+        } else if (positionTally?.count > votersCountResult?.count){
+          // Turnout Less than Candidates vote Total - Reduce Candidates Vote Total
+          const diff = positionTally?.count - votersCountResult?.count;
+          for(let i = 0; i < diff; i++){
+            deleteData.push({
+              
+            })
+          }
+        }
+    })
+
+
+  
+  
+
+  });
+  
 
 export const getUnifiedElectionTelemetry = createServerFn({
   method: "GET",
@@ -1143,7 +1221,6 @@ export const updateVoterFn = createServerFn({ method: 'POST' }).middleware([arcj
           )
           .orderBy(asc(voters.id));
 
-        // console.log(voter);
         
         if (voter){
           
@@ -1233,7 +1310,6 @@ export const updateVoterFn = createServerFn({ method: 'POST' }).middleware([arcj
         console.log(error);
         return { success: false, data: null }
       }
-
   });
 
 
@@ -1373,7 +1449,7 @@ export const inviteVoterFn = createServerFn({ method: 'GET' }).middleware([arcje
 );
 
 
-export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
+export const inviteVoters2Fn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
   async ({ data: electionId }: any) => {
     try {
       // Fetch Voter
@@ -1397,11 +1473,8 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
         sender: process.env.SMS_SENDER_ID,
         message: `Hello <%fname%>, Please vote with Username: <%username%>, Password: <%inviteToken%> . Try and Visit ${electionUrl} to vote!`,
         recipients: mdata,
-        //sandbox: true
       };
-
-      // console.log("smsPayload: ", smsPayload)
-      // let sms = { ok: 1, text: () => { }, status: 200 }
+      
       const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/template/send`, {
         method: 'POST',
         headers: {
@@ -1421,8 +1494,7 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
         const { data: mt } = resp;
         const sentInvites = mt?.map((r: any) => ("0" + stripCountryCode(r.recipient)));
         const sentInvitesCodes = mt?.map((r: any) => (r.recipient));
-        // console.log("sentInvites: ", sentInvites)
-        // console.log("sentInvitesCodes: ", sentInvitesCodes)
+        
         return await db.update(voters).set({ isVerified: true }).where(
           and(
             eq(voters.electionId, electionId),
@@ -1433,6 +1505,74 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
           )
         ).returning();
       }
+
+    } catch (error: any) {
+      console.log(error.message)
+    }
+  }
+);
+
+export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
+  async ({ data: electionId }: any) => {
+    try {
+      // Fetch Voter
+      const rec = await db.select()
+        .from(voters)
+        .innerJoin(elections, eq<any>(voters.electionId, elections.id))
+        .where(eq<any>(elections.id, electionId));
+
+      let mdata: any = {};
+      let resp2 = await Promise.all(rec.map( async (r: any) => {
+
+            const phone = addCountryCode(r?.voters?.phoneNumber);
+            const inviteToken = r?.voters?.inviteToken;
+            const fname = r?.voters?.name?.split(" ")[0];
+            const username = r?.voters?.username;
+            //mdata[phone] = { fname, username, inviteToken }
+
+            // Send Invite Code via SMS
+            const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${rec[0]?.elections?.tag}`
+            const smsPayload: any = {
+              sender: process.env.SMS_SENDER_ID,
+              message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken} . Try and Visit ${electionUrl} to vote!`,
+              recipients: [phone],
+            };
+            
+            const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/template/send`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'api-key': process.env.SMS_API_KEY
+              } as any,
+              body: JSON.stringify(smsPayload)
+            });
+
+            if (!sms.ok) {
+              const errorText = await sms.text();
+              throw new Error(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`);
+            }
+
+            const resp = await sms.json();
+            if (resp) {
+              const { data: mt } = resp;
+              const sentInvites = mt?.map((r: any) => ("0" + stripCountryCode(r.recipient)));
+              const sentInvitesCodes = mt?.map((r: any) => (r.recipient));
+              
+              return await db.update(voters).set({ isVerified: true }).where(
+                and(
+                  eq(voters.electionId, electionId),
+                  or(
+                    inArray(voters.phoneNumber, sentInvites),
+                    inArray(voters.phoneNumber, sentInvitesCodes),
+                  )
+                )
+              ).returning();
+            }
+            return null;
+      }))
+
+      // Return SMS response
+      return resp2;
 
     } catch (error: any) {
       console.log(error.message)

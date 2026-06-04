@@ -5,24 +5,24 @@ import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 import viteReact from '@vitejs/plugin-react'
 
-// const config = defineConfig({
-//   resolve: { tsconfigPaths: true },
-//   plugins: [devtools(), tailwindcss(), tanstackStart(), viteReact()],
-// })
-
 export default defineConfig({
-   // Configure the local development server headers
-   server: {
+  // Configure the local development server headers
+  server: {
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
     },
   },
   plugins: [
+    // Devtools MUST remain the first plugin in your configuration
+    devtools(), 
     nitro({
-      preset: 'node-server', // Or 'vercel', 'cloudflare-workers', etc.
+      preset: 'node-server',
+      // Explicitly activate the H3 WebSocket engine inside Nitro
+      features: {
+        websocket: true, 
+      },
     }),
     tanstackStart(), 
-    devtools(), 
     tailwindcss(), 
     viteReact(),
   ],

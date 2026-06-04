@@ -111,7 +111,6 @@ function RouteComponent() {
                   <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent"></div>
                   <div className="absolute top-4 right-4 z-10">
                     <div className={`px-3 py-0.5 ${['staged','ended'].includes(row.status) || (rightNow < row.startAt || rightNow > row.endAt) ? 'bg-zinc-300 text-zinc-700' : 'bg-purple-500 animate-pulse text-white' }  rounded-full text-xs font-black shadow-lg`}>
-                      {/* { row.status == 'staged' ? 'NOT STARTED': row.status == 'started'? 'LIVE & ON-GOING' : 'CLOSED' } */}
                       { (rightNow < row.startAt || rightNow > row.endAt) ? "INACTIVE" : row.status == 'staged' ? 'NOT STARTED': row.status == 'started'? 'LIVE & ON-GOING' : 'CLOSED' }
                     </div>
                   </div>
@@ -163,7 +162,7 @@ function RouteComponent() {
                         Live Feed
                       </button> */}
                       <Link
-                            to={`/vote/election?page=${row.tag}`}
+                            to={`/vote/election?page=${encodeURIComponent(row.tag)}`}
                             className="group relative flex h-10 w-full cursor-pointer items-center justify-start gap-2.5 rounded-lg bg-[#E3F09B] pl-4 font-semibold text-sm text-[#131313] shadow-[5px_5px_10px_rgba(0,0,0,0.116)] transition-all duration-500 hover:bg-[#c0ff14] active:scale-[0.97]"
                       >
                           <Link2 
