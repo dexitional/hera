@@ -6,7 +6,8 @@ import {
   Loader2,
   Smartphone,
   MessageCircleWarning,
-  PhoneForwarded
+  PhoneForwarded,
+  PhoneCallIcon
 } from "lucide-react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { deleteVoterFn, exportVotersToExcelFn, getVotersByElectionFn, inviteVoterFn, inviteVotersFn, uploadVotersFn } from "#/server/tenant-elections";
@@ -344,10 +345,10 @@ function VotersDirectory() {
 
                       {/* Phone metadata info */}
                       <td className={`px-6 py-4 align-middle text-xs font-mono ${voter?.phoneNumber.length < 9 ? 'text-red-300 font-bold italic' : 'text-zinc-400'} `}>
-                        <div className="inline-flex justify-center items-center gap-1">
+                        <div className="inline-flex justify-center items-center gap-1.5">
                           { voter?.phoneNumber.length < 9 
                             ? <MessageCircleWarning className="w-3 h-3" /> 
-                            : <PhoneForwarded className="w-3 h-3" /> 
+                            : <PhoneCallIcon className="w-3 h-3" /> 
                           }
                           <span className={`${voter?.phoneNumber.length < 9 ? 'text-red-300 font-bold italic' : 'text-zinc-400'} `}>{voter?.phoneNumber || '-- No Phone Number --'} </span>
                         </div>
