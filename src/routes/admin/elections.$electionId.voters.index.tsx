@@ -341,7 +341,7 @@ function VotersDirectory() {
                       </td>
 
                       {/* Phone metadata info */}
-                      <td className={`px-6 py-4 align-middle text-xs font-mono text-zinc-400 ${voter?.phoneNumber.length < 9 && 'border border-red-400 rounded-lg'}`}>
+                      <td className={`px-6 py-4 align-middle text-xs font-mono ${voter?.phoneNumber.length < 9 && 'text-red-300 font-bold italic'} text-zinc-400`}>
                         {voter?.phoneNumber || '-- No Phone Number --'}
                       </td>
 
