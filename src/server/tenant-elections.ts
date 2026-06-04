@@ -1376,7 +1376,6 @@ export const inviteVoterFn = createServerFn({ method: 'GET' }).middleware([arcje
 export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
   async ({ data: electionId }: any) => {
     try {
-
       // Fetch Voter
       const rec = await db.select()
         .from(voters)
@@ -1385,24 +1384,10 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
 
       let mdata: any = {};
       rec.map((r: any) => {
-        // let phone = r?.voters?.phoneNumber.replaceAll("+","").replaceAll(" ","0");
-
-        let rawPhone = String(r?.voters?.phoneNumber || '').trim();
-        rawPhone = rawPhone.replace(/[\s\-\(\)\+]/g, '');
-
-        let phone = rawPhone;
-        if (rawPhone.startsWith('0')) {
-          phone = '233' + rawPhone.slice(1);
-        } else if (rawPhone.startsWith('233')) {
-          phone = rawPhone;
-        } else if (rawPhone.length === 9) {
-          phone = '233' + rawPhone;
-        }
-
+        const phone = addCountryCode(r?.voters?.phoneNumber);
         const inviteToken = r?.voters?.inviteToken;
         const fname = r?.voters?.name?.split(" ")[0];
         const username = r?.voters?.username;
-
         mdata[phone] = { fname, username, inviteToken }
       })
 
@@ -1412,31 +1397,41 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
         sender: process.env.SMS_SENDER_ID,
         message: `Hello <%fname%>, Please vote with Username: <%username%>, Password: <%inviteToken%> . Try and Visit ${electionUrl} to vote!`,
         recipients: mdata,
-        sandbox: true
+        //sandbox: true
       };
 
-      console.log("smsPayload: ", smsPayload)
-      let sms = { ok: 1, text: () => { }, status: 200 }
-      // const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/template/send`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'api-key': process.env.SMS_API_KEY
-      //   } as any,
-      //   body: JSON.stringify(smsPayload)
-      // });
+      // console.log("smsPayload: ", smsPayload)
+      // let sms = { ok: 1, text: () => { }, status: 200 }
+      const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/template/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': process.env.SMS_API_KEY
+        } as any,
+        body: JSON.stringify(smsPayload)
+      });
 
       if (!sms.ok) {
         const errorText = await sms.text();
         throw new Error(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`);
       }
 
-      // const resp = await sms.json();
-      const resp: any = {};
+      const resp = await sms.json();
       if (resp) {
         const { data: mt } = resp;
         const sentInvites = mt?.map((r: any) => ("0" + stripCountryCode(r.recipient)));
-        return await db.update(voters).set({ isVerified: false }).where(inArray(voters.phoneNumber, sentInvites)).returning();
+        const sentInvitesCodes = mt?.map((r: any) => (r.recipient));
+        // console.log("sentInvites: ", sentInvites)
+        // console.log("sentInvitesCodes: ", sentInvitesCodes)
+        return await db.update(voters).set({ isVerified: true }).where(
+          and(
+            eq(voters.electionId, electionId),
+            or(
+              inArray(voters.phoneNumber, sentInvites),
+              inArray(voters.phoneNumber, sentInvitesCodes),
+            )
+          )
+        ).returning();
       }
 
     } catch (error: any) {
