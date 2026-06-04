@@ -1668,12 +1668,11 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
 
           console.log("Bulk Invite: ", smsPayload)
 
-          if (!phone.length) {
+          if (!phone?.length || phone?.length < 9) {
             console.log(`Phone number is Invalid, ${phone}`);
             return ({ message: `Phone number is Invalid, ${phone}` });
           }
     
-
           const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
             method: 'POST',
             headers: {
@@ -1687,7 +1686,6 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
             const errorText = await sms.text();
             console.log(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`)
             return ({ message: `SMS API HTTP Error! Status: ${sms.status} - ${errorText}` });
-            // throw new Error(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`);
           }
 
           const resp = await sms.json();
