@@ -1527,53 +1527,52 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
 
       let resp2 = await Promise.all(rec.map( async (r: any) => {
 
-            const phone = addCountryCode(r?.voters?.phoneNumber);
-            const inviteToken = r?.voters?.inviteToken;
-            const fname = r?.voters?.name?.split(" ")[0];
-            const username = r?.voters?.username;
-            //mdata[phone] = { fname, username, inviteToken }
+          const phone = addCountryCode(r?.voters?.phoneNumber);
+          const inviteToken = r?.voters?.inviteToken;
+          const fname = r?.voters?.name?.split(" ")[0];
+          const username = r?.voters?.username;
+          
+          // Send Invite Code via SMS
+          const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${rec[0]?.elections?.tag}`
+          const smsPayload: any = {
+            sender: process.env.SMS_SENDER_ID,
+            message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken} . Try and Visit ${electionUrl} to vote!`,
+            recipients: [phone],
+          };
 
-            // Send Invite Code via SMS
-            const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${rec[0]?.elections?.tag}`
-            const smsPayload: any = {
-              sender: process.env.SMS_SENDER_ID,
-              message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken} . Try and Visit ${electionUrl} to vote!`,
-              recipients: [phone],
-            };
+          const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'api-key': process.env.SMS_API_KEY
+            } as any,
+            body: JSON.stringify(smsPayload)
+          });
 
-            console.log("smsPayload: ", smsPayload)
+          if (!sms.ok) {
+            const errorText = await sms.text();
+            console.log(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`)
+            return ({ message: `SMS API HTTP Error! Status: ${sms.status} - ${errorText}` });
+            // throw new Error(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`);
+          }
+
+          const resp = await sms.json();
+          if (resp) {
+            const { data: mt } = resp;
+            const sentInvites = mt?.map((r: any) => ("0" + stripCountryCode(r.recipient)));
+            const sentInvitesCodes = mt?.map((r: any) => (r.recipient));
             
-            const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'api-key': process.env.SMS_API_KEY
-              } as any,
-              body: JSON.stringify(smsPayload)
-            });
-
-            if (!sms.ok) {
-              const errorText = await sms.text();
-              throw new Error(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`);
-            }
-
-            const resp = await sms.json();
-            if (resp) {
-              const { data: mt } = resp;
-              const sentInvites = mt?.map((r: any) => ("0" + stripCountryCode(r.recipient)));
-              const sentInvitesCodes = mt?.map((r: any) => (r.recipient));
-              
-              return await db.update(voters).set({ isVerified: true }).where(
-                and(
-                  eq(voters.electionId, electionId),
-                  or(
-                    inArray(voters.phoneNumber, sentInvites),
-                    inArray(voters.phoneNumber, sentInvitesCodes),
-                  )
+            return await db.update(voters).set({ isVerified: true }).where(
+              and(
+                eq(voters.electionId, electionId),
+                or(
+                  inArray(voters.phoneNumber, sentInvites),
+                  inArray(voters.phoneNumber, sentInvitesCodes),
                 )
-              ).returning();
-            }
-            return null;
+              )
+            ).returning();
+          }
+          return null;
       }))
 
       // Return SMS response
