@@ -1532,12 +1532,13 @@ export const inviteVoterFn = createServerFn({ method: 'GET' }).middleware([arcje
         message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken} . Visit ${electionUrl} to vote!`,
         recipients: [phone],
       };
+      
       console.log("Single Invite: ", smsPayload)
       
       if (!phone.length) {
         throw new Error(`Phone number is Invalid, ${phone}`);
       }
-      
+
       const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
         method: 'POST',
         headers: {
@@ -1645,7 +1646,7 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
         .where(
           and(
             eq<any>(elections.id, electionId),
-            // eq<any>(voters.isVerified, false)
+            eq<any>(voters.isVerified, false)
           )
         );
 
@@ -1664,7 +1665,13 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
             recipients: [phone],
           };
 
-          console.log("smsPayload: ", smsPayload)
+          console.log("Bulk Invite: ", smsPayload)
+
+          if (!phone.length) {
+            console.log(`Phone number is Invalid, ${phone}`);
+            return ({ message: `Phone number is Invalid, ${phone}` });
+          }
+    
 
           const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
             method: 'POST',
