@@ -10,6 +10,7 @@ import { candidates, elections, electionVotes, positions, voters } from '../db/s
 // import * as XLSX from 'xlsx';
 import XLSX from 'xlsx-js-style';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
+import { getRequest } from '@tanstack/react-start/server';
 
 
 // ELECTIONS FUNCTIONS
@@ -1893,6 +1894,8 @@ export const castBallotServerFn = createServerFn({
   .middleware([arcjetMiddleware])
   .handler(async ({ data }: any) => {
     const { voterId, electionId, selections } = data;
+    const request = getRequest();
+    const ip = request?.headers.get('x-forwarded-for')?.split(',')[0] || request?.headers.get('x-real-ip') || '127.0.0.1';
 
     try {
       // Execute the entire ballot block inside an atomic SQL transaction isolation container
@@ -1933,7 +1936,7 @@ export const castBallotServerFn = createServerFn({
         // 4. Close and lock the voting gate immediately
         await tx
           .update(voters)
-          .set({ hasVoted: true })
+          .set({ hasVoted: true, voteIp: ip })
           .where(eq<any>(voters.id, voterId));
 
         return { success: true };

@@ -157,6 +157,7 @@ export const voters = pgTable('voters', {
   username: varchar('username', { length: 50 }).notNull(), 
   phoneNumber: text('phone_number').notNull(),
   email: text('email').notNull(),
+  voteIp: text('vote_ip'),
   inviteToken: varchar('invite_token', { length: 64 }).notNull().unique(),
   isVerified: boolean('is_verified').default(false).notNull(),
   hasVoted: boolean('has_voted').default(false).notNull(),
@@ -170,9 +171,8 @@ export const electionVotes = pgTable('election_votes', {
   id: serial('id').primaryKey(),
   electionId: integer('election_id').references(() => elections.id, { onDelete: 'cascade' }).notNull(),
   positionId: integer('position_id').references(() => positions.id, { onDelete: 'cascade' }).notNull(),
-  // candidateId is nullable to natively represent explicit voter abstentions
   candidateId: integer('candidate_id').references(() => candidates.id, { onDelete: 'cascade' }), 
-  receiptSignature: text('receipt_signature').notNull(), 
+  receiptSignature: text('receipt_signature').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => ({
   electionVotesPerfIdx: index('election_votes_lookup_idx').on(t.electionId, t.positionId)
