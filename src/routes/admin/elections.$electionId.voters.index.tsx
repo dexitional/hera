@@ -388,7 +388,7 @@ function VotersDirectory() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleInviteVoter(voter.id)}
-                            className="inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 transition-all shadow-sm"
+                            className="cursor-pointer inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 transition-all shadow-sm"
                           >
                             <Smartphone className="w-3 h-3 text-purple-400" />
                             <span>Invite</span>
@@ -405,7 +405,7 @@ function VotersDirectory() {
                             <button
                               onClick={() => handleDeleteVoter(voter.id)}
                               title="Delete Record"
-                              className="p-1.5 rounded text-zinc-500 hover:text-red-400 hover:bg-red-950/20 transition-colors"
+                              className="p-1.5 cursor-pointer rounded text-zinc-500 hover:text-red-400 hover:bg-red-950/20 transition-colors"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
