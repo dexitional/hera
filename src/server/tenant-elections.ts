@@ -1519,9 +1519,13 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
       const rec = await db.select()
         .from(voters)
         .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-        .where(eq<any>(elections.id, electionId));
+        .where(
+          and(
+            eq<any>(elections.id, electionId),
+            eq<any>(voters.isVerified, false)
+          )
+        );
 
-      let mdata: any = {};
       let resp2 = await Promise.all(rec.map( async (r: any) => {
 
             const phone = addCountryCode(r?.voters?.phoneNumber);
