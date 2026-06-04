@@ -76,7 +76,12 @@ export const getActiveElectionsFn = createServerFn({ method: 'GET' }).middleware
   async () => {
     return await db.select()
       .from(elections)
-      .where(eq<any>(elections.isActive, true));
+      .where(
+        and(
+          eq<any>(elections.isActive, true),
+          eq<any>(elections.makePublic, true)
+        )
+      );
   });
 
 

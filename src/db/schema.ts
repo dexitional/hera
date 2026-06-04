@@ -124,6 +124,7 @@ export const elections = pgTable('elections', {
   autoStop: boolean('auto_stop').default(false).notNull(),
   autoSync: boolean('auto_sync').default(false).notNull(),
   makePublic: boolean('make_public').default(false).notNull(),
+  publicToken: text('public_token'),
   showFeed: boolean('show_feed').default(false).notNull(),
   isActive: boolean('is_active'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
