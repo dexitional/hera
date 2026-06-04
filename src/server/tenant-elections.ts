@@ -360,8 +360,9 @@ export const getElectionOverview = createServerFn({
        ));
        return { success: true };
     });
-       
-     return result;
+    
+    return result;
+
   });
   
 
@@ -1536,6 +1537,8 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
             message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken} . Try and Visit ${electionUrl} to vote!`,
             recipients: [phone],
           };
+
+          console.log("smsPayload: ", smsPayload)
 
           const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
             method: 'POST',
