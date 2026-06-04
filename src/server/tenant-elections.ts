@@ -1288,7 +1288,6 @@ export const updateVoterFn = createServerFn({ method: 'POST' }).middleware([arcj
       console.log("data: ", data)
       try {
        
-
         let [voter] = await db
           .select()
           .from(voters)
