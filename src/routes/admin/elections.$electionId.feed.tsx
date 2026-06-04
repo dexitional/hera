@@ -24,13 +24,6 @@ interface PositionFeedGroup {
   candidates: CandidateTally[];
 }
 
-interface AuditLogEntry {
-  id: string;
-  positionTitle: string;
-  voterMask: string;     
-  channel: "USSD" | "WEB";
-  timestamp: string;
-}
 
 const electionsQueryOptions = (electionId: any) => ({
   queryKey: ['election-telemetry', electionId ],

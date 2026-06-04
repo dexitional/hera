@@ -486,6 +486,126 @@ export const getUnifiedElectionTelemetry = createServerFn({
   };
 });
 
+export const getUnifiedElectionAdminStats = createServerFn({
+  method: "GET",
+})
+ .middleware([arcjetMiddleware])
+ .handler(async ({ data: electionId }): Promise<any> => {
+
+  // Concurrently fetch telemetry data from your database layers
+  const [
+    [electionRecord],
+    [votersCountResult],
+    rawPositions,
+    rawCandidateTallies,
+    rawRecentVotes
+  ] = await Promise.all([
+    db.select().from(elections).where(eq<any>(elections.id, electionId)),
+    db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq<any>(voters.electionId, electionId)),
+    db.select().from(positions).where(eq<any>(positions.electionId, electionId)),
+    db
+      .select({
+        id: candidates.id,
+        name: candidates.name,
+        imageUrl: candidates.imageUrl,
+        positionId: candidates.positionId,
+        order: candidates.order,
+        voteCount: sql<number>`count(${electionVotes.id})::int`,
+      })
+      .from(candidates)
+      .innerJoin(positions, eq(candidates.positionId, positions.id))
+      .leftJoin(
+        electionVotes,
+        and(
+          eq(electionVotes.candidateId, candidates.id),
+          eq(electionVotes.positionId, candidates.positionId)
+        )
+      )
+      .where(eq<any>(positions.electionId, electionId))
+      .groupBy(candidates.id, candidates.name, candidates.imageUrl, candidates.positionId, candidates.order)
+      .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
+    db
+      .select({
+        id: electionVotes.id,
+        positionTitle: positions.title,
+        candidateName: candidates.name,
+        createdAt: electionVotes.createdAt,
+      })
+      .from(electionVotes)
+      .innerJoin(positions, eq(electionVotes.positionId, positions.id))
+      .leftJoin(candidates, eq(electionVotes.candidateId, candidates.id))
+      .where(eq<any>(electionVotes.electionId, electionId))
+      .orderBy(desc(electionVotes.createdAt))
+      .limit(15)
+  ]);
+
+  if (!electionRecord) {
+    throw new Error(`Election instance [${electionId}] not found.`);
+  }
+
+  const generateVoterMask = (index: number): string => {
+    return `voter_id_****_${1000 + (Math.abs(index) % 9000)}`;
+  };
+
+  const formatElapsedTime = (pastDate: Date): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - pastDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    return `${Math.floor(diffMins / 60)}h ago`;
+  };
+
+  const formattedTallies: any[] = await Promise.all(
+    rawPositions.map(async (pos) => {
+      const positionCandidates = rawCandidateTallies
+        .filter((cand) => cand.positionId === pos.id)
+        .map((cand) => ({
+          id: cand.id,
+          name: cand.name,
+          imageUrl: cand.imageUrl ?? "",
+          votes: cand.voteCount,
+        }));
+
+      const [abstentionTally] = await db
+        .select({ count: sql<number>`count(${electionVotes.id})::int` })
+        .from(electionVotes)
+        .where(and(eq(electionVotes.positionId, pos.id), sql`${electionVotes.candidateId} IS NULL`));
+
+      positionCandidates.push({
+        id: null,
+        name: "Abstained (Blank Ballots)",
+        imageUrl: "",
+        votes: abstentionTally?.count || 0
+      } as any);
+
+      return {
+        id: pos.id,
+        title: pos.title,
+        slots: pos.slots,
+        totalVotesForPosition: positionCandidates.reduce((sum, c) => sum + c.votes, 0),
+        candidates: positionCandidates,
+      };
+    })
+  );
+
+  return {
+    electionDetails: {
+      title: electionRecord.title,
+      tag: electionRecord.tag,
+      totalEligibleVoters: votersCountResult?.count ?? 0
+    },
+    tallies: formattedTallies,
+    auditLedger: rawRecentVotes.map((log, index) => ({
+      id: `tx_${log.id}`,
+      positionTitle: log.candidateName ? `${log.positionTitle} (${log.candidateName})` : `${log.positionTitle} (Explicit Abstention)`,
+      voterMask: generateVoterMask(log.id + index),
+      channel: "WEB",
+      timestamp: formatElapsedTime(log.createdAt),
+    })),
+  };
+});
+
 
 /* EXPORT ELECTION RESULTS */
 
@@ -1519,7 +1639,7 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
         .where(
           and(
             eq<any>(elections.id, electionId),
-            eq<any>(voters.isVerified, false)
+            // eq<any>(voters.isVerified, false)
           )
         );
 
