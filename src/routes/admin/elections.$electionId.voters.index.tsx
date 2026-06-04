@@ -274,13 +274,13 @@ function VotersDirectory() {
             </button>
 
             {/* Create Single Voter Route Anchor Link */}
-            <a
-              href="/admin/voters/new"
+            <Link
+              to={`/admin/elections/${electionId}/voters/new`} 
               className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs px-3.5 py-2 rounded-lg font-medium shadow-md transition-all"
             >
               <UserPlus className="w-4 h-4" />
               <span>Create Voter</span>
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -394,7 +394,8 @@ function VotersDirectory() {
                             <span>Invite</span>
                           </button>
                           <Link
-                            to={`/admin/voters/${voter?.id}/edit`} 
+                            to={`/admin/elections/${electionId}/voters/${voter?.id}/edit`} 
+                            
                             title="Edit Voter Profile"
                             className="p-1.5 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
                           >

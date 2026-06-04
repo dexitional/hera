@@ -8,7 +8,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/positions/new
   component: CreatePosition,
   loader: async ({params}) => {
     const electionId = params.electionId;
-    const elections = await getElectionsFn({ data: electionId });
+    const elections = await getElectionsFn();
     return { elections }
   },
   pendingComponent: () => (

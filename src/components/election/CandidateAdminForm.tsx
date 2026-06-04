@@ -4,10 +4,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { createCandidateFn, updateCandidateFn } from "#/server/tenant-elections";
 import { convertToFormData } from "#/lib/utils";
+import { useRouter } from "@tanstack/react-router";
 
 export default function CandidateAdminForm({ data: { data, positions }}: any) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const router = useRouter();
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<any>({
@@ -382,7 +385,16 @@ export default function CandidateAdminForm({ data: { data, positions }}: any) {
                     </div>
 
                     {/* Submit layout control row element */}
-                    <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end">
+                    <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end gap-4 cursor-pointer">
+                      <button 
+                        type="button"
+                        onClick={() => {
+                            if(window.confirm(`Go back!`)) router.history.back(); 
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      
                       <button
                         type="submit"
                         disabled={isSubmitting || !formData?.name  ||  !formData?.positionId }

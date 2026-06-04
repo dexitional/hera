@@ -1,17 +1,19 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import React, { useState } from "react";
 import { CheckCircle2, ChevronDown, User, Mail, Phone, Key, RefreshCw } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createVoterFn, updateVoterFn } from "#/server/tenant-elections";
 import { generateSixDigitCode } from "#/lib/utils";
 
-export default function VoterAdminForm({ data: { data, elections }}: any) {
+export default function VoterAdminForm({ data: { data, elections, electionId }}: any) {
   
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const router = useRouter();
   
   const [formData, setFormData] = useState<any>({
-    electionId: data?.electionId || elections && elections[0]?.id,
+    // electionId: data?.electionId || elections && elections[0]?.id,
+    electionId: data?.electionId || electionId,
     name: data?.name,
     username: data?.username,
     phoneNumber: data?.phoneNumber,
@@ -146,7 +148,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                     <div className="divide-y divide-zinc-800/60 bg-zinc-900/40">
                       
                       {/* Target Election ForeignKey Context Dropdown */}
-                      <div className="px-6 py-5">
+                      {/* <div className="px-6 py-5">
                         <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-start">
                           <div className="col-span-4 flex flex-col pt-1.5">
                             <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
@@ -179,7 +181,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                             )}
                           </div>
                         </div>
-                      </div>
+                      </div> */}
 
                       {/* Name input */}
                       <div className="px-6 py-5">
@@ -312,7 +314,16 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                     </div>
 
                     {/* Footer Trigger Button */}
-                    <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end">
+                    <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end gap-4">
+                      <button 
+                         type="button"
+                         onClick={() => {
+                            if(window.confirm(`Go back!`)) router.history.back(); 
+                         }}
+                      >
+                        Cancel
+                      </button>
+                      
                       <button
                         type="submit"
                         disabled={isSubmitting || !formData.name || !formData.username || !formData.email || !formData.phoneNumber}

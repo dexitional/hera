@@ -3,7 +3,7 @@ import { getElectionsFn, getVoterFn } from "#/server/tenant-elections";
 import { Loader2 } from "lucide-react";
 import VoterAdminForm from "#/components/election/VoterAdminForm";
 
-export const Route = createFileRoute("/admin/voters/$voterId/edit")({
+export const Route = createFileRoute("/admin/elections/$electionId/voters/$voterId/edit")({
   component: EditPosition,
   loader: async ({ params }:any) => {
     const voterId = params.voterId;
@@ -18,6 +18,7 @@ export const Route = createFileRoute("/admin/voters/$voterId/edit")({
 
 function EditPosition() {
 
+  const { electionId } = Route.useParams(); 
   const { data, elections  }:any = Route.useLoaderData();
-  return <VoterAdminForm data={{ data: data[0], elections }} />;
+  return <VoterAdminForm data={{ data: data[0], elections, electionId }} />;
 }

@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { CheckCircle2, ChevronDown, Award, Hash } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createPositionFn, updatePositionFn } from "#/server/tenant-elections";
 
 export default function PositionAdminForm({ data: { data, elections, electionId } }: any) {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
-
+    const router = useRouter();
+  
     const [formData, setFormData] = useState<any>({
       // electionId: data?.electionId || elections && elections[0]?.id, 
       electionId: electionId, 
@@ -254,7 +255,16 @@ export default function PositionAdminForm({ data: { data, elections, electionId 
                       </div>
   
                       {/* Submit Action Footer */}
-                      <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end">
+                      <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end gap-4 cursor-pointer">
+                        <button 
+                          type="button"
+                          onClick={() => {
+                              if(window.confirm(`Go back!`)) router.history.back(); 
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      
                         <button
                           type="submit"
                           disabled={isSubmitting || !formData?.title}

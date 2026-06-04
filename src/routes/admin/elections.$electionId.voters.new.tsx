@@ -4,7 +4,7 @@ import { getElectionsFn } from "#/server/tenant-elections";
 import VoterAdminForm from "#/components/election/VoterAdminForm";
 
 
-export const Route = createFileRoute("/admin/voters/new")({
+export const Route = createFileRoute("/admin/elections/$electionId/voters/new")({
   component: CreateVoter,
   loader: async () => {
     const elections = await getElectionsFn();
@@ -18,6 +18,7 @@ export const Route = createFileRoute("/admin/voters/new")({
 });
 
 function CreateVoter() {
+  const { electionId } = Route.useParams(); 
   const { elections  }:any = Route.useLoaderData();
-  return <VoterAdminForm data={{ elections }} />;
+  return <VoterAdminForm data={{ elections, electionId }} />;
 }
