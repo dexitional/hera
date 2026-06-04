@@ -1647,6 +1647,7 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
           and(
             eq<any>(elections.id, electionId),
             eq<any>(voters.isVerified, false)
+            //eq<any>(voters.hasVoted, false)
           )
         );
 
