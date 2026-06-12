@@ -1,0 +1,182 @@
+import { createServerFn } from '@tanstack/react-start'
+import removeBackground from '@imgly/background-removal-node'
+import sharp from 'sharp'
+import path from 'path'
+
+// Keep global variables basic and simple
+let modelsLoaded = false
+let tfModule: any = null
+let faceapiModule: any = null
+
+/**
+ * 🧠 SAFE DYNAMIC INITIALIZATION ROUTINE
+ * We load the heavy AI modules inside this function line by line. 
+ * This isolates them completely from the Vinxi compiler bundle step.
+ */
+async function initFaceApi() {
+  if (modelsLoaded) return true;
+  
+  try {
+    console.log("⏳ Dynamically loading engine modules...");
+    
+    // Lazy import modules exclusively at server execution time
+    tfModule = await import('@tensorflow/tfjs-core')
+    await import('@tensorflow/tfjs-backend-wasm')
+    faceapiModule = await import('@vladmandic/face-api/dist/face-api.node-wasm.js')
+
+    // Prepare the WebAssembly memory allocation backend layers
+    await tfModule.setBackend('wasm')
+    await tfModule.ready()
+
+    // Resolve storage folders
+    const modelPath = path.resolve('./public/models/face/')
+
+    // Load file structures from your drive
+    await faceapiModule.nets.ssdMobilenetv1.loadFromDisk(modelPath)
+    
+    modelsLoaded = true
+    console.log("🧠 ESM Face tracking engine loaded and active.")
+    return true
+  } catch (err) {
+    console.error("❌ Failed to load Face-API modules safely:", err)
+    return false
+  }
+}
+
+export const generatePassportServerFn = createServerFn({ method: 'POST' })
+  .handler(async (args: any) => {
+    try {
+      let imageBase64: any = null
+      if (typeof args === 'string') imageBase64 = args
+      else if (args?.imageBase64) imageBase64 = args.imageBase64
+      else if (args?.data?.imageBase64) imageBase64 = args.data.imageBase64
+
+      if (!imageBase64) {
+        return { success: false, error: "No image payload found." }
+      }
+
+      const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '')
+      let workingBuffer = Buffer.from(base64Data, 'base64')
+
+        // Fire dynamic runtime startup
+       const isFaceApiReady = await initFaceApi()
+       let detectedFace: any = null
+       let uprightBuffer: Buffer = workingBuffer
+
+       // 1. Try AI Face Orientation if modules loaded successfully
+       if (isFaceApiReady && tfModule && faceapiModule) {
+        const rotations = [0, 90, 180, 270]
+        
+        let highestConfidence = 0
+        let bestAngle = 0
+
+        for (const angle of rotations) {
+          try {
+            // Force Sharp to restructure pixel positions completely inside memory arrays
+            const formattedImageBuffer = await sharp(workingBuffer)
+              .rotate(angle)
+              .png() 
+              .toBuffer()
+
+            const matrixSharp = sharp(formattedImageBuffer).removeAlpha()
+            const meta = await matrixSharp.metadata()
+            const rawPixelBuffer = await matrixSharp.raw().toBuffer()
+            
+            const tensor = tfModule.tidy(() => {
+              return tfModule.tensor3d(
+                new Uint8Array(rawPixelBuffer), 
+                [meta.height || 0, meta.width || 0, 3], 
+                'int32'
+              )
+            })
+
+            // Scan face metrics coordinate channels
+            const detection = await faceapiModule.detectSingleFace(
+              tensor as any, 
+              new faceapiModule.SsdMobilenetv1Options({ minConfidence: 0.5 })
+            )
+            tfModule.dispose(tensor)
+
+            if (detection) {
+              const confidence = detection.score;
+              console.log(`📸 Angle: ${angle}° -> Face Detection Confidence Score: ${confidence.toFixed(4)}`)
+
+              /**
+               * 🎯 HIGHEST CONFIDENCE MATCHING CRITERIA
+               * Instead of breaking out on the first match, we track the scores.
+               * The angle with the highest score is the true upright layout direction.
+               */
+              if (confidence > highestConfidence) {
+                highestConfidence = confidence
+                bestAngle = angle
+                detectedFace = detection.box
+                uprightBuffer = formattedImageBuffer
+              }
+            }
+          } catch (rotationErr) {
+            console.error(`Rotation matching failed for angle ${angle}:`, rotationErr)
+          }
+        }
+
+        if (detectedFace) {
+          console.log(`👑 Best Match Locked: ${bestAngle}° with a score of ${highestConfidence.toFixed(4)}`)
+        }
+      }
+
+      // 2. Safe Fallback: If face tracking missed, run standard upright conversion pass
+      if (!detectedFace) {
+        console.log("Using baseline fallback orientation matrix bounds.")
+        uprightBuffer = await sharp(workingBuffer).withMetadata().rotate().png().toBuffer()
+      }
+
+      // 3. Remove Background
+      const inputBlob = new Blob([uprightBuffer], { type: 'image/png' })
+      let transparentImageBuffer: Buffer
+      try {
+        const transparentBlob = await removeBackground(inputBlob)
+        const bufferArray = await transparentBlob.arrayBuffer()
+        transparentImageBuffer = Buffer.from(bufferArray)
+      } catch (aiError) {
+        transparentImageBuffer = uprightBuffer
+      }
+
+      // 4. Auto-Trim Borders
+      const trimmedBuffer = await sharp(transparentImageBuffer).trim({ threshold: 10 }).toBuffer()
+      const metadata = await sharp(trimmedBuffer).metadata()
+      const width = metadata.width || 400
+      const height = metadata.height || 400
+
+      // 5. Final Canvas Framing
+      const targetSize = Math.max(width, height)
+    //   const topHeadroom = Math.floor(targetSize * 0.12)
+    //   const bottomClearance = Math.floor(targetSize * 0.05)
+    //   const sidePadding = Math.floor((targetSize - width) / 2)
+
+      const topHeadroom = Math.floor(targetSize * 0.05) 
+      const bottomClearance = Math.floor(targetSize * 0.0005) 
+      const sidePadding = Math.floor((targetSize - width) / 40)
+
+      const processedBuffer = await sharp(trimmedBuffer)
+        .extend({
+          top: topHeadroom,
+          bottom: bottomClearance,
+          left: sidePadding > 0 ? sidePadding : 10,
+          right: sidePadding > 0 ? sidePadding : 10,
+          background: { r: 255, g: 255, b: 255, alpha: 1 }
+        })
+        .flatten({ background: { r: 255, g: 255, b: 255 } })
+        .resize(600, 600, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
+        .jpeg({ quality: 95 })
+        .toBuffer()
+
+      const outputBase64 = `data:image/jpeg;base64,${processedBuffer.toString('base64')}`
+      
+      // ✅ GUARANTEED RETURN FORMAT
+      return { success: true, passportImageUrl: outputBase64 }
+
+    } catch (error: any) {
+      console.error('Passport Processing Server Error:', error)
+      // ✅ GUARANTEED SAFETY CATCH RETURN FORMAT
+      return { success: false, error: error?.message || 'Failed to process photo.' }
+    }
+  })

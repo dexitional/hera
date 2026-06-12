@@ -1,0 +1,103 @@
+import { createServerFn } from '@tanstack/react-start'
+import removeBackground from '@imgly/background-removal-node'
+import sharp from 'sharp'
+import path from 'path'
+
+const productionAIConfig: any = {
+  modelSource: 'local',
+  publicPath: typeof window === 'undefined' ? path.resolve('./public/models/background-removal/') : '',
+  debug: false
+}
+
+export const generatePassportServerFn = createServerFn({ method: 'POST' })
+  .handler(async (args: any) => {
+    try {
+      let imageBase64: any = null
+
+      if (typeof args === 'string') imageBase64 = args
+      else if (args?.imageBase64) imageBase64 = args.imageBase64
+      else if (args?.data?.imageBase64) imageBase64 = args.data.imageBase64
+      else if (args?.data) imageBase64 = args.data
+
+      if (!imageBase64) {
+        return { success: false, error: "No image payload found." }
+      }
+
+      const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '')
+      const initialBuffer = Buffer.from(base64Data, 'base64')
+
+      /**
+       * 🔄 CRITICAL CRITERION: IMMEDIATE EXIF ROTATION FIX
+       * We run this pass FIRST. Sharp reads the phone's hidden orientation tags,
+       * bakes the physical pixels completely upright, and saves it as a clear PNG.
+       * This ensures both the AI tool and our cropping math receive a perfectly straight image.
+       */
+      const uprightInputBuffer = await sharp(initialBuffer)
+        .rotate() 
+        .png() 
+        .toBuffer()
+
+      // Convert our safely upright buffer into a standard Web API Blob for the AI engine
+      const inputBlob = new Blob([uprightInputBuffer], { type: 'image/png' })
+
+      // 2. Run the AI background removal tool on the UPRIGHT image
+      let transparentImageBuffer: Buffer
+      try {
+        const transparentBlob = await removeBackground(inputBlob)
+        const bufferArray = await transparentBlob.arrayBuffer()
+        transparentImageBuffer = Buffer.from(bufferArray)
+      } catch (aiError) {
+        console.error("AI Background Removal failed, using fallback trim:", aiError)
+        transparentImageBuffer = uprightInputBuffer
+      }
+
+      /**
+       * 🛠️ AUTO-TRIM UP-RIGHT DEAD SPACE
+       * Cuts away any surrounding transparent pixels cleanly from the upright subject profile
+       */
+      const trimmedBuffer = await sharp(transparentImageBuffer)
+        .trim({ threshold: 10 }) 
+        .toBuffer()
+
+      // 3. Gather clean dimensions of the upright, isolated subject profile
+      const metadata = await sharp(trimmedBuffer).metadata()
+      const width = metadata.width || 400
+      const height = metadata.height || 400
+
+      /**
+       * 📐 PERFECT SQUARE SELECTION MATH
+       * We lock our baseline crop grid size directly to the width of his shoulders.
+       */
+      const cropSize = width
+
+      /**
+       * 📏 HEADSPACE ALIGNMENT PASS
+       * Shifts the box up to create a standard 10% legal headroom gap above the hair.
+       */
+      const topHeadroomOffset = Math.floor(cropSize * 0.2 * -1)
+      const safeTopExtract = Math.max(0, topHeadroomOffset)
+
+      // 4. Construct final official 600x600px white background passport
+      const processedBuffer = await sharp(trimmedBuffer)
+        .extract({
+          left: 0,                   // Lock onto the left shoulder boundary edge
+          top: safeTopExtract,       // Safe overhead clearance buffer
+          width: cropSize,           // Full width profile mapping
+          height: cropSize           // Strict 1:1 aspect ratio square framing
+        })
+        .flatten({ background: { r: 255, g: 255, b: 255 } }) // Solid Plain White Background
+        .resize(600, 600, {
+          fit: 'contain',
+          background: { r: 255, g: 255, b: 255 }
+        })
+        .jpeg({ quality: 95 })
+        .toBuffer()
+
+      const outputBase64 = `data:image/jpeg;base64,${processedBuffer.toString('base64')}`
+      return { success: true, passportImageUrl: outputBase64 }
+
+    } catch (error: any) {
+      console.error('Passport Processing Server Error:', error)
+      return { success: false, error: error.message || 'Failed to process photo.' }
+    }
+  })

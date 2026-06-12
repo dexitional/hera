@@ -193,7 +193,7 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
                         >
                           <div className="w-full h-40 bg-[#0a192a]/50 border-b border-zinc-900 flex items-center justify-center relative overflow-hidden bg-white/80 shrink-0">
                             {candidate.imageUrl ? (
-                              <img src={candidate.imageUrl} alt={candidate.name} className="w-full h-full object-contain" />
+                              <img src={candidate.imageUrl} aria-label={candidate.name} alt={candidate.name} className="w-full h-full object-contain" />
                             ) : (
                               <User className="w-6 h-6 text-zinc-700" />
                             )}
@@ -207,7 +207,7 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
                           <div className="p-3 space-y-1 grow flex flex-col justify-between">
                             <div>
                               <h4 className="text-sm font-bold text-white tracking-wide truncate">{candidate.name}</h4>
-                              <p className="text-[12px] text-zinc-400 line-clamp-2 leading-snug mt-0.5">{candidate.teaser}</p>
+                              <p className="text-[12px] font-bold text-purple-400 line-clamp-2 leading-snug mt-0.5">{candidate.teaser}</p>
                               <p className="text-base italic text-zinc-400 line-clamp-2 leading-snug mt-0.5">#{candidate.order}</p>
                             </div>
                           </div>

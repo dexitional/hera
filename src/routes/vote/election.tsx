@@ -1,4 +1,5 @@
 import AuthElection from '#/components/election/AuthElection'
+import { useAuthStore } from '#/lib/voterStore'
 import { getElectionByTagFn } from '#/server/tenant-elections'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, Navigate, redirect } from '@tanstack/react-router'
@@ -19,13 +20,18 @@ const electionsQueryOptions = (tag: any) => ({
 export const Route = createFileRoute('/vote/election')({
   component: RouteComponent,
   validateSearch: searchSchema,
-  // beforeLoad: async () => {
-  //   const { isAuthenticated } = authStore.state;
-  //   if (isAuthenticated) {
-  //     throw redirect({ to: '/vote/cast' })
-  //   }
-  // },
+  // validateSearch: (search) => searchSchema.parse(search),
   loaderDeps: ({ search }) => search,
+  // beforeLoad: async ({ context, search }) => {
+  //   const page = search.page;
+  //   const [ res ] = await context.queryClient.ensureQueryData(electionsQueryOptions(page));
+  //   console.log()
+    
+  //   // const { isAuthenticated } = useAuthStore.getState();
+  //   // if (isAuthenticated) {
+  //   //   throw redirect({ to: '/vote/cast' })
+  //   // }
+  // },
   loader: async ({ context, deps }) => {
     const { page } = deps
     return await context.queryClient.ensureQueryData(electionsQueryOptions(page));
@@ -39,5 +45,4 @@ function RouteComponent() {
   
   if(page && data?.length) return (<AuthElection data={data && data[0]} />)
   return <Navigate to={`/elections`}/>
-  
 }

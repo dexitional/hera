@@ -22,15 +22,15 @@ const electionsQueryOptions = (params: {
   electionId: number;
   page: number;
   search: string;
-  status: "ALL" | "VOTED" | "PENDING";
+  statusFilter: "ALL" | "VOTED" | "PENDING";
 }) => ({
-  queryKey: ['voters-admin', params.electionId, params.page, params.search, params.status],
+  queryKey: ['voters-admin', params.electionId, params.page, params.search, params.statusFilter],
   queryFn: () => getVotersByElectionFn({
     electionId: params.electionId,
     page: params.page,
-    limit: 25,
+    pageSize: 25,
     searchQuery: params.search,
-    statusFilter: params.status,
+    statusFilter: params.statusFilter,
   }),
 });
 
@@ -47,10 +47,10 @@ export const Route = createFileRoute("/admin/elections/$electionId/voters")({
     const electionId = Number(params.electionId);
     const page = search?.page ?? 1;
     const searchStr = search?.search ?? "";
-    const status = search?.status ?? "ALL";
+    const statusFilter = search?.statusFilter ?? "ALL";
     
     await context.queryClient.ensureQueryData(
-      electionsQueryOptions({ electionId, page, search: searchStr, status })
+      electionsQueryOptions({ electionId, page, search: searchStr, statusFilter })
     );
   },
   pendingComponent: () => (
@@ -66,10 +66,11 @@ function VotersDirectory() {
   
   // Clean hook invocation safely bound to the route identity string context
   const navigate = Route.useNavigate();
-  const { electionId } = Route.useParams({ from: Route.id });
+  const { electionId } = Route.useParams();
   const numElectionId = Number(electionId);
+  console.log("numElectionId", numElectionId);
   
-  const searchParams = Route.useSearch({ from: Route.id }) || {};
+  const searchParams = Route.useSearch() || {};
   const page = Number(searchParams.page) || 1;
   const search = searchParams.search || "";
   const status = searchParams.status || "ALL";
@@ -85,7 +86,7 @@ function VotersDirectory() {
 
   // Read data from React Query with complete reactive parameter dependencies
   const { data: apiResponse }: any = useSuspenseQuery(
-    electionsQueryOptions({ electionId: numElectionId, page, search, status })
+    electionsQueryOptions({ electionId: numElectionId, page, search, statusFilter: status })
   );
 
   const serverResult = apiResponse?.success ? apiResponse : { data: [], meta: { totalItems: 0, totalPages: 1 } };

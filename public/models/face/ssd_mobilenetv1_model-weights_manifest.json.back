@@ -1,0 +1,15 @@
+[
+    {
+      "nodeName": "ssd_mobilenetv1",
+      "manifestPath": "ssd_mobilenetv1_model-weights_manifest.json",
+      "weights": [
+        {
+          "paths": ["ssd_mobilenetv1_model-shard1"],
+          "shape": [3, 3, 3, 16],
+          "dtype": "float32",
+          "name": "params/conv_0/weights"
+        }
+      ]
+    }
+  ]
+  

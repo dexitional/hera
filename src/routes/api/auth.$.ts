@@ -1,4 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router'
+
 import { auth } from '../../lib/auth';
 
 export const Route = createFileRoute('/api/auth/$')({
@@ -33,7 +34,7 @@ export const Route = createFileRoute('/api/auth/$')({
       },
       
       // 3. Upgrade POST requests with dynamic CORS headers
-      POST: async ({ request }) => {
+      POST: async ({ request }: any) => {
         const response = await auth.handler(request);
         const origin = request.headers.get('origin');
         

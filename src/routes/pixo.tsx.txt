@@ -1,0 +1,128 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+
+export const Route = createFileRoute("/pixo")({
+  component: RouteComponent,
+});
+
+function RouteComponent() {
+  const [sourceImage, setSourceImage] = useState<string | null>(null);
+  const [passportResult, setPassportResult] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setErrorMsg(null);
+      setPassportResult(null);
+      const reader = new FileReader();
+      reader.onloadend = () => setSourceImage(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCreatePassport = async () => {
+    if (!sourceImage) return;
+
+    setIsProcessing(true);
+    setProgress(0);
+    setErrorMsg(null);
+
+    try {
+      const { createPassportPhoto } = await import("#/lib/passportPhoto");
+      const result = await createPassportPhoto(sourceImage, setProgress);
+      setPassportResult(result);
+    } catch (err) {
+      setErrorMsg("Failed to process photo. Check your connection and try again.");
+      console.error(err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="p-8 max-w-3xl mx-auto space-y-6">
+      <header>
+        <h1 className="text-2xl font-bold tracking-tight">Biometric Passport Creator</h1>
+        <p className="text-gray-500 text-sm">
+          Upload a portrait to auto-generate a 600x600px white background photo.
+        </p>
+      </header>
+
+      <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="mx-auto block text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+        />
+      </div>
+
+      {errorMsg && (
+        <div className="p-3 text-sm bg-red-50 text-red-600 rounded-md border border-red-200">
+          {errorMsg}
+        </div>
+      )}
+
+      {sourceImage && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+              Original Portrait
+            </span>
+            <div className="border rounded-md overflow-hidden bg-white max-h-80 flex items-center justify-center">
+              <img src={sourceImage} alt="Source" className="max-w-full max-h-80 object-contain" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+              Standard 2x2 Passport Result
+            </span>
+            <div className="border rounded-md overflow-hidden bg-gray-100 h-80 flex items-center justify-center relative">
+              {isProcessing ? (
+                <div className="flex flex-col items-center space-y-2 px-6 w-full">
+                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-xs text-gray-500 font-medium text-center">
+                    Removing background in browser…
+                    {progress > 0 ? ` ${Math.round(progress * 100)}%` : ""}
+                  </p>
+                </div>
+              ) : passportResult ? (
+                <img
+                  src={passportResult}
+                  alt="Passport output"
+                  className="w-[300px] h-[300px] shadow-md object-cover border bg-white"
+                />
+              ) : (
+                <p className="text-xs text-gray-400">Click generate to start pipeline</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sourceImage && !passportResult && (
+        <button
+          disabled={isProcessing}
+          onClick={handleCreatePassport}
+          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition disabled:opacity-50"
+        >
+          {isProcessing ? "Processing Image..." : "Generate Official Passport Photo"}
+        </button>
+      )}
+
+      {passportResult && (
+        <a
+          href={passportResult}
+          download="official_passport.jpg"
+          className="block w-full py-3 bg-green-600 hover:bg-green-700 text-white text-center font-medium rounded-md transition"
+        >
+          Download Print-Ready JPEG
+        </a>
+      )}
+    </div>
+  );
+}

@@ -5,21 +5,34 @@ import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 import viteReact from '@vitejs/plugin-react'
 
+const crossOriginIsolationHeaders = {
+  // Required for onnxruntime threaded WASM (SharedArrayBuffer)
+  'Cross-Origin-Embedder-Policy': 'credentialless',
+  'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+}
+
 export default defineConfig({
-  // Configure the local development server headers
   server: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
-    },
+    headers: crossOriginIsolationHeaders,
+  },
+  preview: {
+    headers: crossOriginIsolationHeaders,
+  },
+  optimizeDeps: {
+    exclude: ['onnxruntime-web', '@imgly/background-removal'],
   },
   plugins: [
     // Devtools MUST remain the first plugin in your configuration
     devtools(), 
     nitro({
       preset: 'node-server',
-      // Explicitly activate the H3 WebSocket engine inside Nitro
       features: {
-        websocket: true, 
+        websocket: true,
+      },
+      routeRules: {
+        '/**': {
+          headers: crossOriginIsolationHeaders,
+        },
       },
     }),
     tanstackStart(), 

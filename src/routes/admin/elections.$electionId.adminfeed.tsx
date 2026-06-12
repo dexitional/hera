@@ -40,7 +40,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/adminfeed")({
   ),
 });
 
-export default function ElectionLiveFeed() {
+function ElectionLiveFeed() {
   const { electionId } = Route.useParams();
   let {
     data: { electionDetails, tallies: ballotTally, auditLedger: auditLog },

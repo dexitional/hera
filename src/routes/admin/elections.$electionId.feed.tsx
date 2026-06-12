@@ -44,7 +44,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/feed")({
   ),
 });
 
-export default function ElectionLiveFeed() {
+function ElectionLiveFeed() {
   const { electionId } = Route.useParams(); 
   let { data: { electionDetails, tallies: ballotTally, auditLedger: auditLog }}: any = useSuspenseQuery(electionsQueryOptions(electionId));
   

@@ -63,6 +63,17 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     const authState = await checkAuthSession();
     return { user: authState?.user, authenticated: authState?.authenticated };
   },
+  notFoundComponent: () => {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a192a] text-white p-6">
+        <h2 className="text-xl font-bold">404 - Page Directory Not Found</h2>
+        <p className="text-xs text-zinc-400 mt-2">The route path could not be resolved cleanly.</p>
+        <a href="/admin/elections" className="mt-4 px-4 py-2 bg-purple-600 rounded text-xs">
+          Return to Elections
+        </a>
+      </div>
+    )
+  },
 
 })
 

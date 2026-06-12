@@ -152,25 +152,15 @@ function RouteComponent() {
                       <span>{row.tag}</span>
                     </div> */}
                     <div className="flex gap-3">
-                      {/* <Link
-                        to={`/vote/election?page=${row.tag}`}
-                        className="flex-1 px-4 py-1 bg-[#E3F09B] text-black rounded-lg hover:from-[#6d28d9]/90 hover:to-purple-600/90 transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-bold shadow-lg"
-                      >
-                        Goto Election Page
-                      </Link> */}
-                      {/* <button className="px-4 py-3 bg-slate-600/20 hover:bg-slate-600/30 text-white rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-medium border border-slate-600/30">
-                        Live Feed
-                      </button> */}
+                      { !(rightNow < row.startAt || rightNow > row.endAt) && (
                       <Link
                             to={`/vote/election?page=${encodeURIComponent(row.tag)}`}
                             className="group relative flex h-10 w-full cursor-pointer items-center justify-start gap-2.5 rounded-lg bg-[#E3F09B] pl-4 font-semibold text-sm text-[#131313] shadow-[5px_5px_10px_rgba(0,0,0,0.116)] transition-all duration-500 hover:bg-[#c0ff14] active:scale-[0.97]"
                       >
-                          <Link2 
-                            className="h-[25px] w-auto transition-transform duration-[1500ms] ease-in-out group-hover:rotate-[250deg]"
-                            
-                          />
+                         <Link2 className="h-[25px] w-auto transition-transform duration-1500 ease-in-out group-hover:rotate-250"/>
                          <span>Goto Election Page</span>
                       </Link>
+                      )}
                     </div>
                   </div>
                 </div>

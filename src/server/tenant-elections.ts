@@ -3,7 +3,7 @@ import { BUCKET_NAME, s3Client } from '#/lib/s3';
 import { addCountryCode, chunkArray, maskPhoneNumber, prepareVotersForBulkImport, stripCountryCode } from '#/lib/utils';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { createServerFn } from '@tanstack/react-start';
-import { and, asc, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, or, sql, ilike, count } from 'drizzle-orm';
 import sharp from 'sharp';
 import { db } from '../db';
 import { candidates, elections, electionVotes, positions, voters } from '../db/schema';
@@ -219,14 +219,17 @@ export const deleteElectionFn = createServerFn({ method: 'POST' }).middleware([a
 export const getElectionOverview = createServerFn({
   method: "GET",
 })
-  .middleware([arcjetMiddleware])
-  .handler(async ({ data: electionId }): Promise<any> => {
+  .middleware([arcjetMiddleware,authMiddleware])
+  .handler(async ({ context, data: electionId }): Promise<any> => {
     // 1. Fetch primary election properties from the 'elections' table core node
+    const admin: any = context?.user;
     const [electionRecord]: any = await db
       .select()
       .from(elections)
-      .where(eq<any>(elections.id, electionId));
-
+      .where(and(eq<any>(elections.adminId, admin.id), eq<any>(elections.id, electionId)));
+      // .innerJoin(elections, eq<any>(positions.electionId, elections.id))
+      // .where(and(eq<any>(elections.adminId, admin.id), eq<any>(elections.id, electionId)))
+    
     if (!electionRecord) {
       throw new Error(`Election resource instance with ID [${electionId}] was not discovered.`);
     }
@@ -375,10 +378,11 @@ export const getElectionOverview = createServerFn({
 export const getUnifiedElectionTelemetry = createServerFn({
   method: "GET",
 })
- .middleware([arcjetMiddleware])
- .handler(async ({ data: electionId }): Promise<any> => {
+ .middleware([arcjetMiddleware,authMiddleware])
+ .handler(async ({ context, data: electionId }): Promise<any> => {
 
   // Concurrently fetch telemetry data from your database layers
+  const admin: any = context?.user;
   const [
     [electionRecord],
     [votersCountResult],
@@ -1258,7 +1262,104 @@ export const getVotersByElectionFn = createServerFn({ method: 'GET' })
       .where(eq<any>(elections.id, electionId))
       .orderBy(asc(voters.id));
   }
-  );
+);
+
+
+// export const getVotersByElectionFn = createServerFn({ method: 'GET' })
+//   .middleware([arcjetMiddleware, authMiddleware])
+//   .handler(async ({ data }: any) => {
+//     try {
+//       const electionId = data?.electionId;
+//       const page = Number(data?.page) || 1;
+//       const pageSize = Number(data?.pageSize) || 10;
+//       const searchQuery = data?.searchQuery || "";
+//       const statusFilter = data?.statusFilter || "ALL";
+
+//       console.log("backend successfully processed variables: ", { electionId, page, pageSize, searchQuery, statusFilter });
+
+//       const limitValue = pageSize;
+//       const offsetValue = (page - 1) * limitValue;
+
+//       const conditions: any = [eq(voters.electionId, electionId)];
+
+//       if (searchQuery && searchQuery.trim() !== "") {
+//         const searchPattern = `%${searchQuery.trim()}%`;
+//         conditions.push(
+//           or(
+//             ilike(voters.username, searchPattern),
+//             ilike(voters.name, searchPattern),
+//             ilike(voters.phoneNumber, searchPattern),
+//             ilike(voters.email, searchPattern)
+//           )
+//         );
+//       }
+
+//       if (statusFilter === "VOTED") {
+//         conditions.push(eq(voters.hasVoted, true));
+//       } else if (statusFilter === "PENDING") {
+//         conditions.push(eq(voters.hasVoted, false));
+//       }
+
+//       const queryCondition = and(...conditions);
+
+//       // Explicitly select fields that exist on your schema (removed missing isActive)
+//       const [votersRecords, [countResult]] = await Promise.all([
+//         db
+//           .select({
+//             id: voters.id,
+//             name: voters.name,
+//             username: voters.username,
+//             phoneNumber: voters.phoneNumber,
+//             email: voters.email,
+//             inviteToken: voters.inviteToken,
+//             isVerified: voters.isVerified,
+//             hasVoted: voters.hasVoted,
+//             invitedAt: voters.invitedAt
+//           })
+//           .from(voters)
+//           .innerJoin(elections, eq(voters.electionId, elections.id))
+//           .where(queryCondition)
+//           .orderBy(asc(voters.id))
+//           .limit(limitValue)
+//           .offset(offsetValue),
+        
+//         db
+//           .select({ total: count() })
+//           .from(voters)
+//           .innerJoin(elections, eq(voters.electionId, elections.id))
+//           .where(queryCondition)
+//       ]);
+
+//       const totalCount = countResult?.total || 0;
+//       const totalPages = Math.ceil(totalCount / limitValue);
+ 
+//       console.log({
+//         voters: votersRecords,
+//         pagination: {
+//           totalCount,
+//           totalPages,
+//           currentPage: page,
+//           pageSize: limitValue
+//         }
+//       });
+
+//       return {
+//         voters: votersRecords,
+//         pagination: {
+//           totalCount,
+//           totalPages,
+//           currentPage: page,
+//           pageSize: limitValue
+//         }
+//       };
+//     } catch (serverError) {
+//       console.error("CRITICAL BACKEND ERROR:", serverError);
+//       return {
+//         voters: [],
+//         pagination: { totalCount: 0, totalPages: 1, currentPage: 1, pageSize: 10 }
+//       };
+//     }
+// });
 
 
 
@@ -1873,24 +1974,10 @@ export const deleteVoterFn = createServerFn({ method: 'POST' })
 //   });
 
 
-interface VoteSelectionInput {
-  positionId: number;
-  candidateId: number | null; // Natively receives 'null' directly from our UI for Abstentions
-  receiptSignature: string;
-}
-
-interface CastBallotPayload {
-  voterId: number;
-  electionId: number;
-  selections: VoteSelectionInput[];
-}
 
 export const castBallotServerFn = createServerFn({
   method: "POST",
 })
-  .inputValidator((data: unknown) => {
-    return data as { data: CastBallotPayload };
-  })
   .middleware([arcjetMiddleware])
   .handler(async ({ data }: any) => {
     const { voterId, electionId, selections } = data;
