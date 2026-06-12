@@ -1634,11 +1634,22 @@ export const inviteVoterFn = createServerFn({ method: 'GET' }).middleware([arcje
       const fname = rec?.voters?.name?.split(" ")[0];
       const username = rec?.voters?.username;
       const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${rec?.elections?.tag}`
-      const smsPayload: any = {
-        sender: process.env.SMS_SENDER_ID,
-        message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken} . Visit ${electionUrl} to vote!`,
-        recipients: [phone],
-      };
+      let smsPayload: any;
+      if(rec?.elections?.authMode?.toLowerCase() == 'otp'){
+        smsPayload = {
+          sender: process.env.SMS_SENDER_ID,
+          message: `Hello ${fname}, Your Verification OTP is ${inviteToken} . Visit ${electionUrl} to vote!`,
+          recipients: [phone],
+        }
+
+      } else {
+
+        smsPayload = {
+          sender: process.env.SMS_SENDER_ID,
+          message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken} . Visit ${electionUrl} to vote!`,
+          recipients: [phone],
+        };
+      }
       
       console.log("Single Invite: ", smsPayload)
       
