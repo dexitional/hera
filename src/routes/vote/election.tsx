@@ -1,5 +1,4 @@
 import AuthElection from '#/components/election/AuthElection'
-import { useAuthStore } from '#/lib/voterStore'
 import { getElectionByTagFn } from '#/server/tenant-elections'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, Navigate, redirect } from '@tanstack/react-router'

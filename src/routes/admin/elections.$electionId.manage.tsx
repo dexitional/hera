@@ -100,36 +100,62 @@ function ManageElectionConsole() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
           
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono uppercase tracking-wider">
-              <Link to="/admin/elections" className="hover:text-purple-400 transition-colors">Elections</Link>
+            <div className="flex items-center gap-2 text-xs text-zinc-200 font-mono uppercase tracking-wider">
+              <Link to="/admin/elections" className="hover:text-purple-400 transition-colors">Election Centre</Link>
               <span>/</span>
-              <span className="text-zinc-400 select-all">tag: {election.tag}</span>
+              <span className="text-purple-400 select-all font-bold">{election.tag}</span>
             </div>
             <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
               <Sliders className="w-5 h-5 text-purple-400" />
-              <span>GROUP ::&nbsp;&nbsp; {election.title}</span>
+              <span>{election.title}</span>
             </h1>
           </div>
 
-          {/* Real-time Status Switch Override */}
-          <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 shrink-0">
-            <div className="flex flex-col text-right">
-              <span className="text-xs font-semibold text-white">Ballot Infrastructure</span>
-              <span className="text-[10px] text-zinc-500 font-medium">Toggle polling state live</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsLive(!isLive)}
-              className="focus:outline-none transition-transform active:scale-95"
-            >
-              {isLive ? (
-                <ToggleRight className="w-9 h-9 text-emerald-400 cursor-pointer" />
-              ) : (
-                <ToggleLeft className="w-9 h-9 text-zinc-600 cursor-pointer" />
-              )}
-            </button>
+          <div className="flex items-center gap-3">
+
+             {/* Real-time Status Switch Override */}
+              <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 shrink-0">
+                <div className="flex flex-col text-right">
+                  <span className="text-xs font-semibold text-white">Main Election Status</span>
+                  <span className="text-[10px] text-zinc-500 font-medium">Toggle Started or Ended</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsLive(!isLive)}
+                  className="focus:outline-none transition-transform active:scale-95"
+                >
+                  {isLive ? (
+                    <ToggleRight className="w-9 h-9 text-emerald-400 cursor-pointer" />
+                  ) : (
+                    <ToggleLeft className="w-9 h-9 text-zinc-600 cursor-pointer" />
+                  )}
+                </button>
+              </div>
+
+              {/* Real-time Status Switch Override */}
+              <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 shrink-0">
+                  <div className="flex flex-col text-right">
+                    <span className="text-xs font-semibold text-white">Make Election Public</span>
+                    <span className="text-[10px] text-zinc-500 font-medium">Toggle preview state live</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsLive(!isLive)}
+                    className="focus:outline-none transition-transform active:scale-95"
+                  >
+                    {isLive ? (
+                      <ToggleRight className="w-9 h-9 text-emerald-400 cursor-pointer" />
+                    ) : (
+                      <ToggleLeft className="w-9 h-9 text-zinc-600 cursor-pointer" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
           </div>
-        </div>
+
+         
+
 
         {/* ================= QUICK STATS DISCOVERY RIBBON ================= */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

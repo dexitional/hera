@@ -83,13 +83,12 @@ export const getActiveElectionsFn = createServerFn({ method: 'GET' }).middleware
           eq<any>(elections.makePublic, true)
         )
       );
-  });
+});
 
 
 export const createElectionFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware,authMiddleware])
   .handler(async ({ context, data }: any) => {
-
     try {
 
       let finalAvatarUrl: string | undefined = undefined;

@@ -26,9 +26,10 @@ export default function ElectionAdminForm({ data }: any) {
         const isEditMode = data != null;
 
         const authModeLabels: Record<string, string> = {
-          otp: "One-Time Password (SMS / Email)",
+          otp: "One-Time Password - Version 1 (OTP-SMS)",
           google: "Google OAuth 2.0 Identity Single Sign-On",
-          credential: "Secure Username & Passcode",
+          credential: "Secure Username & Passcode (Send Bulk Credentials via SMS)",
+          aotp: "One-Time Password - Version 2 (OTP-SMS/Voice)",
         };
       
         const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

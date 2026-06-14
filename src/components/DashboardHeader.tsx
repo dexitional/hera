@@ -1,9 +1,15 @@
-import React from 'react'
-import { useState, useEffect, useRef } from 'react';
-import { 
-  Search, CircleHelp, Lightbulb, User, MessageSquare, BookOpen, LifeBuoy, Sparkles, Settings, LogOut, X, Plus, Boxes, 
-  User2Icon} from 'lucide-react';
 import { signOut } from '#/lib/auth-client';
+import { Link, useLocation, useMatch, useParams } from '@tanstack/react-router';
+import {
+  ArrowBigRightDash,
+  LogOut,
+  MessageSquare,
+  Search,
+  Settings,
+  User2Icon,
+  X
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 
 export default function DashboardHeader({ user }: any) {
@@ -17,6 +23,13 @@ export default function DashboardHeader({ user }: any) {
       href: '/dashboard/org/knvmlleenlmznzfsltwy'
     }
   ];
+  
+  const pathname:any = useLocation({ select: (location: any) => location.pathname });
+  const pathSegments = pathname.split('/')?.filter(Boolean);
+  const currentPageName = pathSegments[pathSegments.length - 1] || 'Home';
+  const params = useParams({  strict: false });
+  
+  
   
   // Dropdown UI states
   const [activeDropdown, setActiveDropdown] = useState(null); // 'help' | 'advisor' | 'profile' | null
@@ -83,19 +96,57 @@ export default function DashboardHeader({ user }: any) {
       
       {/* Breadcrumb / Brand Node */}
       <div className="hidden md:flex items-center text-sm">
-        <a className="items-center justify-center shrink-0 flex" href="/admin/">
+        {/* Home */}
+        <Link to={`/admin`} className="items-center justify-center shrink-0 flex" href="/admin/">
           <span className="font-bold tracking-tight text-white hover:text-zinc-200 transition-colors">Dashboard</span>
-        </a>
+        </Link>
+
+        {/* Elections console */}
+        { ['candidates','voters','positions','manage','feed'].includes(currentPageName) && (
+        <div className="flex items-center md:pl-2">
+          <span className="text-zinc-600 pr-2 select-none">
+            <ArrowBigRightDash className="h-4 w-4" />
+          </span>
+          <Link className="items-center justify-center shrink-0 flex" to={['candidates','voters','positions'].includes(currentPageName) ? `/admin/elections/${params?.electionId}/manage`: `/admin/elections/` }>
+            <span className="font-bold tracking-tight text-zinc-400 hover:text-zinc-200 transition-colors">Elections Console</span>
+          </Link>
+        </div>
+        )}
+
+        {/* Manage Election */}
+        {/* { ['candidates','voters','positions'].includes(currentPageName) && params?.electionId && (
+        <div className="flex items-center md:pl-2">
+          <span className="text-zinc-600 pr-2 select-none">
+            <ArrowBigRightDash className="h-4 w-4" />
+          </span>
+          <a className="items-center justify-center shrink-0 flex" href="/admin/">
+            <span className="font-bold tracking-tight text-zinc-400 hover:text-zinc-200 transition-colors">Manage Election</span>
+          </a>
+        </div>
+        )} */}
+
+
+         {/* Election Centre */}
+         { ['candidates','voters','positions','feed','new'].includes(currentPageName) && params?.electionId && (
+        <div className="flex items-center md:pl-2">
+          <span className="text-zinc-600 pr-2 select-none">
+            <ArrowBigRightDash className="h-4 w-4" />
+          </span>
+          <Link to={`/admin/elections/${params?.electionId}/manage`} className="items-center justify-center shrink-0 flex" >
+            <span className="font-bold tracking-tight text-zinc-400 hover:text-zinc-200 transition-colors">Election Centre</span>
+          </Link>
+        </div>
+        )}
         
         
-        {/* <div className="flex items-center md:pl-2">
+        <div className="flex items-center md:pl-2">
           <span className="text-zinc-600 pr-2 select-none">
             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" fill="none">
               <path d="M16 3.549L7.12 20.600"></path>
             </svg>
           </span>
-          <span className="text-zinc-400 text-xs font-medium">New Elections</span>
-        </div> */}
+          <span className="text-zinc-400 text-xs font-medium capitalize">{currentPageName}</span>
+        </div>
 
 
 
