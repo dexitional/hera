@@ -99,7 +99,7 @@ function CandidateRow({ candidate }: { candidate: CandidateResult }) {
           <Crown className="h-3 w-3" /> Winner
         </span>
       )}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-center gap-3">
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-zinc-400 bg-zinc-50 font-mono text-[12px] font-black text-zinc-500 italic">
           {candidate.ballotNumber}
         </span>
@@ -116,7 +116,7 @@ function CandidateRow({ candidate }: { candidate: CandidateResult }) {
           )}
         </div>
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 sm:text-left">
           <p className="text-sm font-bold text-zinc-900">{candidate.name}</p>
           {candidate.teaser ? (
             <p className="truncate text-[11px] italic text-zinc-500">{candidate.teaser}</p>
@@ -147,7 +147,7 @@ function AbstentionCard({ abstentions, abstentionPercentage }: { abstentions: nu
   const clampedWidth = Math.min(abstentionPercentage, 100);
   return (
     <div className="relative flex flex-col gap-2.5 rounded-lg border border-dashed border-red-300 bg-red-50/40 p-3.5 print:break-inside-avoid">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-red-300 bg-white font-mono text-[12px] font-black italic text-red-500">
           —
         </span>
@@ -274,7 +274,7 @@ function ElectionFinalResultsPage() {
         {/* STATISTICS SECTION */}
         <section className="mb-9">
           <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-zinc-500">Voter Turnout &amp; Statistics</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+          <div className="grid md:grid-cols-4 grid-cols-1 gap-3">
             <StatCard
               icon={Users}
               label="Eligible Voters"
