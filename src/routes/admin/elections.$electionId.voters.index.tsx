@@ -1,5 +1,5 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { 
   UserPlus, Upload, Search, Edit2, Trash2, 
   CheckCircle, XCircle, FileSpreadsheet, X, 
@@ -9,8 +9,16 @@ import {
   PhoneForwarded,
   PhoneCallIcon
 } from "lucide-react";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { deleteVoterFn, exportVotersToExcelFn, getVotersByElectionFn, inviteVoterFn, inviteVotersFn, uploadVotersFn } from "#/server/tenant-elections";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { 
+  deleteVoterFn, 
+  exportVotersToExcelFn, 
+  getVotersByElectionFn, 
+  inviteVoterFn, 
+  inviteVotersFn, 
+  uploadVotersFn,
+  getSmsProgressFn  
+} from "#/server/tenant-elections";
 import * as XLSX from 'xlsx';
 import { addCountryCode, generateSixDigitCode, stripCountryCode } from "#/lib/utils";
 
@@ -60,6 +68,26 @@ function VotersDirectory() {
   const [statusFilter, setStatusFilter] = useState<"ALL" | "VOTED" | "PENDING">("ALL");
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [isTrackingSms, setIsTrackingSms] = useState(false);
+
+  // Background Task Real-Time Progress Tracker via Server Polling Pipeline
+  const { data: queueProgress } = useQuery({
+    queryKey: ['sms-progress', electionId],
+    queryFn: () => getSmsProgressFn({ data: electionId } as any),
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.isProcessing || isTrackingSms ? 2000 : false;
+    },
+    placeholderData: { isProcessing: false, total: 0, processed: 0, successful: 0, failed: 0 }
+  });
+
+  useEffect(() => {
+    if (queueProgress?.isProcessing) {
+      setIsTrackingSms(true);
+    } else if (isTrackingSms && queueProgress && !queueProgress.isProcessing) {
+      setIsTrackingSms(false);
+    }
+  }, [queueProgress?.isProcessing, isTrackingSms, queueProgress]);
 
   // Filter Logic execution pipeline
   const filteredVoters = voters?.filter((voter: any) => {
@@ -95,11 +123,17 @@ function VotersDirectory() {
 
   const invitesMutation = useMutation({
     mutationFn: inviteVotersFn,
+    onMutate: () => {
+      setIsTrackingSms(true);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
-      return redirect({ to: `/admin/elections/${electionId}/voters` } as any)
+      queryClient.invalidateQueries({ queryKey: ['sms-progress', electionId] });
     },
-    onError: (error: any) => console.error(error.message)
+    onError: (error: any) => {
+      setIsTrackingSms(false);
+      console.error(error.message);
+    },
   });
 
   const importExcelMutation = useMutation({
@@ -192,7 +226,6 @@ function VotersDirectory() {
     reader.readAsArrayBuffer(excelFile);
     reader.onload = (e) => {
       try {
-        
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
@@ -226,10 +259,84 @@ function VotersDirectory() {
     }
   }
 
+  const progressPercentage = queueProgress?.total 
+    ? Math.round((queueProgress.processed / queueProgress.total) * 100) 
+    : 0;
+
+
 
   return (
     <>
-      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* New Bulk Invite Progress Bar */}
+          {/* <div className="bg-[#0a192a]/50 p-4 rounded-xl border border-zinc-800">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-400">Progress: {progressPercentage}%</span>
+              <div className="flex-1 h-2 bg-zinc-900 rounded-full">
+                <div className="h-full bg-purple-500 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
+              </div>
+            </div>
+          </div> */}
+
+          {/* Dynamic Progress Panel Display Node */}
+          {(isTrackingSms || invitesMutation.isPending || (queueProgress && (queueProgress.isProcessing || queueProgress.total > 0))) && (
+            <div className="grid grid-cols-2 gap-4">
+                {/* Progress Bar Container */}
+                <div className="bg-[#0a192a]/80 border border-zinc-800 rounded-xl p-5 shadow-sm space-y-4 animate-in fade-in duration-200">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div>
+                      <h4 className="font-bold text-white text-sm md:text-base flex items-center gap-2">
+                        {(queueProgress?.isProcessing || isTrackingSms || invitesMutation.isPending) ? (
+                          <>
+                            <Loader2 className="animate-spin text-purple-500 w-4 h-4" />
+                            Bulk SMS Transmission Active
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="text-emerald-400 w-4 h-4" />
+                            Bulk SMS Broadcast Completed
+                          </>
+                        )}
+                      </h4>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        Crentials transmission tracking pipeline
+                      </p>
+                    </div>
+                    <span className="text-sm font-bold text-purple-400 bg-purple-950/40 border border-purple-900/30 px-2.5 py-1 rounded-md">
+                      {progressPercentage}% Complete
+                    </span>
+                  </div>
+
+                  <div className="w-full bg-zinc-900 rounded-full h-2.5 overflow-hidden border border-zinc-800">
+                    <div className={`h-2.5 transition-all duration-500 ease-out ${queueProgress?.isProcessing || isTrackingSms ? 'bg-purple-600' : 'bg-emerald-500'}`} style={{ width: `${progressPercentage}%` }}></div>
+                  </div>
+                </div>
+
+                {/* Statuses */}
+                <div className="bg-[#0a192a]/80 border border-zinc-800 rounded-xl p-5 shadow-sm space-y-4 animate-in fade-in duration-200">
+                  <div className="grid grid-cols-4 sm:grid-cols-4 gap-3">
+                    <div className="bg-zinc-900/60 px-3 py-1 rounded-lg border border-zinc-800 text-center">
+                      <span className="text-xs text-zinc-400 block font-medium">Total Batched</span>
+                      <span className="text-lg font-bold text-white">{queueProgress?.total ?? 0}</span>
+                    </div>
+                    <div className="bg-blue-950/30 px-3 py-1 rounded-lg border border-blue-900/30 text-center">
+                      <span className="text-xs text-blue-400 block font-medium">Processed</span>
+                      <span className="text-lg font-bold text-blue-300">{queueProgress?.processed ?? 0}</span>
+                    </div>
+                    <div className="bg-emerald-950/30 px-3 py-1 rounded-lg border border-emerald-900/30 text-center">
+                      <span className="text-xs text-emerald-400 block font-medium">Delivered</span>
+                      <span className="text-lg font-bold text-emerald-300">{queueProgress?.successful ?? 0}</span>
+                    </div>
+                    <div className="bg-red-950/30 px-3 py-1 rounded-lg border border-red-900/30 text-center">
+                      <span className="text-xs text-red-400 block font-medium">Failed / Retried</span>
+                      <span className="text-lg font-bold text-red-300">{queueProgress?.failed ?? 0}</span>
+                    </div>
+                  </div>
+                </div>
+            
+            </div>
+          )}
+       
         
         {/* ================= HEADER RIBBON CONTROLS ================= */}
         <div className="grid grid-cols-5 gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
@@ -241,7 +348,6 @@ function VotersDirectory() {
           </div>
           
           <div className="col-span-3 flex flex-col md:flex-row items-center gap-3 shrink-0">
-
             <button
               className="flex items-center gap-2 bg-[#E3F09B] text-black text-xs font-bold hover:bg-zinc-800 hover:text-white border border-zinc-800 px-3.5 py-2 rounded-lg transition-all"
             >
@@ -438,6 +544,7 @@ function VotersDirectory() {
         </div>
 
       </div>
+
 
       {/* ========================================================================= */}
       {/* EXCEL BULK FILE INGESTION STORAGE DIALOG OVERLAY                         */}

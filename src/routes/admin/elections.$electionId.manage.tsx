@@ -328,6 +328,14 @@ function ManageElectionConsole() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
+
+              <Link
+                to={`/admin/elections/${election?.id}/results`}
+                className="w-full sm:w-auto flex items-center gap-1 text-center px-4 py-2 bg-purple-600 hover:bg-purple-500 text-xs font-semibold text-white rounded-lg transition-all shadow-sm shrink-0"
+              >
+                <Activity className="h-4 animate-pulse" />
+                <span className="">Print Results</span>
+              </Link>
               <button
                 onClick={handleExportCertifiedResults}
                 disabled={election.status && ['staged','started'].includes(election?.status)}

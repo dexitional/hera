@@ -21,7 +21,7 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-[#0a192a] border-b border-[#23232b] shadow-md">
+    <header className="sticky top-0 z-50 w-full bg-[#0a192a] border-b border-[#23232b] shadow-md print:hidden">
       
       {/* Main Navigation Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between rounded-b-3xl">

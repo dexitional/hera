@@ -1,7 +1,7 @@
 export default function Footer() {
   return (
     <>
-    <footer className="relative w-full border-t border-white/10 bg-[#0a192a] backdrop-blur-xl">
+    <footer className="relative w-full border-t border-white/10 bg-[#0a192a] backdrop-blur-xl print:hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20"></div>
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 ">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">

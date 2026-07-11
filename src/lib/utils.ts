@@ -138,3 +138,34 @@ export function chunkArray<T>(array: T[], size: number): T[][] {
 export function maskPhoneNumber(phone: any) {
   return phone.replace(/(\d{3})\d{4}(\d{3})/, '$1xxxx$2');
 }
+
+export const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export const smsQueueTracker = new Map<string, {
+  total: number;
+  processed: number;
+  successful: number;
+  failed: number;
+  isProcessing: boolean;
+}>();
+
+export async function fetchWithRetry(url: string, options: any, retries = 3, delay = 1000): Promise<Response> {
+  try {
+    const res = await fetch(url, options);
+    if (!res.ok && (res.status === 429 || res.status >= 500) && retries > 0) {
+      console.warn(`Gateway rate-limited/errored (${res.status}). Backoff retrying in ${delay}ms...`);
+      await wait(delay);
+      return fetchWithRetry(url, options, retries - 1, delay * 2);
+    }
+    return res;
+  } catch (err) {
+    if (retries > 0) {
+      console.warn(`Network disconnect encountered. Retrying in ${delay}ms...`);
+      await wait(delay);
+      return fetchWithRetry(url, options, retries - 1, delay * 2);
+    }
+    throw err;
+  }
+}
+
+

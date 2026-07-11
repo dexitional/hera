@@ -1,12 +1,12 @@
 import { authMiddleware } from '#/middleware/authMiddleware';
 import { BUCKET_NAME, s3Client } from '#/lib/s3';
-import { addCountryCode, chunkArray, fetchWithRetry, maskPhoneNumber, prepareVotersForBulkImport, stripCountryCode, wait } from '#/lib/utils';
+import { addCountryCode, chunkArray, maskPhoneNumber, prepareVotersForBulkImport, stripCountryCode } from '#/lib/utils';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { createServerFn } from '@tanstack/react-start';
 import { and, asc, desc, eq, inArray, or, sql, ilike, count } from 'drizzle-orm';
 import sharp from 'sharp';
 import { db } from '../db';
-import { candidates, elections, electionVotes, positions, voters, user } from '../db/schema';
+import { candidates, elections, electionVotes, positions, voters } from '../db/schema';
 // import * as XLSX from 'xlsx';
 import XLSX from 'xlsx-js-style';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
@@ -1014,141 +1014,6 @@ export const exportElectionResultsToFormatExcelFn = createServerFn({ method: 'GE
   });
 
 
-/* FINAL RESULTS PRINT PAGE DATA */
-
-export const getElectionFinalResultsFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ context, data }: any) => {
-    const electionId = data?.electionId ?? data;
-    const admin: any = context?.user;
-
-    const [
-      [electionRecord],
-      [votersCountResult],
-      [votedCountResult],
-      rawPositions,
-      rawCandidateTallies,
-    ] = await Promise.all([
-      db
-        .select({
-          id: elections.id,
-          tag: elections.tag,
-          title: elections.title,
-          description: elections.description,
-          imageUrl: elections.imageUrl,
-          startAt: elections.startAt,
-          endAt: elections.endAt,
-          status: elections.status,
-          organizerName: user.name,
-          organizerImage: user.image,
-        })
-        .from(elections)
-        .innerJoin(user, eq(elections.adminId, user.id))
-        .where(and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id))),
-      db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq<any>(voters.electionId, electionId)),
-      db
-        .select({ count: sql<number>`count(${voters.id})::int` })
-        .from(voters)
-        .where(and(eq<any>(voters.electionId, electionId), eq<any>(voters.hasVoted, true))),
-      db.select().from(positions).where(eq<any>(positions.electionId, electionId)).orderBy(asc(positions.order), asc(positions.createdAt)),
-      db
-        .select({
-          id: candidates.id,
-          name: candidates.name,
-          teaser: candidates.teaser,
-          imageUrl: candidates.imageUrl,
-          order: candidates.order,
-          positionId: candidates.positionId,
-          voteCount: sql<number>`count(${electionVotes.id})::int`,
-        })
-        .from(candidates)
-        .innerJoin(positions, eq(candidates.positionId, positions.id))
-        .leftJoin(
-          electionVotes,
-          and(eq(electionVotes.candidateId, candidates.id), eq(electionVotes.positionId, candidates.positionId))
-        )
-        .where(eq<any>(positions.electionId, electionId))
-        .groupBy(candidates.id, candidates.name, candidates.teaser, candidates.imageUrl, candidates.order, candidates.positionId)
-        .orderBy(asc(candidates.order)),
-    ]);
-
-    if (!electionRecord) {
-      throw new Error(`Election instance [${electionId}] not found.`);
-    }
-
-    const registeredVoters = votersCountResult?.count ?? 0;
-    const votedCount = votedCountResult?.count ?? 0;
-    const absentees = Math.max(registeredVoters - votedCount, 0);
-    const turnoutPercentage = registeredVoters > 0 ? (votedCount / registeredVoters) * 100 : 0;
-
-    const positionResults = await Promise.all(
-      rawPositions.map(async (pos, posIdx) => {
-        const positionCandidates = rawCandidateTallies
-          .filter((cand) => cand.positionId === pos.id)
-          .map((cand, idx) => ({
-            id: cand.id,
-            name: cand.name,
-            teaser: cand.teaser ?? '',
-            imageUrl: cand.imageUrl ?? '',
-            ballotNumber: cand.order ?? idx + 1,
-            votes: cand.voteCount,
-          }));
-
-        const [abstentionTally] = await db
-          .select({ count: sql<number>`count(${electionVotes.id})::int` })
-          .from(electionVotes)
-          .where(and(eq(electionVotes.positionId, pos.id), sql`${electionVotes.candidateId} IS NULL`));
-
-        const abstentions = abstentionTally?.count ?? 0;
-        const totalVotesForPosition = positionCandidates.reduce((sum, c) => sum + c.votes, 0) + abstentions;
-
-        // Determine the vote-count cutoff for winning the available slots, honoring ties at the boundary
-        const sortedByVotes = [...positionCandidates].sort((a, b) => b.votes - a.votes);
-        const cutoffVotes = sortedByVotes[pos.slots - 1]?.votes ?? -1;
-
-        const rankedCandidates = positionCandidates
-          .map((cand) => ({
-            ...cand,
-            percentage: totalVotesForPosition > 0 ? (cand.votes / totalVotesForPosition) * 100 : 0,
-            isWinner: totalVotesForPosition > 0 && cand.votes > 0 && cand.votes >= cutoffVotes,
-          }))
-          .sort((a, b) => b.votes - a.votes);
-
-        return {
-          id: pos.id,
-          title: pos.title,
-          slots: pos.slots,
-          order: pos.order ?? posIdx,
-          totalVotesForPosition,
-          abstentions,
-          abstentionPercentage: totalVotesForPosition > 0 ? (abstentions / totalVotesForPosition) * 100 : 0,
-          candidates: rankedCandidates,
-        };
-      })
-    );
-
-    return {
-      election: {
-        id: electionRecord.id,
-        tag: electionRecord.tag,
-        title: electionRecord.title,
-        description: electionRecord.description,
-        imageUrl: electionRecord.imageUrl || electionRecord.organizerImage || '',
-        organizerName: electionRecord.organizerName,
-        startAt: electionRecord.startAt ? electionRecord.startAt.toISOString() : null,
-        endAt: electionRecord.endAt ? electionRecord.endAt.toISOString() : null,
-        status: electionRecord.status,
-      },
-      stats: {
-        registeredVoters,
-        votedCount,
-        absentees,
-        turnoutPercentage,
-      },
-      positions: positionResults.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-    };
-  });
-
 
 // POSITION FUNCTIONS
 
@@ -1972,44 +1837,21 @@ export const inviteVoters1Fn = createServerFn({ method: 'GET' }).middleware([arc
 );
 
 
-// Helper Function for Background SMS Queue Processing
-const smsQueueTracker = new Map<string, {
-  total: number;
-  processed: number;
-  successful: number;
-  failed: number;
-  isProcessing: boolean;
-}>();
-
-
+// Background processor function
 async function processSmsQueueInBackground(rec: any[], electionId: string) {
-  const batches = chunkArray(rec, 25); // Smooth 5-record chunks
-  const electionTag = rec[0]?.elections?.tag || '';
-  const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${electionTag}`;
-
-  smsQueueTracker.set(electionId, {
-    total: rec.length,
-    processed: 0,
-    successful: 0,
-    failed: 0,
-    isProcessing: true,
-  });
+  // Process 10 voters at a time to prevent overwhelming Arkesel
+  const batches = chunkArray(rec, 40);
+  const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${rec[0]?.elections?.tag}`;
 
   for (const batch of batches) {
     await Promise.all(
       batch.map(async (r: any) => {
-        const stats = smsQueueTracker.get(electionId)!;
         const phone = addCountryCode(r?.voters?.phoneNumber);
         const inviteToken = r?.voters?.inviteToken;
         const fname = r?.voters?.name?.split(" ")[0];
         const username = r?.voters?.username;
 
-        if (!phone?.length || phone?.length < 9) {
-          stats.processed += 1;
-          stats.failed += 1;
-          smsQueueTracker.set(electionId, { ...stats });
-          return;
-        }
+        if (!phone?.length || phone?.length < 9) return;
 
         const smsPayload = {
           sender: process.env.SMS_SENDER_ID,
@@ -2018,7 +1860,7 @@ async function processSmsQueueInBackground(rec: any[], electionId: string) {
         };
 
         try {
-          const sms = await fetchWithRetry(`${process.env.SMS_API_URL}/sms/send`, {
+          const sms = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -2027,11 +1869,13 @@ async function processSmsQueueInBackground(rec: any[], electionId: string) {
             body: JSON.stringify(smsPayload)
           });
 
-          if (!sms.ok) throw new Error(`HTTP Gateway State Error ${sms.status}`);
+          if (!sms.ok) return;
 
           const resp = await sms.json();
-          
+          console.log("SMS Response: ", resp);
           if (resp && (resp.status === "success" || resp.code === "1000")) {
+            console.log("Updating database for voter: ", r?.voters?.phoneNumber);
+            // Update database immediately per voter
             await db.update(voters)
               .set({ isVerified: true })
               .where(
@@ -2040,39 +1884,24 @@ async function processSmsQueueInBackground(rec: any[], electionId: string) {
                   eq<any>(voters.phoneNumber, r?.voters?.phoneNumber)
                 )
               );
-            stats.successful += 1;
-          } else {
-            stats.failed += 1;
           }
         } catch (err) {
-          stats.failed += 1;
-          console.error(`Permanent transmission failure to ${phone}:`, err);
-        } finally {
-          stats.processed += 1;
-          smsQueueTracker.set(electionId, { ...stats });
+          console.error(`Failed background SMS to ${phone}:`, err);
         }
       })
     );
-    await wait(1000); // 1s carrier pacing step delay
-  }
 
-  const finalStats = smsQueueTracker.get(electionId);
-  if (finalStats) {
-    smsQueueTracker.set(electionId, { ...finalStats, isProcessing: false });
+    // Optional: 1-second pause between batches to protect API rate limits
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
+  console.log(`Background processing finished for election: ${electionId}`);
 }
 
 // Fixed Server Function
-export const inviteVotersFn = createServerFn({ method: 'POST' })
+export const inviteVotersFn = createServerFn({ method: 'POST' }) // Changed to POST
   .middleware([arcjetMiddleware])
   .handler(async ({ data: electionId }: any) => {
     try {
-      const currentJob = smsQueueTracker.get(electionId);
-      console.log("Current Job: ", currentJob);
-      if (currentJob?.isProcessing) {
-        return { success: false, message: "A broadcast is already running for this election." };
-      }
-
       const rec = await db.select()
         .from(voters)
         .innerJoin(elections, eq<any>(voters.electionId, elections.id))
@@ -2080,33 +1909,28 @@ export const inviteVotersFn = createServerFn({ method: 'POST' })
           and(
             eq<any>(elections.id, electionId),
             eq<any>(voters.hasVoted, false),
-            //eq<any>(voters.isVerified, false)
+            //eq<any>(voters.isVerified, false) // Only send to unverified
           )
         );
-        console.log("Rec: ", rec);
-
+      
       if (!rec.length) {
-        return { success: true, message: "No pending unverified voters to invite." };
+        return { success: true, message: "No pending voters to invite." };
       }
-     
+
+      // CRITICAL: Kick off the queue in the background. DO NOT await this!
       processSmsQueueInBackground(rec, electionId);
 
+      // Instantly respond to client so Cloudflare closes the connection successfully
       return {
         success: true,
-        message: `Queue initiated. Asynchronously processing ${rec.length} voter invitations in the background.`,
+        message: `Processing ${rec.length} invites in the background.`,
       };
+
     } catch (error: any) {
+      console.error(error.message);
       return { success: false, error: error.message };
     }
-  });
-
-
-  // Polling Metrics Collector Function
-  export const getSmsProgressFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware])
-  .handler(async ({ data: electionId }: any) => {
-    return smsQueueTracker.get(electionId) || { isProcessing: false, total: 0, processed: 0, successful: 0, failed: 0 };
- });
+});
 
 
 export const exportVotersToExcelFn = createServerFn({ method: 'GET' })

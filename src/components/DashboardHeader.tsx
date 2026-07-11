@@ -91,7 +91,7 @@ export default function DashboardHeader({ user }: any) {
 
   return (
     <>
-    <header className="hidden md:flex h-11 md:h-12 items-center shrink-0 bg-[#18181b][#0a192a]/80 border-b border-[#23232b] relative z-40">
+    <header className="hidden md:flex h-11 md:h-12 items-center shrink-0 bg-[#18181b][#0a192a]/80 border-b border-[#23232b] relative z-40 print:hidden">
     <div className="@container max-w-[1200px] px-4 @lg:px-6 @xl:px-10 mx-auto w-full flex items-center justify-between h-full pr-3 flex-1 gap-x-8 pl-4">
       
       {/* Breadcrumb / Brand Node */}

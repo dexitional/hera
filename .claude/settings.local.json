@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/dexitional/Documents/2026/herav/src/routes/admin/**)",
+      "Bash(grep -n \"tenant-elections\" src/routes/admin/elections.\\\\$electionId.edit.tsx src/routes/admin/elections.index.tsx src/routes/admin/elections.\\\\$electionId.voters.index.tsx src/routes/admin/elections.\\\\$electionId.candidates.index.tsx 2>/dev/null)",
+      "Bash(grep -n \"sameSite\\\\|secure\\\\|CORS\\\\|origin\" src/lib/auth.ts src/routes/api/auth.\\\\$.ts)",
+      "Skill(artifact-design)",
+      "Skill(artifact-design:*)"
+    ]
+  }
+}
