@@ -1838,7 +1838,7 @@ export const inviteVoters1Fn = createServerFn({ method: 'GET' }).middleware([arc
 // Background processor function
 async function processSmsQueueInBackground(rec: any[], electionId: string) {
   // Process 10 voters at a time to prevent overwhelming Arkesel
-  const batches = chunkArray(rec, 10);
+  const batches = chunkArray(rec, 40);
   const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${rec[0]?.elections?.tag}`;
 
   for (const batch of batches) {
