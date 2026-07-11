@@ -68,7 +68,7 @@ function StatCard({
   accent: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-zinc-200 bg-white p-5 print:break-inside-avoid print:border-zinc-300 print:shadow-none shadow-sm">
+    <div className="w-full relative overflow-hidden rounded-xl border border-zinc-200 bg-white p-5 print:break-inside-avoid print:border-zinc-300 print:shadow-none shadow-sm">
       <div className={`absolute inset-x-0 top-0 h-1 ${accent}`} />
       <div className="flex items-start justify-between">
         <div>
@@ -274,7 +274,7 @@ function ElectionFinalResultsPage() {
         {/* STATISTICS SECTION */}
         <section className="mb-9">
           <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-zinc-500">Voter Turnout &amp; Statistics</h2>
-          <div className="grid md:grid-cols-4 grid-cols-1 gap-3">
+          <div className="w-full flex flex-col sm:flex-row gap-3">
             <StatCard
               icon={Users}
               label="Eligible Voters"
