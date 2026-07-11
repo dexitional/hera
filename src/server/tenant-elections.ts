@@ -1753,7 +1753,7 @@ export const inviteVoters2Fn = createServerFn({ method: 'GET' }).middleware([arc
   }
 );
 
-export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
+export const inviteVoters1Fn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
   async ({ data: electionId }: any) => {
     try {
       // Fetch Voter
@@ -1833,6 +1833,102 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
     }
   }
 );
+
+
+// Background processor function
+async function processSmsQueueInBackground(rec: any[], electionId: string) {
+  // Process 10 voters at a time to prevent overwhelming Arkesel
+  const batches = chunkArray(rec, 10);
+  const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${rec[0]?.elections?.tag}`;
+
+  for (const batch of batches) {
+    await Promise.all(
+      batch.map(async (r: any) => {
+        const phone = addCountryCode(r?.voters?.phoneNumber);
+        const inviteToken = r?.voters?.inviteToken;
+        const fname = r?.voters?.name?.split(" ")[0];
+        const username = r?.voters?.username;
+
+        if (!phone?.length || phone?.length < 9) return;
+
+        const smsPayload = {
+          sender: process.env.SMS_SENDER_ID,
+          message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken}. Visit ${electionUrl} to vote!`,
+          recipients: [phone],
+        };
+
+        try {
+          const sms = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'api-key': process.env.SMS_API_KEY!
+            },
+            body: JSON.stringify(smsPayload)
+          });
+
+          if (!sms.ok) return;
+
+          const resp = await sms.json();
+          console.log("SMS Response: ", resp);
+          if (resp && (resp.status === "success" || resp.code === "1000")) {
+            console.log("Updating database for voter: ", r?.voters?.phoneNumber);
+            // Update database immediately per voter
+            await db.update(voters)
+              .set({ isVerified: true })
+              .where(
+                and(
+                  eq<any>(voters.electionId, electionId),
+                  eq<any>(voters.phoneNumber, r?.voters?.phoneNumber)
+                )
+              );
+          }
+        } catch (err) {
+          console.error(`Failed background SMS to ${phone}:`, err);
+        }
+      })
+    );
+
+    // Optional: 1-second pause between batches to protect API rate limits
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  console.log(`Background processing finished for election: ${electionId}`);
+}
+
+// Fixed Server Function
+export const inviteVotersFn = createServerFn({ method: 'POST' }) // Changed to POST
+  .middleware([arcjetMiddleware])
+  .handler(async ({ data: electionId }: any) => {
+    try {
+      const rec = await db.select()
+        .from(voters)
+        .innerJoin(elections, eq<any>(voters.electionId, elections.id))
+        .where(
+          and(
+            eq<any>(elections.id, electionId),
+            eq<any>(voters.hasVoted, false),
+            //eq<any>(voters.isVerified, false) // Only send to unverified
+          )
+        );
+      
+      if (!rec.length) {
+        return { success: true, message: "No pending voters to invite." };
+      }
+
+      // CRITICAL: Kick off the queue in the background. DO NOT await this!
+      processSmsQueueInBackground(rec, electionId);
+
+      // Instantly respond to client so Cloudflare closes the connection successfully
+      return {
+        success: true,
+        message: `Processing ${rec.length} invites in the background.`,
+      };
+
+    } catch (error: any) {
+      console.error(error.message);
+      return { success: false, error: error.message };
+    }
+});
 
 
 export const exportVotersToExcelFn = createServerFn({ method: 'GET' })
