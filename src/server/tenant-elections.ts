@@ -1763,8 +1763,8 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
         .where(
           and(
             eq<any>(elections.id, electionId),
-            eq<any>(voters.isVerified, false)
-            //eq<any>(voters.hasVoted, false)
+            //eq<any>(voters.isVerified, false)
+            eq<any>(voters.hasVoted, false)
           )
         );
 
@@ -1806,6 +1806,7 @@ export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
           }
 
           const resp = await sms.json();
+          console.log("SMS Response: ", resp);
           if (resp) {
             const { data: mt } = resp;
             const sentInvites = mt?.map((r: any) => ("0" + stripCountryCode(r.recipient)));
