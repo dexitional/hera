@@ -1414,6 +1414,7 @@ export const updateVoterFn = createServerFn({ method: 'POST' }).middleware([arcj
       try {
         const phoneNumberCode = addCountryCode(data?.phone);
         const phoneNumberNoCode = stripCountryCode(data?.phone);
+        const cleanUsername = data.username.toLowerCase().replace(/\s+/g, '');
 
         let [voter] = ['credential'].includes(data.authMode)
         ? await db
@@ -1422,7 +1423,8 @@ export const updateVoterFn = createServerFn({ method: 'POST' }).middleware([arcj
           .innerJoin(elections, eq<any>(voters.electionId, elections.id))
           .where(
             and(
-              eq<any>(voters.username, data.username), 
+              // eq<any>(voters.username, data.username), 
+              eq(sql`LOWER(REPLACE(${voters.username}, ' ', ''))`, cleanUsername), 
               eq<any>(voters.inviteToken, data.password),
               eq<any>(elections.id, data.electionId)
             )
