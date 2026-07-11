@@ -110,7 +110,7 @@ function CandidateRow({ candidate }: { candidate: CandidateResult }) {
           } bg-zinc-100 flex items-center justify-center`}
         >
           {candidate.imageUrl ? (
-            <img src={candidate.imageUrl} alt={candidate.name} className="h-full w-full object-cover" />
+            <img src={candidate.imageUrl} alt={candidate.name} className="h-full w-full object-cover object-top" />
           ) : (
             <Users className="h-6 w-6 text-zinc-400" />
           )}
