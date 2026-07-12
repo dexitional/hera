@@ -180,19 +180,19 @@ function ManageElectionConsole() {
         {/* ================= WORKSPACE CONSOLE BREADCRUMB HEADER ================= */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
           
-          <div className="space-y-1">
+          <div className="space-y-1 flex-3">
             <div className="flex items-center gap-2 text-xs text-zinc-200 font-mono uppercase tracking-wider">
               <Link to="/admin/elections" className="hover:text-purple-400 transition-colors">Election Centre</Link>
               <span>/</span>
               <span className="text-purple-400 select-all font-bold">{election.tag}</span>
             </div>
-            <h1 className="text-sm sm:text-xl font-bold text-white tracking-tight flex items-center gap-2">
+            <h1 className="text-sm sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
               <Sliders className="w-5 h-5 text-purple-400" />
               <span>{election.title}</span>
             </h1>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex-4 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   {/* Edit / Reset Quick Actions */}
                   <div className="flex items-center gap-2 shrink-0">

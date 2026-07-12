@@ -54,7 +54,6 @@ import { Route as AdminElectionsElectionIdVotersIndexRouteImport } from './route
 import { Route as AdminElectionsElectionIdPositionsIndexRouteImport } from './routes/admin/elections.$electionId.positions.index'
 import { Route as AdminElectionsElectionIdCandidatesIndexRouteImport } from './routes/admin/elections.$electionId.candidates.index'
 import { Route as AdminElectionsElectionIdVotersNewRouteImport } from './routes/admin/elections.$electionId.voters.new'
-import { Route as AdminElectionsElectionIdVotersIndexcopyRouteImport } from './routes/admin/elections.$electionId.voters.index copy'
 import { Route as AdminElectionsElectionIdPositionsNewRouteImport } from './routes/admin/elections.$electionId.positions.new'
 import { Route as AdminElectionsElectionIdFeedBakRouteImport } from './routes/admin/elections.$electionId.feed.bak'
 import { Route as AdminElectionsElectionIdCandidatesNewRouteImport } from './routes/admin/elections.$electionId.candidates.new'
@@ -301,12 +300,6 @@ const AdminElectionsElectionIdVotersNewRoute =
     path: '/elections/$electionId/voters/new',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const AdminElectionsElectionIdVotersIndexcopyRoute =
-  AdminElectionsElectionIdVotersIndexcopyRouteImport.update({
-    id: '/elections/$electionId/voters/index copy',
-    path: '/elections/$electionId/voters/index copy',
-    getParentRoute: () => AdminRouteRoute,
-  } as any)
 const AdminElectionsElectionIdPositionsNewRoute =
   AdminElectionsElectionIdPositionsNewRouteImport.update({
     id: '/elections/$electionId/positions/new',
@@ -388,7 +381,6 @@ export interface FileRoutesByFullPath {
   '/admin/elections/$electionId/candidates/new': typeof AdminElectionsElectionIdCandidatesNewRoute
   '/admin/elections/$electionId/feed/bak': typeof AdminElectionsElectionIdFeedBakRoute
   '/admin/elections/$electionId/positions/new': typeof AdminElectionsElectionIdPositionsNewRoute
-  '/admin/elections/$electionId/voters/index copy': typeof AdminElectionsElectionIdVotersIndexcopyRoute
   '/admin/elections/$electionId/voters/new': typeof AdminElectionsElectionIdVotersNewRoute
   '/admin/elections/$electionId/candidates/': typeof AdminElectionsElectionIdCandidatesIndexRoute
   '/admin/elections/$electionId/positions/': typeof AdminElectionsElectionIdPositionsIndexRoute
@@ -441,7 +433,6 @@ export interface FileRoutesByTo {
   '/admin/elections/$electionId/candidates/new': typeof AdminElectionsElectionIdCandidatesNewRoute
   '/admin/elections/$electionId/feed/bak': typeof AdminElectionsElectionIdFeedBakRoute
   '/admin/elections/$electionId/positions/new': typeof AdminElectionsElectionIdPositionsNewRoute
-  '/admin/elections/$electionId/voters/index copy': typeof AdminElectionsElectionIdVotersIndexcopyRoute
   '/admin/elections/$electionId/voters/new': typeof AdminElectionsElectionIdVotersNewRoute
   '/admin/elections/$electionId/candidates': typeof AdminElectionsElectionIdCandidatesIndexRoute
   '/admin/elections/$electionId/positions': typeof AdminElectionsElectionIdPositionsIndexRoute
@@ -496,7 +487,6 @@ export interface FileRoutesById {
   '/admin/elections/$electionId/candidates/new': typeof AdminElectionsElectionIdCandidatesNewRoute
   '/admin/elections/$electionId/feed/bak': typeof AdminElectionsElectionIdFeedBakRoute
   '/admin/elections/$electionId/positions/new': typeof AdminElectionsElectionIdPositionsNewRoute
-  '/admin/elections/$electionId/voters/index copy': typeof AdminElectionsElectionIdVotersIndexcopyRoute
   '/admin/elections/$electionId/voters/new': typeof AdminElectionsElectionIdVotersNewRoute
   '/admin/elections/$electionId/candidates/': typeof AdminElectionsElectionIdCandidatesIndexRoute
   '/admin/elections/$electionId/positions/': typeof AdminElectionsElectionIdPositionsIndexRoute
@@ -552,7 +542,6 @@ export interface FileRouteTypes {
     | '/admin/elections/$electionId/candidates/new'
     | '/admin/elections/$electionId/feed/bak'
     | '/admin/elections/$electionId/positions/new'
-    | '/admin/elections/$electionId/voters/index copy'
     | '/admin/elections/$electionId/voters/new'
     | '/admin/elections/$electionId/candidates/'
     | '/admin/elections/$electionId/positions/'
@@ -605,7 +594,6 @@ export interface FileRouteTypes {
     | '/admin/elections/$electionId/candidates/new'
     | '/admin/elections/$electionId/feed/bak'
     | '/admin/elections/$electionId/positions/new'
-    | '/admin/elections/$electionId/voters/index copy'
     | '/admin/elections/$electionId/voters/new'
     | '/admin/elections/$electionId/candidates'
     | '/admin/elections/$electionId/positions'
@@ -659,7 +647,6 @@ export interface FileRouteTypes {
     | '/admin/elections/$electionId/candidates/new'
     | '/admin/elections/$electionId/feed/bak'
     | '/admin/elections/$electionId/positions/new'
-    | '/admin/elections/$electionId/voters/index copy'
     | '/admin/elections/$electionId/voters/new'
     | '/admin/elections/$electionId/candidates/'
     | '/admin/elections/$electionId/positions/'
@@ -1008,13 +995,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminElectionsElectionIdVotersNewRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/elections/$electionId/voters/index copy': {
-      id: '/admin/elections/$electionId/voters/index copy'
-      path: '/elections/$electionId/voters/index copy'
-      fullPath: '/admin/elections/$electionId/voters/index copy'
-      preLoaderRoute: typeof AdminElectionsElectionIdVotersIndexcopyRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
     '/admin/elections/$electionId/positions/new': {
       id: '/admin/elections/$electionId/positions/new'
       path: '/elections/$electionId/positions/new'
@@ -1100,7 +1080,6 @@ interface AdminRouteRouteChildren {
   AdminElectionsElectionIdResultsRoute: typeof AdminElectionsElectionIdResultsRoute
   AdminElectionsElectionIdCandidatesNewRoute: typeof AdminElectionsElectionIdCandidatesNewRoute
   AdminElectionsElectionIdPositionsNewRoute: typeof AdminElectionsElectionIdPositionsNewRoute
-  AdminElectionsElectionIdVotersIndexcopyRoute: typeof AdminElectionsElectionIdVotersIndexcopyRoute
   AdminElectionsElectionIdVotersNewRoute: typeof AdminElectionsElectionIdVotersNewRoute
   AdminElectionsElectionIdCandidatesIndexRoute: typeof AdminElectionsElectionIdCandidatesIndexRoute
   AdminElectionsElectionIdPositionsIndexRoute: typeof AdminElectionsElectionIdPositionsIndexRoute
@@ -1140,8 +1119,6 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
     AdminElectionsElectionIdCandidatesNewRoute,
   AdminElectionsElectionIdPositionsNewRoute:
     AdminElectionsElectionIdPositionsNewRoute,
-  AdminElectionsElectionIdVotersIndexcopyRoute:
-    AdminElectionsElectionIdVotersIndexcopyRoute,
   AdminElectionsElectionIdVotersNewRoute:
     AdminElectionsElectionIdVotersNewRoute,
   AdminElectionsElectionIdCandidatesIndexRoute:
