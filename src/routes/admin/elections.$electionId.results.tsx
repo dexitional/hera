@@ -213,7 +213,7 @@ function ElectionFinalResultsPage() {
       : "Schedule not set";
 
   return (
-    <div className="min-h-screen bg-zinc-900 py-8 print:bg-white print:py-0 print:[color-adjust:exact] print:[-webkit-print-color-adjust:exact]">
+    <div className="min-h-screen  py-8 print:bg-white print:py-0 print:[color-adjust:exact] print:[-webkit-print-color-adjust:exact]">
       <style>{`
         @media print {
           @page { size: A4; margin: 12mm; }

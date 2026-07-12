@@ -207,6 +207,85 @@ export const updateElectionFn = createServerFn({ method: 'POST' }).middleware([a
   });
 
 
+export const updateElectionStatusFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ data }: any) => {
+    const { electionId, status } = data;
+    const [updated] = await db
+      .update(elections)
+      .set({ status })
+      .where(eq<any>(elections.id, electionId))
+      .returning();
+    return updated;
+  });
+
+export const updateElectionPublicStateFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ data }: any) => {
+    const { electionId, makePublic } = data;
+    const [updated] = await db
+      .update(elections)
+      .set({ makePublic })
+      .where(eq<any>(elections.id, electionId))
+      .returning();
+    return updated;
+  });
+
+export const resetElectionFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const electionId = data?.electionId ?? data;
+    const admin: any = context?.user;
+
+    const [electionRecord] = await db
+      .select({ id: elections.id })
+      .from(elections)
+      .where(and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id)));
+
+    if (!electionRecord) {
+      throw new Error(`Election instance [${electionId}] not found.`);
+    }
+
+    return await db.transaction(async (tx: any) => {
+      await tx.delete(electionVotes).where(eq(electionVotes.electionId, electionId));
+
+      const resetVoters = await tx
+        .update(voters)
+        .set({ hasVoted: false, voteIp: null })
+        .where(eq(voters.electionId, electionId))
+        .returning();
+
+      return { success: true, votersReset: resetVoters.length };
+    });
+  });
+
+export const extendElectionEndTimeFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const { electionId, hours } = data;
+    const admin: any = context?.user;
+
+    const [electionRecord] = await db
+      .select({ id: elections.id, endAt: elections.endAt })
+      .from(elections)
+      .where(and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id)));
+
+    if (!electionRecord) {
+      throw new Error(`Election instance [${electionId}] not found.`);
+    }
+
+    const currentEndAt = electionRecord.endAt ? new Date(electionRecord.endAt) : new Date();
+    const nextEndAt = new Date(currentEndAt.getTime() + Number(hours) * 60 * 60 * 1000);
+
+    const [updated] = await db
+      .update(elections)
+      .set({ endAt: nextEndAt })
+      .where(eq<any>(elections.id, electionId))
+      .returning();
+
+    return updated;
+  });
+
 export const deleteElectionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
   async ({ data: electionId }: any) => {
     return await db.delete(elections).where(eq<any>(elections.id, electionId)).returning();
@@ -285,6 +364,10 @@ export const getElectionOverview = createServerFn({
       endAt: electionRecord?.endAt.toISOString(),
       authMode: electionRecord.authMode ?? "OTP",
       isActive: electionRecord.isActive,
+      makePublic: electionRecord.makePublic,
+      billVoters: electionRecord.billVoters,
+      billAmount: electionRecord.billAmount,
+      billPaid: electionRecord.billPaid,
       counts: {
         positions: positionsCountResult?.count ?? 0,
         candidates: candidatesCountResult?.count ?? 0,
@@ -1388,112 +1471,79 @@ export const getVotersFn = createServerFn({ method: 'GET' })
 
 export const getVotersByElectionFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ data: electionId }) => {
-    return await db
-      .select()
-      .from(voters)
-      .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-      .where(eq<any>(elections.id, electionId))
-      .orderBy(asc(voters.id));
+  .handler(async ({ data }: any) => {
+    const electionId = data?.electionId ?? data;
+    const page = Math.max(Number(data?.page) || 1, 1);
+    const pageSize = Math.max(Number(data?.pageSize) || 15, 1);
+    const searchQuery = (data?.searchQuery || "").trim();
+    const statusFilter = data?.statusFilter || "ALL";
+
+    const limitValue = pageSize;
+    const offsetValue = (page - 1) * limitValue;
+
+    const conditions: any = [eq(voters.electionId, electionId)];
+
+    if (searchQuery) {
+      const searchPattern = `%${searchQuery}%`;
+      conditions.push(
+        or(
+          ilike(voters.name, searchPattern),
+          ilike(voters.username, searchPattern),
+          ilike(voters.email, searchPattern),
+          ilike(voters.phoneNumber, searchPattern)
+        )
+      );
+    }
+
+    if (statusFilter === "VOTED") {
+      conditions.push(eq(voters.hasVoted, true));
+    } else if (statusFilter === "PENDING") {
+      conditions.push(eq(voters.hasVoted, false));
+    }
+
+    const queryCondition = and(...conditions);
+
+    const [votersRecords, [countResult]] = await Promise.all([
+      db
+        .select({
+          id: voters.id,
+          name: voters.name,
+          username: voters.username,
+          phoneNumber: voters.phoneNumber,
+          email: voters.email,
+          inviteToken: voters.inviteToken,
+          isVerified: voters.isVerified,
+          hasVoted: voters.hasVoted,
+          invitedAt: voters.invitedAt,
+        })
+        .from(voters)
+        .innerJoin(elections, eq(voters.electionId, elections.id))
+        .where(queryCondition)
+        .orderBy(asc(voters.id))
+        .limit(limitValue)
+        .offset(offsetValue),
+
+      db
+        .select({ total: count() })
+        .from(voters)
+        .innerJoin(elections, eq(voters.electionId, elections.id))
+        .where(queryCondition),
+    ]);
+
+    const totalCount = countResult?.total ?? 0;
+    const totalPages = Math.max(Math.ceil(totalCount / limitValue), 1);
+
+    return {
+      voters: votersRecords,
+      pagination: {
+        totalCount,
+        totalPages,
+        currentPage: page,
+        pageSize: limitValue,
+      },
+    };
   }
 );
-
-
-// export const getVotersByElectionFn = createServerFn({ method: 'GET' })
-//   .middleware([arcjetMiddleware, authMiddleware])
-//   .handler(async ({ data }: any) => {
-//     try {
-//       const electionId = data?.electionId;
-//       const page = Number(data?.page) || 1;
-//       const pageSize = Number(data?.pageSize) || 10;
-//       const searchQuery = data?.searchQuery || "";
-//       const statusFilter = data?.statusFilter || "ALL";
-
-//       console.log("backend successfully processed variables: ", { electionId, page, pageSize, searchQuery, statusFilter });
-
-//       const limitValue = pageSize;
-//       const offsetValue = (page - 1) * limitValue;
-
-//       const conditions: any = [eq(voters.electionId, electionId)];
-
-//       if (searchQuery && searchQuery.trim() !== "") {
-//         const searchPattern = `%${searchQuery.trim()}%`;
-//         conditions.push(
-//           or(
-//             ilike(voters.username, searchPattern),
-//             ilike(voters.name, searchPattern),
-//             ilike(voters.phoneNumber, searchPattern),
-//             ilike(voters.email, searchPattern)
-//           )
-//         );
-//       }
-
-//       if (statusFilter === "VOTED") {
-//         conditions.push(eq(voters.hasVoted, true));
-//       } else if (statusFilter === "PENDING") {
-//         conditions.push(eq(voters.hasVoted, false));
-//       }
-
-//       const queryCondition = and(...conditions);
-
-//       // Explicitly select fields that exist on your schema (removed missing isActive)
-//       const [votersRecords, [countResult]] = await Promise.all([
-//         db
-//           .select({
-//             id: voters.id,
-//             name: voters.name,
-//             username: voters.username,
-//             phoneNumber: voters.phoneNumber,
-//             email: voters.email,
-//             inviteToken: voters.inviteToken,
-//             isVerified: voters.isVerified,
-//             hasVoted: voters.hasVoted,
-//             invitedAt: voters.invitedAt
-//           })
-//           .from(voters)
-//           .innerJoin(elections, eq(voters.electionId, elections.id))
-//           .where(queryCondition)
-//           .orderBy(asc(voters.id))
-//           .limit(limitValue)
-//           .offset(offsetValue),
-        
-//         db
-//           .select({ total: count() })
-//           .from(voters)
-//           .innerJoin(elections, eq(voters.electionId, elections.id))
-//           .where(queryCondition)
-//       ]);
-
-//       const totalCount = countResult?.total || 0;
-//       const totalPages = Math.ceil(totalCount / limitValue);
- 
-//       console.log({
-//         voters: votersRecords,
-//         pagination: {
-//           totalCount,
-//           totalPages,
-//           currentPage: page,
-//           pageSize: limitValue
-//         }
-//       });
-
-//       return {
-//         voters: votersRecords,
-//         pagination: {
-//           totalCount,
-//           totalPages,
-//           currentPage: page,
-//           pageSize: limitValue
-//         }
-//       };
-//     } catch (serverError) {
-//       console.error("CRITICAL BACKEND ERROR:", serverError);
-//       return {
-//         voters: [],
-//         pagination: { totalCount: 0, totalPages: 1, currentPage: 1, pageSize: 10 }
-//       };
-//     }
-// });
 
 
 

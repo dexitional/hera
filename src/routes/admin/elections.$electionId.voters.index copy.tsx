@@ -9,41 +9,31 @@ import {
   PhoneForwarded,
   PhoneCallIcon
 } from "lucide-react";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  deleteVoterFn,
-  exportVotersToExcelFn,
-  getVotersByElectionFn,
-  inviteVoterFn,
-  inviteVotersFn,
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { 
+  deleteVoterFn, 
+  exportVotersToExcelFn, 
+  getVotersByElectionFn, 
+  inviteVoterFn, 
+  inviteVotersFn, 
   uploadVotersFn,
-  getSmsProgressFn
+  getSmsProgressFn  
 } from "#/server/tenant-elections";
 import * as XLSX from 'xlsx';
 import { addCountryCode, generateSixDigitCode, stripCountryCode } from "#/lib/utils";
 
-const VOTERS_PAGE_SIZE = 15;
 
-const votersQueryOptions = (params: {
-  electionId: any;
-  page: number;
-  pageSize: number;
-  searchQuery: string;
-  statusFilter: "ALL" | "VOTED" | "PENDING";
-}) => ({
-  queryKey: ['voters-admin', params.electionId, params.page, params.pageSize, params.searchQuery, params.statusFilter],
-  queryFn: () => getVotersByElectionFn({ data: params } as any),
-  placeholderData: keepPreviousData,
+const electionsQueryOptions = (electionId: any) => ({
+  queryKey: ['voters-admin'],
+  queryFn: () => getVotersByElectionFn({ data: electionId }),
 });
 
 
-export const Route = createFileRoute("/admin/elections/$electionId/voters/")({
+export const Route = createFileRoute("/admin/elections/$electionId/voters/index copy")({
   component: VotersDirectory,
   loader: async ({ context,params }) => {
-    const { electionId } = params;
-    await context.queryClient.ensureQueryData(votersQueryOptions({
-      electionId, page: 1, pageSize: VOTERS_PAGE_SIZE, searchQuery: "", statusFilter: "ALL",
-    }));
+    const { electionId } = params; 
+    await context.queryClient.ensureQueryData(electionsQueryOptions(electionId));
   },
   pendingComponent: () => (
     <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
@@ -53,47 +43,32 @@ export const Route = createFileRoute("/admin/elections/$electionId/voters/")({
 
 
 function VotersDirectory() {
-
+  
   const queryClient = useQueryClient();
-  const { electionId } = Route.useParams();
+  const { electionId } = Route.useParams(); 
+  const { data }:any = useSuspenseQuery(electionsQueryOptions(electionId));
   const [isExporting, setIsExporting] = useState(false);
+  
+  const voters:any = data?.map((r: any) => ({ 
+    id: r?.voters?.id,
+    name: r?.voters?.name,
+    username: r?.voters?.username,
+    phoneNumber: r?.voters?.phoneNumber,
+    isActive: r?.voters?.isActive,
+    email: r?.voters?.email,
+    inviteToken: r?.voters?.inviteToken,
+    isVerified: r?.voters?.isVerified,
+    hasVoted: r?.voters?.hasVoted,
+  }))
 
+
+  
   // const [voters, setVoters] = useState<VoterRecord[]>(INITIAL_VOTERS);
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "VOTED" | "PENDING">("ALL");
-  const [page, setPage] = useState(1);
-  const [jumpToPageInput, setJumpToPageInput] = useState("");
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [isTrackingSms, setIsTrackingSms] = useState(false);
-
-  // Debounce the raw search input before it drives a server request
-  useEffect(() => {
-    const timeout = setTimeout(() => setDebouncedSearchQuery(searchQuery.trim()), 300);
-    return () => clearTimeout(timeout);
-  }, [searchQuery]);
-
-  // Any change to the active filters should snap the view back to page 1
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearchQuery, statusFilter]);
-
-  const { data }: any = useQuery(votersQueryOptions({
-    electionId, page, pageSize: VOTERS_PAGE_SIZE, searchQuery: debouncedSearchQuery, statusFilter,
-  }));
-
-  const voters: any = data?.voters ?? [];
-  const totalCount: number = data?.pagination?.totalCount ?? 0;
-  const totalPages: number = Math.max(data?.pagination?.totalPages ?? 1, 1);
-  const isFetchingVoters = !data;
-
-  const handleJumpToPage = () => {
-    const parsed = Number(jumpToPageInput);
-    if (!Number.isFinite(parsed)) return;
-    setPage(Math.min(Math.max(Math.floor(parsed), 1), totalPages));
-    setJumpToPageInput("");
-  };
 
   // Background Task Real-Time Progress Tracker via Server Polling Pipeline
   const { data: queueProgress } = useQuery({
@@ -114,8 +89,19 @@ function VotersDirectory() {
     }
   }, [queueProgress?.isProcessing, isTrackingSms, queueProgress]);
 
-  // Search and status filtering now run server-side (see getVotersByElectionFn)
+  // Filter Logic execution pipeline
+  const filteredVoters = voters?.filter((voter: any) => {
+    const matchesSearch = 
+      voter?.name?.toLowerCase().includes(searchQuery?.toLowerCase()) ||
+      voter?.email?.toLowerCase().includes(searchQuery?.toLowerCase()) ||
+      voter?.username?.toLowerCase().includes(searchQuery?.toLowerCase());
+    
+    if (statusFilter === "VOTED") return matchesSearch && voter.hasVoted;
+    if (statusFilter === "PENDING") return matchesSearch && !voter.hasVoted;
+    return matchesSearch;
+  });
 
+  
 
   const deleteMutation = useMutation({
     mutationFn: deleteVoterFn,
@@ -365,7 +351,7 @@ function VotersDirectory() {
             <button
               className="flex items-center gap-2 bg-[#E3F09B] text-black text-xs font-bold hover:bg-zinc-800 hover:text-white border border-zinc-800 px-3.5 py-2 rounded-lg transition-all"
             >
-             <span>{totalCount} Voters</span>
+             <span>{voters?.length} Voters</span>
             </button>
             
            
@@ -451,8 +437,8 @@ function VotersDirectory() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-900 text-sm">
-                {voters.length > 0 ? (
-                  voters.map((voter: any) => (
+                {filteredVoters.length > 0 ? (
+                  filteredVoters.map((voter: any) => (
                     <tr key={voter.id} className="hover:bg-zinc-900/20 transition-colors group">
                       
                       {/* Name, Username, and Email Blocks */}
@@ -554,55 +540,6 @@ function VotersDirectory() {
                 )}
               </tbody>
             </table>
-          </div>
-
-          {/* ================= PAGINATION BOTTOM ELEMENT BAR ================= */}
-          <div className="p-4 bg-zinc-900/40 border-t border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <span className="text-xs text-zinc-400">
-              {isFetchingVoters
-                ? "Loading voters..."
-                : <>Showing Page <b className="text-white">{page}</b> of <b className="text-white">{totalPages}</b> ({totalCount} entries)</>
-              }
-            </span>
-
-            <div className="flex gap-2 w-full sm:w-auto justify-end items-center">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                className="flex items-center gap-1 text-xs px-3 py-1.5 border border-zinc-800 rounded-lg bg-zinc-900 text-zinc-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-zinc-800 transition-all cursor-pointer"
-              >
-                Previous
-              </button>
-
-              {/* Jump To Page Number Input */}
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="number"
-                  min={1}
-                  max={totalPages}
-                  value={jumpToPageInput}
-                  onChange={(e) => setJumpToPageInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleJumpToPage()}
-                  placeholder={`${page}`}
-                  className="w-14 bg-[#0a192a]/50 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white text-center placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <button
-                  disabled={!jumpToPageInput}
-                  onClick={handleJumpToPage}
-                  className="text-xs px-3 py-1.5 border border-zinc-800 rounded-lg bg-zinc-900 text-zinc-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-zinc-800 transition-all cursor-pointer"
-                >
-                  Go
-                </button>
-              </div>
-
-              <button
-                disabled={page >= totalPages}
-                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                className="flex items-center gap-1 text-xs px-3 py-1.5 border border-zinc-800 rounded-lg bg-zinc-900 text-zinc-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-zinc-800 transition-all cursor-pointer"
-              >
-                Next
-              </button>
-            </div>
           </div>
         </div>
 

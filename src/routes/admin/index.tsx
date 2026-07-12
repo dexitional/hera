@@ -147,7 +147,7 @@ function GlobalAdminDashboard() {
             </div> */}
 
             {/* CARD 2: EVENTS PLATFORMS */}
-            {/* <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-5 flex flex-col justify-between hover:border-zinc-700/80 transition-all group relative overflow-hidden">
+            <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-5 flex flex-col justify-between hover:border-zinc-700/80 transition-all group relative overflow-hidden">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="w-10 h-10 rounded-lg bg-emerald-950/30 border border-emerald-900/30 flex items-center justify-center">
@@ -168,7 +168,7 @@ function GlobalAdminDashboard() {
                 </div>
               </div>
               <Link to="/admin/events" className="absolute inset-0 z-10" />
-            </div> */}
+            </div>
 
             {/* CARD 3: ELECTIONS CONFIGURATOR */}
             <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-5 flex flex-col justify-between hover:border-zinc-700/80 transition-all group relative overflow-hidden">
