@@ -1,10 +1,11 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import React, { useState, useEffect, useRef } from "react";
-import { 
-  UserPlus, Search, Edit2, Trash2, CheckCircle2, 
-  Award, Filter, User, Image as ImageIcon, ChevronDown, 
+import {
+  UserPlus, Search, Edit2, Trash2, CheckCircle2,
+  Award, Filter, User, Image as ImageIcon, ChevronDown,
   Loader2,
-  UserCheck
+  UserCheck,
+  ArrowLeft
 } from "lucide-react";
 import { deleteCandidateFn, getCandidatesFn } from "#/server/tenant-elections";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
@@ -93,6 +94,15 @@ function CandidatesDirectory() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
+        {/* ================= BACK NAVIGATION ================= */}
+        <Link
+          to="/admin/elections/$electionId/manage"
+          params={{ electionId }}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to Management Console
+        </Link>
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">Candidates Manager</h1>

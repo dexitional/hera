@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import {
+  ArrowLeft,
   Award,
   ChevronDown,
   Edit2,
@@ -112,6 +113,15 @@ function PositionsDirectory() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
+      {/* ================= BACK NAVIGATION ================= */}
+      <Link
+        to="/admin/elections/$electionId/manage"
+        params={{ electionId }}
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" /> Back to Management Console
+      </Link>
+
       {/* ================= HEADER SECTION ================= */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
         <div>

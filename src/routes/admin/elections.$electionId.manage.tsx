@@ -11,7 +11,8 @@ import {
   ClockPlus,
   Receipt,
   CreditCard,
-  FileText
+  FileText,
+  ArrowLeft
 } from "lucide-react";
 import { exportElectionResultsToExcelFn, exportElectionResultsToFormatExcelFn, extendElectionEndTimeFn, getElectionOverview, resetElectionFn, updateElectionPublicStateFn, updateElectionStatusFn } from "#/server/tenant-elections";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
@@ -176,7 +177,15 @@ function ManageElectionConsole() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-        
+
+        {/* ================= BACK NAVIGATION ================= */}
+        <Link
+          to="/admin/elections"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to Election Console
+        </Link>
+
         {/* ================= WORKSPACE CONSOLE BREADCRUMB HEADER ================= */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
           
@@ -186,7 +195,7 @@ function ManageElectionConsole() {
               <span>/</span>
               <span className="text-purple-400 select-all font-bold">{election.tag}</span>
             </div>
-            <h1 className="text-sm sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
+            <h1 className="text-sm sm:text-base font-bold text-white tracking-tight flex items-center gap-2">
               <Sliders className="w-5 h-5 text-purple-400" />
               <span>{election.title}</span>
             </h1>

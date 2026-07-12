@@ -21,7 +21,8 @@ export const getElectionsFn = createServerFn({ method: 'GET' })
     const admin: any = context?.user;
     const resp = await db.select()
       .from(elections)
-      .where(eq<any>(elections.adminId, admin.id));
+      .where(eq<any>(elections.adminId, admin.id))
+      .orderBy(desc(elections.createdAt));
 
     return resp;
   });
@@ -479,6 +480,7 @@ export const getUnifiedElectionTelemetry = createServerFn({
       .select({
         id: candidates.id,
         name: candidates.name,
+        teaser: candidates.teaser,
         imageUrl: candidates.imageUrl,
         positionId: candidates.positionId,
         order: candidates.order,
@@ -494,7 +496,7 @@ export const getUnifiedElectionTelemetry = createServerFn({
         )
       )
       .where(eq<any>(positions.electionId, electionId))
-      .groupBy(candidates.id, candidates.name, candidates.imageUrl, candidates.positionId, candidates.order)
+      .groupBy(candidates.id, candidates.name, candidates.teaser, candidates.imageUrl, candidates.positionId, candidates.order)
       .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
     db
       .select({
@@ -532,10 +534,12 @@ export const getUnifiedElectionTelemetry = createServerFn({
     rawPositions.map(async (pos) => {
       const positionCandidates = rawCandidateTallies
         .filter((cand) => cand.positionId === pos.id)
-        .map((cand) => ({
+        .map((cand, idx) => ({
           id: cand.id,
           name: cand.name,
+          teaser: cand.teaser ?? "",
           imageUrl: cand.imageUrl ?? "",
+          ballotNumber: cand.order ?? idx + 1,
           votes: cand.voteCount,
         }));
 
@@ -547,7 +551,9 @@ export const getUnifiedElectionTelemetry = createServerFn({
       positionCandidates.push({
         id: null,
         name: "Abstained (Blank Ballots)",
+        teaser: "",
         imageUrl: "",
+        ballotNumber: null,
         votes: abstentionTally?.count || 0
       } as any);
 
@@ -599,6 +605,7 @@ export const getUnifiedElectionAdminStats = createServerFn({
       .select({
         id: candidates.id,
         name: candidates.name,
+        teaser: candidates.teaser,
         imageUrl: candidates.imageUrl,
         positionId: candidates.positionId,
         order: candidates.order,
@@ -614,7 +621,7 @@ export const getUnifiedElectionAdminStats = createServerFn({
         )
       )
       .where(eq<any>(positions.electionId, electionId))
-      .groupBy(candidates.id, candidates.name, candidates.imageUrl, candidates.positionId, candidates.order)
+      .groupBy(candidates.id, candidates.name, candidates.teaser, candidates.imageUrl, candidates.positionId, candidates.order)
       .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
     db
       .select({
@@ -652,10 +659,12 @@ export const getUnifiedElectionAdminStats = createServerFn({
     rawPositions.map(async (pos) => {
       const positionCandidates = rawCandidateTallies
         .filter((cand) => cand.positionId === pos.id)
-        .map((cand) => ({
+        .map((cand, idx) => ({
           id: cand.id,
           name: cand.name,
+          teaser: cand.teaser ?? "",
           imageUrl: cand.imageUrl ?? "",
+          ballotNumber: cand.order ?? idx + 1,
           votes: cand.voteCount,
         }));
 
@@ -667,7 +676,9 @@ export const getUnifiedElectionAdminStats = createServerFn({
       positionCandidates.push({
         id: null,
         name: "Abstained (Blank Ballots)",
+        teaser: "",
         imageUrl: "",
+        ballotNumber: null,
         votes: abstentionTally?.count || 0
       } as any);
 

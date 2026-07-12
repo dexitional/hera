@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import React, { useState, useEffect } from "react";
-import { 
-  BarChart3, Users, Award, ShieldAlert, Activity, 
+import {
+  BarChart3, Users, Award, ShieldAlert, Activity,
   RefreshCw, CheckCircle2, User, HelpCircle,
-  Loader2, Ban, ChevronLeft, ChevronRight
+  Loader2, Ban, ChevronLeft, ChevronRight, ArrowLeft
 } from "lucide-react";
 // cspell:ignore USSD INFOBAR
 import { getUnifiedElectionTelemetry } from "#/server/tenant-elections";
@@ -95,12 +95,27 @@ function ElectionLiveFeed() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-4 md:p-6 text-zinc-200 font-sans select-none overflow-x-hidden">
-        
+
+        {/* ================= BACK NAVIGATION ================= */}
+        <Link
+          to="/admin/elections/$electionId/manage"
+          params={{ electionId }}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to Management Console
+        </Link>
+
         {/* ================= STREAM CONSOLE INFOBAR HEADER ================= */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
           <div>
             <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono uppercase tracking-wider">
-              <Link to={`/admin/elections`} className="hover:text-purple-400 transition-colors">Management Console</Link>
+              <Link
+                to="/admin/elections/$electionId/manage"
+                params={{ electionId }}
+                className="hover:text-purple-400 transition-colors"
+              >
+                Management Console
+              </Link>
               <span>/</span>
               <span className="text-zinc-400 select-all">Live Stream Metrics Feed</span>
             </div>
@@ -194,7 +209,7 @@ function ElectionLiveFeed() {
                 </div>
 
                 {/* Candidate Vote Visual Progress Accumulator Bars Matrix */}
-                <div className="space-y-4 pt-1">
+                <div className="grid grid-cols-3 gap-3">
                   {currentActiveOffice?.candidates?.map((candidate: any) => {
                     const isAbstain = candidate.id === null || candidate.id === -1;
                     const percentageShares = currentActiveOffice.totalVotesForPosition > 0 
@@ -203,28 +218,43 @@ function ElectionLiveFeed() {
                     const clampedWidth = Math.min(parseFloat(percentageShares), 100);
 
                     return (
-                      <div key={candidate.id ?? `abstain-${currentActiveOffice.id}`} className="space-y-2">
-                        <div className="flex items-center justify-between text-xs font-medium">
-                          
-                          {/* Image Thumbnail and Name Info Node */}
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className={`w-7 h-7 rounded border overflow-hidden flex items-center justify-center shrink-0 ${
-                              isAbstain ? 'bg-amber-950/40 border-amber-900/40' : 'bg-zinc-900 border-zinc-800'
-                            }`}>
-                              {isAbstain ? (
-                                <Ban className="w-3.5 h-3.5 text-amber-500" />
-                              ) : candidate.imageUrl ? (
-                                <img src={candidate.imageUrl} alt={candidate.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <User className="w-3.5 h-3.5 text-zinc-500" />
-                              )}
+                      <div key={candidate.id ?? `abstain-${currentActiveOffice.id}`} className="space-y-2.5 rounded-lg border border-zinc-800/60 bg-zinc-900/30 p-3">
+
+                        {/* Enlarged Candidate Photo Panel */}
+                        <div className="flex justify-center">
+                          <div className={`w-2/3 aspect-square rounded-lg border overflow-hidden flex items-center justify-center shrink-0 ${
+                            isAbstain ? 'bg-amber-950/40 border-amber-900/40' : 'bg-zinc-900 border-zinc-800'
+                          }`}>
+                            {isAbstain ? (
+                              <Ban className="w-8 h-8 text-amber-500" />
+                            ) : candidate.imageUrl ? (
+                              <img src={candidate.imageUrl} alt={candidate.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <User className="w-8 h-8 text-zinc-500" />
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-center gap-2 text-xs font-medium">
+
+                          {/* Ballot Number, Name and Teaser Info Node */}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="min-w-0 flex flex-col gap-1 text-center">
+                              <p className="text-zinc-200 font-semibold truncate tracking-wide">{candidate.name}</p>
+                              {candidate.teaser ? (
+                                <p className="text-[10px] text-zinc-500 italic truncate">{candidate.teaser}</p>
+                              ) : null}
                             </div>
-                            <span className="text-zinc-200 font-semibold truncate tracking-wide">{candidate.name}</span>
                           </div>
 
                           {/* Numerical Vote Shares Data Count Labels */}
                           <div className="flex items-center gap-2 font-mono text-[11px] font-bold shrink-0">
-                            <span className="text-purple-400">{candidate.votes.toLocaleString()} </span>
+                            {!isAbstain && candidate.ballotNumber != null && (
+                              <span className="mr-10 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-zinc-500 bg-zinc-900 font-mono text-[9px] font-bold text-zinc-400 italic">
+                                {candidate.ballotNumber}
+                              </span>
+                            )}
+                            <span className="text-purple-400">{candidate.votes.toLocaleString()}</span>
                             <span className="text-zinc-600">|</span>
                             <span className="text-white">{percentageShares}%</span>
                           </div>
@@ -232,7 +262,7 @@ function ElectionLiveFeed() {
 
                         {/* Outer Progress Bar Runway */}
                         <div className="w-full bg-zinc-900 border border-zinc-800/60 h-2.5 rounded-full overflow-hidden p-0.5">
-                          <div 
+                          <div
                             style={{ width: `${clampedWidth}%` }}
                             className={`h-full rounded-full transition-all duration-500 ${
                               isAbstain ? 'bg-gradient-to-r from-amber-600 to-amber-400' : 'bg-gradient-to-r from-purple-600 to-indigo-500'
