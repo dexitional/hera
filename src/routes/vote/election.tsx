@@ -1,7 +1,7 @@
 import AuthElection from '#/components/election/AuthElection'
 import { getElectionByTagFn } from '#/server/tenant-elections'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { createFileRoute, Navigate, redirect } from '@tanstack/react-router'
+import { createFileRoute, Navigate } from '@tanstack/react-router'
 import { z } from 'zod'
 
 const searchSchema = z.object({

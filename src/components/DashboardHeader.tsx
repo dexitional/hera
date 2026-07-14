@@ -1,5 +1,5 @@
 import { signOut } from '#/lib/auth-client';
-import { Link, useLocation, useMatch, useParams } from '@tanstack/react-router';
+import { Link, useLocation, useParams } from '@tanstack/react-router';
 import {
   ArrowBigRightDash,
   LogOut,
@@ -14,16 +14,6 @@ import { useEffect, useRef, useState } from 'react';
 
 export default function DashboardHeader({ user }: any) {
 
-  const INITIAL_ORGANIZATIONS = [
-    {
-      id: 'knvmlleenlmznzfsltwy',
-      name: 'Capevars.com',
-      plan: 'Free Plan',
-      projectsCount: 2,
-      href: '/dashboard/org/knvmlleenlmznzfsltwy'
-    }
-  ];
-  
   const pathname:any = useLocation({ select: (location: any) => location.pathname });
   const pathSegments = pathname.split('/')?.filter(Boolean);
   const currentPageName = pathSegments[pathSegments.length - 1] || 'Home';
@@ -36,7 +26,6 @@ export default function DashboardHeader({ user }: any) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [organizations] = useState(INITIAL_ORGANIZATIONS);
 
   // Refs for checking clicks outside to automatically close menus
   const helpRef:any = useRef(null);
@@ -48,11 +37,6 @@ export default function DashboardHeader({ user }: any) {
     setActiveDropdown((prev) => (prev === menuName ? null : menuName));
   };
   
-
-  // Filter organizations down via reactive inputs
-  const filteredOrganizations = organizations.filter((org) =>
-    org.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   // Listen for clicks outside open dropdown menus
   useEffect(() => {
@@ -107,9 +91,15 @@ export default function DashboardHeader({ user }: any) {
           <span className="text-zinc-600 pr-2 select-none">
             <ArrowBigRightDash className="h-4 w-4" />
           </span>
-          <Link className="items-center justify-center shrink-0 flex" to={['candidates','voters','positions'].includes(currentPageName) ? `/admin/elections/${params?.electionId}/manage`: `/admin/elections/` }>
-            <span className="font-bold tracking-tight text-zinc-400 hover:text-zinc-200 transition-colors">Elections Console</span>
-          </Link>
+          {['candidates','voters','positions'].includes(currentPageName) ? (
+            <Link className="items-center justify-center shrink-0 flex" to="/admin/elections/$electionId/manage" params={{ electionId: params?.electionId as string }}>
+              <span className="font-bold tracking-tight text-zinc-400 hover:text-zinc-200 transition-colors">Elections Console</span>
+            </Link>
+          ) : (
+            <Link className="items-center justify-center shrink-0 flex" to="/admin/elections">
+              <span className="font-bold tracking-tight text-zinc-400 hover:text-zinc-200 transition-colors">Elections Console</span>
+            </Link>
+          )}
         </div>
         )}
 
@@ -132,7 +122,7 @@ export default function DashboardHeader({ user }: any) {
           <span className="text-zinc-600 pr-2 select-none">
             <ArrowBigRightDash className="h-4 w-4" />
           </span>
-          <Link to={`/admin/elections/${params?.electionId}/manage`} className="items-center justify-center shrink-0 flex" >
+          <Link to="/admin/elections/$electionId/manage" params={{ electionId: params?.electionId as string }} className="items-center justify-center shrink-0 flex" >
             <span className="font-bold tracking-tight text-zinc-400 hover:text-zinc-200 transition-colors">Election Centre</span>
           </Link>
         </div>
@@ -244,11 +234,14 @@ export default function DashboardHeader({ user }: any) {
           <button 
             type="button" 
             onClick={() => toggleDropdown('profile')}
-            className="relative justify-center cursor-pointer items-center transition-all bg-[#0a192a] hover:bg-zinc-800 border-[#E3F09B] hover:border-white border shrink-0 flex rounded-full overflow-hidden h-8 w-8"
+            className="relative justify-center cursor-pointer items-center transition-all bg-[#0a192a] hover:bg-zinc-800 border-[#E3F09B] hover:border-white border-[0.5px] shrink-0 flex rounded-full overflow-hidden h-8 w-8"
           > 
-            <div className="bg-[#0a192a] text-[#0a192a] flex items-center justify-center w-full h-full rounded-full font-bold text-xs select-none">
-              {/* {user?.name} */}
-              <User2Icon className="h-4 text-[#E3F09B]"/>
+            <div className="bg-[#0a192a] text-[#0a192a] flex items-center justify-center w-full h-full rounded-full font-bold text-xs select-none overflow-hidden">
+              {user?.image ? (
+                <img src={user.image} alt={user?.name || "Profile"} className="w-full h-full object-cover" />
+              ) : (
+                <User2Icon className="h-4 text-[#E3F09B]"/>
+              )}
             </div>
           </button>
 

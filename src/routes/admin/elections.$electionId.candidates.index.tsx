@@ -1,20 +1,27 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   UserPlus, Search, Edit2, Trash2, CheckCircle2,
-  Award, Filter, User, Image as ImageIcon, ChevronDown,
+  Award, Filter, User, ChevronDown,
   Loader2,
-  UserCheck,
   ArrowLeft
 } from "lucide-react";
 import { deleteCandidateFn, getCandidatesFn } from "#/server/tenant-elections";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
+const CANDIDATES_PAGE_SIZE = 15;
 
-const electionsQueryOptions = (electionId: any) => ({
-  queryKey: ['candidates-admin', electionId],
-  queryFn: () => getCandidatesFn({ data: electionId }),
+const candidatesQueryOptions = (params: {
+  electionId: any;
+  page: number;
+  pageSize: number;
+  searchQuery: string;
+  positionFilter: string;
+}) => ({
+  queryKey: ['candidates-admin', params.electionId, params.page, params.pageSize, params.searchQuery, params.positionFilter],
+  queryFn: () => getCandidatesFn({ data: params } as any),
+  placeholderData: keepPreviousData,
 });
 
 
@@ -22,7 +29,9 @@ export const Route = createFileRoute("/admin/elections/$electionId/candidates/")
   component: CandidatesDirectory,
   loader: async ({ context, params }) => {
     const electionId = params.electionId;
-    return await context.queryClient.ensureQueryData(electionsQueryOptions(electionId));
+    await context.queryClient.ensureQueryData(candidatesQueryOptions({
+      electionId, page: 1, pageSize: CANDIDATES_PAGE_SIZE, searchQuery: "", positionFilter: "ALL",
+    }));
   },
   pendingComponent: () => (
     <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
@@ -33,9 +42,33 @@ export const Route = createFileRoute("/admin/elections/$electionId/candidates/")
 function CandidatesDirectory() {
 
   const queryClient = useQueryClient();
-  const { electionId } = Route.useParams(); 
-  const { data }:any = useSuspenseQuery(electionsQueryOptions(electionId));
-  const candidates:any = data?.map((r: any) => ({ 
+  const { electionId } = Route.useParams();
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [selectedPositionFilter, setSelectedPositionFilter] = useState<string>("ALL");
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [jumpToPageInput, setJumpToPageInput] = useState("");
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Debounce the raw search input before it drives a server request
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearchQuery(searchQuery.trim()), 300);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  // Any change to the active filters should snap the view back to page 1
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchQuery, selectedPositionFilter]);
+
+  const { data }: any = useQuery(candidatesQueryOptions({
+    electionId, page, pageSize: CANDIDATES_PAGE_SIZE, searchQuery: debouncedSearchQuery, positionFilter: selectedPositionFilter,
+  }));
+
+  const candidates: any = (data?.candidates ?? []).map((r: any) => ({
     id: r?.candidates.id,
     teaser: r?.candidates.teaser,
     order: r?.candidates.order,
@@ -45,16 +78,19 @@ function CandidatesDirectory() {
     electionTitle: r.elections?.title,
     name: r.candidates?.name,
     imageUrl: r.candidates?.imageUrl,
-  }))
+  }));
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPositionFilter, setSelectedPositionFilter] = useState<string>("ALL");
-  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
-  
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const uniquePositions = ["ALL", ...(data?.positionTitles ?? [])];
+  const totalCount: number = data?.pagination?.totalCount ?? 0;
+  const totalPages: number = Math.max(data?.pagination?.totalPages ?? 1, 1);
+  const isFetchingCandidates = !data;
 
-  // Dynamically extract unique offices to populate filtering dropdown options
-  const uniquePositions = ["ALL", ...Array.from(new Set(candidates.map((c:any) => c.positionTitle)))];
+  const handleJumpToPage = () => {
+    const parsed = Number(jumpToPageInput);
+    if (!Number.isFinite(parsed)) return;
+    setPage(Math.min(Math.max(Math.floor(parsed), 1), totalPages));
+    setJumpToPageInput("");
+  };
 
   // Smart Click-Away Closing listener
   useEffect(() => {
@@ -67,18 +103,13 @@ function CandidatesDirectory() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Pipeline sorting out row inclusions reactively
-  const filteredCandidates = candidates?.filter((candidate: any) => {
-    const matchesSearch = candidate.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = selectedPositionFilter === "ALL" || candidate.positionTitle === selectedPositionFilter;
-    return matchesSearch && matchesFilter;
-  });
+  // Search and position filtering now run server-side (see getCandidatesFn)
 
   const deleteMutation = useMutation({
     mutationFn: deleteCandidateFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['candidates-admin'] });
-      return redirect({ to: `/admin/elections/${electionId}/candidates` })
+      return redirect({ to: '/admin/elections/$electionId/candidates', params: { electionId } })
     },
     onError: (error: any) => console.error(error.message)
   });
@@ -110,10 +141,11 @@ function CandidatesDirectory() {
               Review certified election candidates, verify cloud profile images, and assign contesting categories.
             </p>
           </div>
-          
+
           <div className="flex items-center gap-3 shrink-0">
             <Link
-              to={`/admin/elections/${electionId}/candidates/new`}
+              to="/admin/elections/$electionId/candidates/new"
+              params={{ electionId }}
               className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs px-3.5 py-2 rounded-lg font-medium shadow-md transition-all"
             >
               <UserPlus className="w-4 h-4" />
@@ -189,16 +221,16 @@ function CandidatesDirectory() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-900 text-sm">
-                {filteredCandidates.length > 0 ? (
-                  filteredCandidates.map((candidate: any) => (
+                {candidates.length > 0 ? (
+                  candidates.map((candidate: any) => (
                     <tr key={candidate.id} className="hover:bg-zinc-900/20 transition-colors group">
-                      
+
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center shrink-0">
                             {candidate.imageUrl ? (
-                              <img 
-                                src={candidate.imageUrl} 
+                              <img
+                                src={candidate.imageUrl}
                                 alt={candidate.name}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
@@ -224,7 +256,7 @@ function CandidatesDirectory() {
                             {candidate.positionTitle}
                           </span>
                           <span className="text-[11px] text-zinc-500 font-mono mt-0.5">Ballot Number :  #{candidate.order}</span>
-                          
+
                           </div>
                         </div>
                       </td>
@@ -251,7 +283,8 @@ function CandidatesDirectory() {
                       <td className="px-6 py-4 align-middle text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Link
-                            to={`/admin/elections/${electionId}/candidates/${candidate?.id}/edit`}
+                            to="/admin/elections/$electionId/candidates/$candidateId/edit"
+                            params={{ electionId, candidateId: String(candidate?.id) }}
                             title="Edit Candidate Meta"
                             className="p-1.5 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
                           >
@@ -278,6 +311,55 @@ function CandidatesDirectory() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* ================= PAGINATION BOTTOM ELEMENT BAR ================= */}
+          <div className="p-4 bg-zinc-900/40 border-t border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-xs text-zinc-400">
+              {isFetchingCandidates
+                ? "Loading candidates..."
+                : <>Showing Page <b className="text-white">{page}</b> of <b className="text-white">{totalPages}</b> ({totalCount} entries)</>
+              }
+            </span>
+
+            <div className="flex gap-2 w-full sm:w-auto justify-end items-center">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                className="flex items-center gap-1 text-xs px-3 py-1.5 border border-zinc-800 rounded-lg bg-zinc-900 text-zinc-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-zinc-800 transition-all cursor-pointer"
+              >
+                Previous
+              </button>
+
+              {/* Jump To Page Number Input */}
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  value={jumpToPageInput}
+                  onChange={(e) => setJumpToPageInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleJumpToPage()}
+                  placeholder={`${page}`}
+                  className="w-14 bg-[#0a192a]/50 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white text-center placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <button
+                  disabled={!jumpToPageInput}
+                  onClick={handleJumpToPage}
+                  className="text-xs px-3 py-1.5 border border-zinc-800 rounded-lg bg-zinc-900 text-zinc-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-zinc-800 transition-all cursor-pointer"
+                >
+                  Go
+                </button>
+              </div>
+
+              <button
+                disabled={page >= totalPages}
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                className="flex items-center gap-1 text-xs px-3 py-1.5 border border-zinc-800 rounded-lg bg-zinc-900 text-zinc-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-zinc-800 transition-all cursor-pointer"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
 

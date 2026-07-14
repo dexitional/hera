@@ -30,7 +30,7 @@ export const getFullElectionResults = createServerFn({ method: 'GET'}).handler(
   .orderBy(positions.title, sql`votesReceived DESC`);
 
   // Restructure the data cleanly by grouping candidates under their respective positions
-  const resultsByPosition: Record<number, { title: string; totalPositionVotes: number; candidates: any[] }> = {};
+  const resultsByPosition: Record<string, { title: string; totalPositionVotes: number; candidates: any[] }> = {};
 
   rows.forEach((row) => {
     if (!resultsByPosition[row.positionId]) {
@@ -90,7 +90,7 @@ export const getCachedElectionResults = createServerFn({ method: 'GET'}).
   .groupBy(positions.id, candidates.id)
   .orderBy(positions.title, sql`votesReceived DESC`);
 
-  const resultsByPosition: Record<number, { title: string; totalPositionVotes: number; candidates: any[] }> = {};
+  const resultsByPosition: Record<string, { title: string; totalPositionVotes: number; candidates: any[] }> = {};
 
   rows.forEach((row) => {
     if (!resultsByPosition[row.positionId]) {

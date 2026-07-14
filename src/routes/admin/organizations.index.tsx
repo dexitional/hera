@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import React, { useState } from "react";
-import { 
-  Building2, Plus, Search, Sliders, Edit2, 
-  Trash2, Mail, Phone, Shield, User, Image as ImageIcon 
+import { useState } from "react";
+import {
+  Building2, Plus, Search, Sliders, Edit2,
+  Trash2, Mail, Phone, User
 } from "lucide-react";
 
 interface OrganizationRecord {

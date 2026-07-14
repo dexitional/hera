@@ -5,5 +5,5 @@ export const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379/
 
 // Shared utility helper for cache key generation naming standards
 export const getCacheKeys = {
-  electionResults: (electionId: number) => `cache:results:election:${electionId}`,
+  electionResults: (electionId: string) => `cache:results:election:${electionId}`,
 };

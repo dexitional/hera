@@ -23,24 +23,30 @@ import { Route as VoteElectionRouteImport } from './routes/vote/election'
 import { Route as VoteCastRouteImport } from './routes/vote/cast'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as AuthSigninRouteImport } from './routes/auth.signin'
+import { Route as AuthErrorRouteImport } from './routes/auth.error'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminPublicRouteImport } from './routes/admin/public'
 import { Route as NomineeNomineeIdIndexRouteImport } from './routes/nominee/$nomineeId/index'
 import { Route as EventsEventIdIndexRouteImport } from './routes/events/$eventId/index'
+import { Route as AdminUsersIndexRouteImport } from './routes/admin/users.index'
 import { Route as AdminOrganizationsIndexRouteImport } from './routes/admin/organizations.index'
 import { Route as AdminEventsIndexRouteImport } from './routes/admin/events.index'
 import { Route as AdminElectionsIndexRouteImport } from './routes/admin/elections.index'
 import { Route as AdminContestantsIndexRouteImport } from './routes/admin/contestants.index'
 import { Route as AdminCategoriesIndexRouteImport } from './routes/admin/categories.index'
+import { Route as ApiWebhooksPaystackRouteImport } from './routes/api/webhooks.paystack'
+import { Route as ApiWebhooksArkeselUssdRouteImport } from './routes/api/webhooks.arkesel-ussd'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
+import { Route as AdminUsersUserIdRouteImport } from './routes/admin/users.$userId'
 import { Route as AdminOrganizationsNewRouteImport } from './routes/admin/organizations.new'
 import { Route as AdminEventsNewRouteImport } from './routes/admin/events.new'
-import { Route as AdminEventsManageRouteImport } from './routes/admin/events.manage'
-import { Route as AdminEventsFeedRouteImport } from './routes/admin/events.feed'
 import { Route as AdminElectionsNewRouteImport } from './routes/admin/elections.new'
 import { Route as AdminContestantsNewRouteImport } from './routes/admin/contestants.new'
 import { Route as AdminCategoriesNewRouteImport } from './routes/admin/categories.new'
 import { Route as EventsEventIdCategoriesIndexRouteImport } from './routes/events/$eventId/categories/index'
+import { Route as AdminEventsEventIdManageRouteImport } from './routes/admin/events.$eventId.manage'
+import { Route as AdminEventsEventIdFeedRouteImport } from './routes/admin/events.$eventId.feed'
+import { Route as AdminEventsEventIdEditRouteImport } from './routes/admin/events.$eventId.edit'
 import { Route as AdminElectionsElectionIdResultsRouteImport } from './routes/admin/elections.$electionId.results'
 import { Route as AdminElectionsElectionIdReceiptRouteImport } from './routes/admin/elections.$electionId.receipt'
 import { Route as AdminElectionsElectionIdPayRouteImport } from './routes/admin/elections.$electionId.pay'
@@ -50,13 +56,22 @@ import { Route as AdminElectionsElectionIdFeedRouteImport } from './routes/admin
 import { Route as AdminElectionsElectionIdEditRouteImport } from './routes/admin/elections.$electionId.edit'
 import { Route as AdminElectionsElectionIdAdminfeedRouteImport } from './routes/admin/elections.$electionId.adminfeed'
 import { Route as EventsEventIdCategoriesCategoryIdIndexRouteImport } from './routes/events/$eventId/categories/$categoryId/index'
+import { Route as AdminEventsEventIdTransactionsIndexRouteImport } from './routes/admin/events.$eventId.transactions.index'
+import { Route as AdminEventsEventIdContestantsIndexRouteImport } from './routes/admin/events.$eventId.contestants.index'
+import { Route as AdminEventsEventIdCategoriesIndexRouteImport } from './routes/admin/events.$eventId.categories.index'
 import { Route as AdminElectionsElectionIdVotersIndexRouteImport } from './routes/admin/elections.$electionId.voters.index'
 import { Route as AdminElectionsElectionIdPositionsIndexRouteImport } from './routes/admin/elections.$electionId.positions.index'
 import { Route as AdminElectionsElectionIdCandidatesIndexRouteImport } from './routes/admin/elections.$electionId.candidates.index'
+import { Route as AdminEventsEventIdTransactionsNewRouteImport } from './routes/admin/events.$eventId.transactions.new'
+import { Route as AdminEventsEventIdContestantsNewRouteImport } from './routes/admin/events.$eventId.contestants.new'
+import { Route as AdminEventsEventIdCategoriesNewRouteImport } from './routes/admin/events.$eventId.categories.new'
 import { Route as AdminElectionsElectionIdVotersNewRouteImport } from './routes/admin/elections.$electionId.voters.new'
 import { Route as AdminElectionsElectionIdPositionsNewRouteImport } from './routes/admin/elections.$electionId.positions.new'
 import { Route as AdminElectionsElectionIdFeedBakRouteImport } from './routes/admin/elections.$electionId.feed.bak'
 import { Route as AdminElectionsElectionIdCandidatesNewRouteImport } from './routes/admin/elections.$electionId.candidates.new'
+import { Route as AdminEventsEventIdTransactionsTransactionIdEditRouteImport } from './routes/admin/events.$eventId.transactions.$transactionId.edit'
+import { Route as AdminEventsEventIdContestantsContestantIdEditRouteImport } from './routes/admin/events.$eventId.contestants.$contestantId.edit'
+import { Route as AdminEventsEventIdCategoriesCategoryIdEditRouteImport } from './routes/admin/events.$eventId.categories.$categoryId.edit'
 import { Route as AdminElectionsElectionIdVotersVoterIdEditRouteImport } from './routes/admin/elections.$electionId.voters.$voterId.edit'
 import { Route as AdminElectionsElectionIdPositionsPositionIdEditRouteImport } from './routes/admin/elections.$electionId.positions.$positionId.edit'
 import { Route as AdminElectionsElectionIdCandidatesCandidateIdEditRouteImport } from './routes/admin/elections.$electionId.candidates.$candidateId.edit'
@@ -131,6 +146,11 @@ const AuthSigninRoute = AuthSigninRouteImport.update({
   path: '/auth/signin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthErrorRoute = AuthErrorRouteImport.update({
+  id: '/auth/error',
+  path: '/auth/error',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -150,6 +170,11 @@ const EventsEventIdIndexRoute = EventsEventIdIndexRouteImport.update({
   id: '/events/$eventId/',
   path: '/events/$eventId/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersIndexRoute = AdminUsersIndexRouteImport.update({
+  id: '/users/',
+  path: '/users/',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminOrganizationsIndexRoute = AdminOrganizationsIndexRouteImport.update({
   id: '/organizations/',
@@ -176,10 +201,25 @@ const AdminCategoriesIndexRoute = AdminCategoriesIndexRouteImport.update({
   path: '/categories/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const ApiWebhooksPaystackRoute = ApiWebhooksPaystackRouteImport.update({
+  id: '/api/webhooks/paystack',
+  path: '/api/webhooks/paystack',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWebhooksArkeselUssdRoute = ApiWebhooksArkeselUssdRouteImport.update({
+  id: '/api/webhooks/arkesel-ussd',
+  path: '/api/webhooks/arkesel-ussd',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersUserIdRoute = AdminUsersUserIdRouteImport.update({
+  id: '/users/$userId',
+  path: '/users/$userId',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminOrganizationsNewRoute = AdminOrganizationsNewRouteImport.update({
   id: '/organizations/new',
@@ -189,16 +229,6 @@ const AdminOrganizationsNewRoute = AdminOrganizationsNewRouteImport.update({
 const AdminEventsNewRoute = AdminEventsNewRouteImport.update({
   id: '/events/new',
   path: '/events/new',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminEventsManageRoute = AdminEventsManageRouteImport.update({
-  id: '/events/manage',
-  path: '/events/manage',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminEventsFeedRoute = AdminEventsFeedRouteImport.update({
-  id: '/events/feed',
-  path: '/events/feed',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminElectionsNewRoute = AdminElectionsNewRouteImport.update({
@@ -222,6 +252,22 @@ const EventsEventIdCategoriesIndexRoute =
     path: '/events/$eventId/categories/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminEventsEventIdManageRoute =
+  AdminEventsEventIdManageRouteImport.update({
+    id: '/events/$eventId/manage',
+    path: '/events/$eventId/manage',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminEventsEventIdFeedRoute = AdminEventsEventIdFeedRouteImport.update({
+  id: '/events/$eventId/feed',
+  path: '/events/$eventId/feed',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminEventsEventIdEditRoute = AdminEventsEventIdEditRouteImport.update({
+  id: '/events/$eventId/edit',
+  path: '/events/$eventId/edit',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminElectionsElectionIdResultsRoute =
   AdminElectionsElectionIdResultsRouteImport.update({
     id: '/elections/$electionId/results',
@@ -276,6 +322,24 @@ const EventsEventIdCategoriesCategoryIdIndexRoute =
     path: '/events/$eventId/categories/$categoryId/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminEventsEventIdTransactionsIndexRoute =
+  AdminEventsEventIdTransactionsIndexRouteImport.update({
+    id: '/events/$eventId/transactions/',
+    path: '/events/$eventId/transactions/',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminEventsEventIdContestantsIndexRoute =
+  AdminEventsEventIdContestantsIndexRouteImport.update({
+    id: '/events/$eventId/contestants/',
+    path: '/events/$eventId/contestants/',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminEventsEventIdCategoriesIndexRoute =
+  AdminEventsEventIdCategoriesIndexRouteImport.update({
+    id: '/events/$eventId/categories/',
+    path: '/events/$eventId/categories/',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
 const AdminElectionsElectionIdVotersIndexRoute =
   AdminElectionsElectionIdVotersIndexRouteImport.update({
     id: '/elections/$electionId/voters/',
@@ -292,6 +356,24 @@ const AdminElectionsElectionIdCandidatesIndexRoute =
   AdminElectionsElectionIdCandidatesIndexRouteImport.update({
     id: '/elections/$electionId/candidates/',
     path: '/elections/$electionId/candidates/',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminEventsEventIdTransactionsNewRoute =
+  AdminEventsEventIdTransactionsNewRouteImport.update({
+    id: '/events/$eventId/transactions/new',
+    path: '/events/$eventId/transactions/new',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminEventsEventIdContestantsNewRoute =
+  AdminEventsEventIdContestantsNewRouteImport.update({
+    id: '/events/$eventId/contestants/new',
+    path: '/events/$eventId/contestants/new',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminEventsEventIdCategoriesNewRoute =
+  AdminEventsEventIdCategoriesNewRouteImport.update({
+    id: '/events/$eventId/categories/new',
+    path: '/events/$eventId/categories/new',
     getParentRoute: () => AdminRouteRoute,
   } as any)
 const AdminElectionsElectionIdVotersNewRoute =
@@ -316,6 +398,24 @@ const AdminElectionsElectionIdCandidatesNewRoute =
   AdminElectionsElectionIdCandidatesNewRouteImport.update({
     id: '/elections/$electionId/candidates/new',
     path: '/elections/$electionId/candidates/new',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminEventsEventIdTransactionsTransactionIdEditRoute =
+  AdminEventsEventIdTransactionsTransactionIdEditRouteImport.update({
+    id: '/events/$eventId/transactions/$transactionId/edit',
+    path: '/events/$eventId/transactions/$transactionId/edit',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminEventsEventIdContestantsContestantIdEditRoute =
+  AdminEventsEventIdContestantsContestantIdEditRouteImport.update({
+    id: '/events/$eventId/contestants/$contestantId/edit',
+    path: '/events/$eventId/contestants/$contestantId/edit',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminEventsEventIdCategoriesCategoryIdEditRoute =
+  AdminEventsEventIdCategoriesCategoryIdEditRouteImport.update({
+    id: '/events/$eventId/categories/$categoryId/edit',
+    path: '/events/$eventId/categories/$categoryId/edit',
     getParentRoute: () => AdminRouteRoute,
   } as any)
 const AdminElectionsElectionIdVotersVoterIdEditRoute =
@@ -348,6 +448,7 @@ export interface FileRoutesByFullPath {
   '/tickets': typeof TicketsRoute
   '/admin/public': typeof AdminPublicRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/auth/error': typeof AuthErrorRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
   '/vote/cast': typeof VoteCastRoute
@@ -357,16 +458,18 @@ export interface FileRoutesByFullPath {
   '/admin/categories/new': typeof AdminCategoriesNewRoute
   '/admin/contestants/new': typeof AdminContestantsNewRoute
   '/admin/elections/new': typeof AdminElectionsNewRoute
-  '/admin/events/feed': typeof AdminEventsFeedRoute
-  '/admin/events/manage': typeof AdminEventsManageRoute
   '/admin/events/new': typeof AdminEventsNewRoute
   '/admin/organizations/new': typeof AdminOrganizationsNewRoute
+  '/admin/users/$userId': typeof AdminUsersUserIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/webhooks/arkesel-ussd': typeof ApiWebhooksArkeselUssdRoute
+  '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/admin/categories/': typeof AdminCategoriesIndexRoute
   '/admin/contestants/': typeof AdminContestantsIndexRoute
   '/admin/elections/': typeof AdminElectionsIndexRoute
   '/admin/events/': typeof AdminEventsIndexRoute
   '/admin/organizations/': typeof AdminOrganizationsIndexRoute
+  '/admin/users/': typeof AdminUsersIndexRoute
   '/events/$eventId/': typeof EventsEventIdIndexRoute
   '/nominee/$nomineeId/': typeof NomineeNomineeIdIndexRoute
   '/admin/elections/$electionId/adminfeed': typeof AdminElectionsElectionIdAdminfeedRoute
@@ -377,18 +480,30 @@ export interface FileRoutesByFullPath {
   '/admin/elections/$electionId/pay': typeof AdminElectionsElectionIdPayRoute
   '/admin/elections/$electionId/receipt': typeof AdminElectionsElectionIdReceiptRoute
   '/admin/elections/$electionId/results': typeof AdminElectionsElectionIdResultsRoute
+  '/admin/events/$eventId/edit': typeof AdminEventsEventIdEditRoute
+  '/admin/events/$eventId/feed': typeof AdminEventsEventIdFeedRoute
+  '/admin/events/$eventId/manage': typeof AdminEventsEventIdManageRoute
   '/events/$eventId/categories/': typeof EventsEventIdCategoriesIndexRoute
   '/admin/elections/$electionId/candidates/new': typeof AdminElectionsElectionIdCandidatesNewRoute
   '/admin/elections/$electionId/feed/bak': typeof AdminElectionsElectionIdFeedBakRoute
   '/admin/elections/$electionId/positions/new': typeof AdminElectionsElectionIdPositionsNewRoute
   '/admin/elections/$electionId/voters/new': typeof AdminElectionsElectionIdVotersNewRoute
+  '/admin/events/$eventId/categories/new': typeof AdminEventsEventIdCategoriesNewRoute
+  '/admin/events/$eventId/contestants/new': typeof AdminEventsEventIdContestantsNewRoute
+  '/admin/events/$eventId/transactions/new': typeof AdminEventsEventIdTransactionsNewRoute
   '/admin/elections/$electionId/candidates/': typeof AdminElectionsElectionIdCandidatesIndexRoute
   '/admin/elections/$electionId/positions/': typeof AdminElectionsElectionIdPositionsIndexRoute
   '/admin/elections/$electionId/voters/': typeof AdminElectionsElectionIdVotersIndexRoute
+  '/admin/events/$eventId/categories/': typeof AdminEventsEventIdCategoriesIndexRoute
+  '/admin/events/$eventId/contestants/': typeof AdminEventsEventIdContestantsIndexRoute
+  '/admin/events/$eventId/transactions/': typeof AdminEventsEventIdTransactionsIndexRoute
   '/events/$eventId/categories/$categoryId/': typeof EventsEventIdCategoriesCategoryIdIndexRoute
   '/admin/elections/$electionId/candidates/$candidateId/edit': typeof AdminElectionsElectionIdCandidatesCandidateIdEditRoute
   '/admin/elections/$electionId/positions/$positionId/edit': typeof AdminElectionsElectionIdPositionsPositionIdEditRoute
   '/admin/elections/$electionId/voters/$voterId/edit': typeof AdminElectionsElectionIdVotersVoterIdEditRoute
+  '/admin/events/$eventId/categories/$categoryId/edit': typeof AdminEventsEventIdCategoriesCategoryIdEditRoute
+  '/admin/events/$eventId/contestants/$contestantId/edit': typeof AdminEventsEventIdContestantsContestantIdEditRoute
+  '/admin/events/$eventId/transactions/$transactionId/edit': typeof AdminEventsEventIdTransactionsTransactionIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -400,6 +515,7 @@ export interface FileRoutesByTo {
   '/tickets': typeof TicketsRoute
   '/admin/public': typeof AdminPublicRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/auth/error': typeof AuthErrorRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
   '/vote/cast': typeof VoteCastRoute
@@ -409,16 +525,18 @@ export interface FileRoutesByTo {
   '/admin/categories/new': typeof AdminCategoriesNewRoute
   '/admin/contestants/new': typeof AdminContestantsNewRoute
   '/admin/elections/new': typeof AdminElectionsNewRoute
-  '/admin/events/feed': typeof AdminEventsFeedRoute
-  '/admin/events/manage': typeof AdminEventsManageRoute
   '/admin/events/new': typeof AdminEventsNewRoute
   '/admin/organizations/new': typeof AdminOrganizationsNewRoute
+  '/admin/users/$userId': typeof AdminUsersUserIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/webhooks/arkesel-ussd': typeof ApiWebhooksArkeselUssdRoute
+  '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/admin/categories': typeof AdminCategoriesIndexRoute
   '/admin/contestants': typeof AdminContestantsIndexRoute
   '/admin/elections': typeof AdminElectionsIndexRoute
   '/admin/events': typeof AdminEventsIndexRoute
   '/admin/organizations': typeof AdminOrganizationsIndexRoute
+  '/admin/users': typeof AdminUsersIndexRoute
   '/events/$eventId': typeof EventsEventIdIndexRoute
   '/nominee/$nomineeId': typeof NomineeNomineeIdIndexRoute
   '/admin/elections/$electionId/adminfeed': typeof AdminElectionsElectionIdAdminfeedRoute
@@ -429,18 +547,30 @@ export interface FileRoutesByTo {
   '/admin/elections/$electionId/pay': typeof AdminElectionsElectionIdPayRoute
   '/admin/elections/$electionId/receipt': typeof AdminElectionsElectionIdReceiptRoute
   '/admin/elections/$electionId/results': typeof AdminElectionsElectionIdResultsRoute
+  '/admin/events/$eventId/edit': typeof AdminEventsEventIdEditRoute
+  '/admin/events/$eventId/feed': typeof AdminEventsEventIdFeedRoute
+  '/admin/events/$eventId/manage': typeof AdminEventsEventIdManageRoute
   '/events/$eventId/categories': typeof EventsEventIdCategoriesIndexRoute
   '/admin/elections/$electionId/candidates/new': typeof AdminElectionsElectionIdCandidatesNewRoute
   '/admin/elections/$electionId/feed/bak': typeof AdminElectionsElectionIdFeedBakRoute
   '/admin/elections/$electionId/positions/new': typeof AdminElectionsElectionIdPositionsNewRoute
   '/admin/elections/$electionId/voters/new': typeof AdminElectionsElectionIdVotersNewRoute
+  '/admin/events/$eventId/categories/new': typeof AdminEventsEventIdCategoriesNewRoute
+  '/admin/events/$eventId/contestants/new': typeof AdminEventsEventIdContestantsNewRoute
+  '/admin/events/$eventId/transactions/new': typeof AdminEventsEventIdTransactionsNewRoute
   '/admin/elections/$electionId/candidates': typeof AdminElectionsElectionIdCandidatesIndexRoute
   '/admin/elections/$electionId/positions': typeof AdminElectionsElectionIdPositionsIndexRoute
   '/admin/elections/$electionId/voters': typeof AdminElectionsElectionIdVotersIndexRoute
+  '/admin/events/$eventId/categories': typeof AdminEventsEventIdCategoriesIndexRoute
+  '/admin/events/$eventId/contestants': typeof AdminEventsEventIdContestantsIndexRoute
+  '/admin/events/$eventId/transactions': typeof AdminEventsEventIdTransactionsIndexRoute
   '/events/$eventId/categories/$categoryId': typeof EventsEventIdCategoriesCategoryIdIndexRoute
   '/admin/elections/$electionId/candidates/$candidateId/edit': typeof AdminElectionsElectionIdCandidatesCandidateIdEditRoute
   '/admin/elections/$electionId/positions/$positionId/edit': typeof AdminElectionsElectionIdPositionsPositionIdEditRoute
   '/admin/elections/$electionId/voters/$voterId/edit': typeof AdminElectionsElectionIdVotersVoterIdEditRoute
+  '/admin/events/$eventId/categories/$categoryId/edit': typeof AdminEventsEventIdCategoriesCategoryIdEditRoute
+  '/admin/events/$eventId/contestants/$contestantId/edit': typeof AdminEventsEventIdContestantsContestantIdEditRoute
+  '/admin/events/$eventId/transactions/$transactionId/edit': typeof AdminEventsEventIdTransactionsTransactionIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -454,6 +584,7 @@ export interface FileRoutesById {
   '/tickets': typeof TicketsRoute
   '/admin/public': typeof AdminPublicRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/auth/error': typeof AuthErrorRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
   '/vote/cast': typeof VoteCastRoute
@@ -463,16 +594,18 @@ export interface FileRoutesById {
   '/admin/categories/new': typeof AdminCategoriesNewRoute
   '/admin/contestants/new': typeof AdminContestantsNewRoute
   '/admin/elections/new': typeof AdminElectionsNewRoute
-  '/admin/events/feed': typeof AdminEventsFeedRoute
-  '/admin/events/manage': typeof AdminEventsManageRoute
   '/admin/events/new': typeof AdminEventsNewRoute
   '/admin/organizations/new': typeof AdminOrganizationsNewRoute
+  '/admin/users/$userId': typeof AdminUsersUserIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/webhooks/arkesel-ussd': typeof ApiWebhooksArkeselUssdRoute
+  '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
   '/admin/categories/': typeof AdminCategoriesIndexRoute
   '/admin/contestants/': typeof AdminContestantsIndexRoute
   '/admin/elections/': typeof AdminElectionsIndexRoute
   '/admin/events/': typeof AdminEventsIndexRoute
   '/admin/organizations/': typeof AdminOrganizationsIndexRoute
+  '/admin/users/': typeof AdminUsersIndexRoute
   '/events/$eventId/': typeof EventsEventIdIndexRoute
   '/nominee/$nomineeId/': typeof NomineeNomineeIdIndexRoute
   '/admin/elections/$electionId/adminfeed': typeof AdminElectionsElectionIdAdminfeedRoute
@@ -483,18 +616,30 @@ export interface FileRoutesById {
   '/admin/elections/$electionId/pay': typeof AdminElectionsElectionIdPayRoute
   '/admin/elections/$electionId/receipt': typeof AdminElectionsElectionIdReceiptRoute
   '/admin/elections/$electionId/results': typeof AdminElectionsElectionIdResultsRoute
+  '/admin/events/$eventId/edit': typeof AdminEventsEventIdEditRoute
+  '/admin/events/$eventId/feed': typeof AdminEventsEventIdFeedRoute
+  '/admin/events/$eventId/manage': typeof AdminEventsEventIdManageRoute
   '/events/$eventId/categories/': typeof EventsEventIdCategoriesIndexRoute
   '/admin/elections/$electionId/candidates/new': typeof AdminElectionsElectionIdCandidatesNewRoute
   '/admin/elections/$electionId/feed/bak': typeof AdminElectionsElectionIdFeedBakRoute
   '/admin/elections/$electionId/positions/new': typeof AdminElectionsElectionIdPositionsNewRoute
   '/admin/elections/$electionId/voters/new': typeof AdminElectionsElectionIdVotersNewRoute
+  '/admin/events/$eventId/categories/new': typeof AdminEventsEventIdCategoriesNewRoute
+  '/admin/events/$eventId/contestants/new': typeof AdminEventsEventIdContestantsNewRoute
+  '/admin/events/$eventId/transactions/new': typeof AdminEventsEventIdTransactionsNewRoute
   '/admin/elections/$electionId/candidates/': typeof AdminElectionsElectionIdCandidatesIndexRoute
   '/admin/elections/$electionId/positions/': typeof AdminElectionsElectionIdPositionsIndexRoute
   '/admin/elections/$electionId/voters/': typeof AdminElectionsElectionIdVotersIndexRoute
+  '/admin/events/$eventId/categories/': typeof AdminEventsEventIdCategoriesIndexRoute
+  '/admin/events/$eventId/contestants/': typeof AdminEventsEventIdContestantsIndexRoute
+  '/admin/events/$eventId/transactions/': typeof AdminEventsEventIdTransactionsIndexRoute
   '/events/$eventId/categories/$categoryId/': typeof EventsEventIdCategoriesCategoryIdIndexRoute
   '/admin/elections/$electionId/candidates/$candidateId/edit': typeof AdminElectionsElectionIdCandidatesCandidateIdEditRoute
   '/admin/elections/$electionId/positions/$positionId/edit': typeof AdminElectionsElectionIdPositionsPositionIdEditRoute
   '/admin/elections/$electionId/voters/$voterId/edit': typeof AdminElectionsElectionIdVotersVoterIdEditRoute
+  '/admin/events/$eventId/categories/$categoryId/edit': typeof AdminEventsEventIdCategoriesCategoryIdEditRoute
+  '/admin/events/$eventId/contestants/$contestantId/edit': typeof AdminEventsEventIdContestantsContestantIdEditRoute
+  '/admin/events/$eventId/transactions/$transactionId/edit': typeof AdminEventsEventIdTransactionsTransactionIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -509,6 +654,7 @@ export interface FileRouteTypes {
     | '/tickets'
     | '/admin/public'
     | '/admin/settings'
+    | '/auth/error'
     | '/auth/signin'
     | '/auth/signup'
     | '/vote/cast'
@@ -518,16 +664,18 @@ export interface FileRouteTypes {
     | '/admin/categories/new'
     | '/admin/contestants/new'
     | '/admin/elections/new'
-    | '/admin/events/feed'
-    | '/admin/events/manage'
     | '/admin/events/new'
     | '/admin/organizations/new'
+    | '/admin/users/$userId'
     | '/api/auth/$'
+    | '/api/webhooks/arkesel-ussd'
+    | '/api/webhooks/paystack'
     | '/admin/categories/'
     | '/admin/contestants/'
     | '/admin/elections/'
     | '/admin/events/'
     | '/admin/organizations/'
+    | '/admin/users/'
     | '/events/$eventId/'
     | '/nominee/$nomineeId/'
     | '/admin/elections/$electionId/adminfeed'
@@ -538,18 +686,30 @@ export interface FileRouteTypes {
     | '/admin/elections/$electionId/pay'
     | '/admin/elections/$electionId/receipt'
     | '/admin/elections/$electionId/results'
+    | '/admin/events/$eventId/edit'
+    | '/admin/events/$eventId/feed'
+    | '/admin/events/$eventId/manage'
     | '/events/$eventId/categories/'
     | '/admin/elections/$electionId/candidates/new'
     | '/admin/elections/$electionId/feed/bak'
     | '/admin/elections/$electionId/positions/new'
     | '/admin/elections/$electionId/voters/new'
+    | '/admin/events/$eventId/categories/new'
+    | '/admin/events/$eventId/contestants/new'
+    | '/admin/events/$eventId/transactions/new'
     | '/admin/elections/$electionId/candidates/'
     | '/admin/elections/$electionId/positions/'
     | '/admin/elections/$electionId/voters/'
+    | '/admin/events/$eventId/categories/'
+    | '/admin/events/$eventId/contestants/'
+    | '/admin/events/$eventId/transactions/'
     | '/events/$eventId/categories/$categoryId/'
     | '/admin/elections/$electionId/candidates/$candidateId/edit'
     | '/admin/elections/$electionId/positions/$positionId/edit'
     | '/admin/elections/$electionId/voters/$voterId/edit'
+    | '/admin/events/$eventId/categories/$categoryId/edit'
+    | '/admin/events/$eventId/contestants/$contestantId/edit'
+    | '/admin/events/$eventId/transactions/$transactionId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -561,6 +721,7 @@ export interface FileRouteTypes {
     | '/tickets'
     | '/admin/public'
     | '/admin/settings'
+    | '/auth/error'
     | '/auth/signin'
     | '/auth/signup'
     | '/vote/cast'
@@ -570,16 +731,18 @@ export interface FileRouteTypes {
     | '/admin/categories/new'
     | '/admin/contestants/new'
     | '/admin/elections/new'
-    | '/admin/events/feed'
-    | '/admin/events/manage'
     | '/admin/events/new'
     | '/admin/organizations/new'
+    | '/admin/users/$userId'
     | '/api/auth/$'
+    | '/api/webhooks/arkesel-ussd'
+    | '/api/webhooks/paystack'
     | '/admin/categories'
     | '/admin/contestants'
     | '/admin/elections'
     | '/admin/events'
     | '/admin/organizations'
+    | '/admin/users'
     | '/events/$eventId'
     | '/nominee/$nomineeId'
     | '/admin/elections/$electionId/adminfeed'
@@ -590,18 +753,30 @@ export interface FileRouteTypes {
     | '/admin/elections/$electionId/pay'
     | '/admin/elections/$electionId/receipt'
     | '/admin/elections/$electionId/results'
+    | '/admin/events/$eventId/edit'
+    | '/admin/events/$eventId/feed'
+    | '/admin/events/$eventId/manage'
     | '/events/$eventId/categories'
     | '/admin/elections/$electionId/candidates/new'
     | '/admin/elections/$electionId/feed/bak'
     | '/admin/elections/$electionId/positions/new'
     | '/admin/elections/$electionId/voters/new'
+    | '/admin/events/$eventId/categories/new'
+    | '/admin/events/$eventId/contestants/new'
+    | '/admin/events/$eventId/transactions/new'
     | '/admin/elections/$electionId/candidates'
     | '/admin/elections/$electionId/positions'
     | '/admin/elections/$electionId/voters'
+    | '/admin/events/$eventId/categories'
+    | '/admin/events/$eventId/contestants'
+    | '/admin/events/$eventId/transactions'
     | '/events/$eventId/categories/$categoryId'
     | '/admin/elections/$electionId/candidates/$candidateId/edit'
     | '/admin/elections/$electionId/positions/$positionId/edit'
     | '/admin/elections/$electionId/voters/$voterId/edit'
+    | '/admin/events/$eventId/categories/$categoryId/edit'
+    | '/admin/events/$eventId/contestants/$contestantId/edit'
+    | '/admin/events/$eventId/transactions/$transactionId/edit'
   id:
     | '__root__'
     | '/'
@@ -614,6 +789,7 @@ export interface FileRouteTypes {
     | '/tickets'
     | '/admin/public'
     | '/admin/settings'
+    | '/auth/error'
     | '/auth/signin'
     | '/auth/signup'
     | '/vote/cast'
@@ -623,16 +799,18 @@ export interface FileRouteTypes {
     | '/admin/categories/new'
     | '/admin/contestants/new'
     | '/admin/elections/new'
-    | '/admin/events/feed'
-    | '/admin/events/manage'
     | '/admin/events/new'
     | '/admin/organizations/new'
+    | '/admin/users/$userId'
     | '/api/auth/$'
+    | '/api/webhooks/arkesel-ussd'
+    | '/api/webhooks/paystack'
     | '/admin/categories/'
     | '/admin/contestants/'
     | '/admin/elections/'
     | '/admin/events/'
     | '/admin/organizations/'
+    | '/admin/users/'
     | '/events/$eventId/'
     | '/nominee/$nomineeId/'
     | '/admin/elections/$electionId/adminfeed'
@@ -643,18 +821,30 @@ export interface FileRouteTypes {
     | '/admin/elections/$electionId/pay'
     | '/admin/elections/$electionId/receipt'
     | '/admin/elections/$electionId/results'
+    | '/admin/events/$eventId/edit'
+    | '/admin/events/$eventId/feed'
+    | '/admin/events/$eventId/manage'
     | '/events/$eventId/categories/'
     | '/admin/elections/$electionId/candidates/new'
     | '/admin/elections/$electionId/feed/bak'
     | '/admin/elections/$electionId/positions/new'
     | '/admin/elections/$electionId/voters/new'
+    | '/admin/events/$eventId/categories/new'
+    | '/admin/events/$eventId/contestants/new'
+    | '/admin/events/$eventId/transactions/new'
     | '/admin/elections/$electionId/candidates/'
     | '/admin/elections/$electionId/positions/'
     | '/admin/elections/$electionId/voters/'
+    | '/admin/events/$eventId/categories/'
+    | '/admin/events/$eventId/contestants/'
+    | '/admin/events/$eventId/transactions/'
     | '/events/$eventId/categories/$categoryId/'
     | '/admin/elections/$electionId/candidates/$candidateId/edit'
     | '/admin/elections/$electionId/positions/$positionId/edit'
     | '/admin/elections/$electionId/voters/$voterId/edit'
+    | '/admin/events/$eventId/categories/$categoryId/edit'
+    | '/admin/events/$eventId/contestants/$contestantId/edit'
+    | '/admin/events/$eventId/transactions/$transactionId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -666,12 +856,15 @@ export interface RootRouteChildren {
   ElectionsRoute: typeof ElectionsRoute
   StoreRoute: typeof StoreRoute
   TicketsRoute: typeof TicketsRoute
+  AuthErrorRoute: typeof AuthErrorRoute
   AuthSigninRoute: typeof AuthSigninRoute
   AuthSignupRoute: typeof AuthSignupRoute
   VoteCastRoute: typeof VoteCastRoute
   VoteElectionRoute: typeof VoteElectionRoute
   EventsIndexRoute: typeof EventsIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiWebhooksArkeselUssdRoute: typeof ApiWebhooksArkeselUssdRoute
+  ApiWebhooksPaystackRoute: typeof ApiWebhooksPaystackRoute
   EventsEventIdIndexRoute: typeof EventsEventIdIndexRoute
   NomineeNomineeIdIndexRoute: typeof NomineeNomineeIdIndexRoute
   EventsEventIdCategoriesIndexRoute: typeof EventsEventIdCategoriesIndexRoute
@@ -778,6 +971,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSigninRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/error': {
+      id: '/auth/error'
+      path: '/auth/error'
+      fullPath: '/auth/error'
+      preLoaderRoute: typeof AuthErrorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/settings': {
       id: '/admin/settings'
       path: '/settings'
@@ -805,6 +1005,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/events/$eventId/'
       preLoaderRoute: typeof EventsEventIdIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/users/': {
+      id: '/admin/users/'
+      path: '/users'
+      fullPath: '/admin/users/'
+      preLoaderRoute: typeof AdminUsersIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/admin/organizations/': {
       id: '/admin/organizations/'
@@ -841,12 +1048,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCategoriesIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/api/webhooks/paystack': {
+      id: '/api/webhooks/paystack'
+      path: '/api/webhooks/paystack'
+      fullPath: '/api/webhooks/paystack'
+      preLoaderRoute: typeof ApiWebhooksPaystackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/webhooks/arkesel-ussd': {
+      id: '/api/webhooks/arkesel-ussd'
+      path: '/api/webhooks/arkesel-ussd'
+      fullPath: '/api/webhooks/arkesel-ussd'
+      preLoaderRoute: typeof ApiWebhooksArkeselUssdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/users/$userId': {
+      id: '/admin/users/$userId'
+      path: '/users/$userId'
+      fullPath: '/admin/users/$userId'
+      preLoaderRoute: typeof AdminUsersUserIdRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/admin/organizations/new': {
       id: '/admin/organizations/new'
@@ -860,20 +1088,6 @@ declare module '@tanstack/react-router' {
       path: '/events/new'
       fullPath: '/admin/events/new'
       preLoaderRoute: typeof AdminEventsNewRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/events/manage': {
-      id: '/admin/events/manage'
-      path: '/events/manage'
-      fullPath: '/admin/events/manage'
-      preLoaderRoute: typeof AdminEventsManageRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/events/feed': {
-      id: '/admin/events/feed'
-      path: '/events/feed'
-      fullPath: '/admin/events/feed'
-      preLoaderRoute: typeof AdminEventsFeedRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/elections/new': {
@@ -903,6 +1117,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/events/$eventId/categories/'
       preLoaderRoute: typeof EventsEventIdCategoriesIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/events/$eventId/manage': {
+      id: '/admin/events/$eventId/manage'
+      path: '/events/$eventId/manage'
+      fullPath: '/admin/events/$eventId/manage'
+      preLoaderRoute: typeof AdminEventsEventIdManageRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/feed': {
+      id: '/admin/events/$eventId/feed'
+      path: '/events/$eventId/feed'
+      fullPath: '/admin/events/$eventId/feed'
+      preLoaderRoute: typeof AdminEventsEventIdFeedRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/edit': {
+      id: '/admin/events/$eventId/edit'
+      path: '/events/$eventId/edit'
+      fullPath: '/admin/events/$eventId/edit'
+      preLoaderRoute: typeof AdminEventsEventIdEditRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/admin/elections/$electionId/results': {
       id: '/admin/elections/$electionId/results'
@@ -967,6 +1202,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsEventIdCategoriesCategoryIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/events/$eventId/transactions/': {
+      id: '/admin/events/$eventId/transactions/'
+      path: '/events/$eventId/transactions'
+      fullPath: '/admin/events/$eventId/transactions/'
+      preLoaderRoute: typeof AdminEventsEventIdTransactionsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/contestants/': {
+      id: '/admin/events/$eventId/contestants/'
+      path: '/events/$eventId/contestants'
+      fullPath: '/admin/events/$eventId/contestants/'
+      preLoaderRoute: typeof AdminEventsEventIdContestantsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/categories/': {
+      id: '/admin/events/$eventId/categories/'
+      path: '/events/$eventId/categories'
+      fullPath: '/admin/events/$eventId/categories/'
+      preLoaderRoute: typeof AdminEventsEventIdCategoriesIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/elections/$electionId/voters/': {
       id: '/admin/elections/$electionId/voters/'
       path: '/elections/$electionId/voters'
@@ -986,6 +1242,27 @@ declare module '@tanstack/react-router' {
       path: '/elections/$electionId/candidates'
       fullPath: '/admin/elections/$electionId/candidates/'
       preLoaderRoute: typeof AdminElectionsElectionIdCandidatesIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/transactions/new': {
+      id: '/admin/events/$eventId/transactions/new'
+      path: '/events/$eventId/transactions/new'
+      fullPath: '/admin/events/$eventId/transactions/new'
+      preLoaderRoute: typeof AdminEventsEventIdTransactionsNewRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/contestants/new': {
+      id: '/admin/events/$eventId/contestants/new'
+      path: '/events/$eventId/contestants/new'
+      fullPath: '/admin/events/$eventId/contestants/new'
+      preLoaderRoute: typeof AdminEventsEventIdContestantsNewRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/categories/new': {
+      id: '/admin/events/$eventId/categories/new'
+      path: '/events/$eventId/categories/new'
+      fullPath: '/admin/events/$eventId/categories/new'
+      preLoaderRoute: typeof AdminEventsEventIdCategoriesNewRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/elections/$electionId/voters/new': {
@@ -1014,6 +1291,27 @@ declare module '@tanstack/react-router' {
       path: '/elections/$electionId/candidates/new'
       fullPath: '/admin/elections/$electionId/candidates/new'
       preLoaderRoute: typeof AdminElectionsElectionIdCandidatesNewRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/transactions/$transactionId/edit': {
+      id: '/admin/events/$eventId/transactions/$transactionId/edit'
+      path: '/events/$eventId/transactions/$transactionId/edit'
+      fullPath: '/admin/events/$eventId/transactions/$transactionId/edit'
+      preLoaderRoute: typeof AdminEventsEventIdTransactionsTransactionIdEditRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/contestants/$contestantId/edit': {
+      id: '/admin/events/$eventId/contestants/$contestantId/edit'
+      path: '/events/$eventId/contestants/$contestantId/edit'
+      fullPath: '/admin/events/$eventId/contestants/$contestantId/edit'
+      preLoaderRoute: typeof AdminEventsEventIdContestantsContestantIdEditRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/categories/$categoryId/edit': {
+      id: '/admin/events/$eventId/categories/$categoryId/edit'
+      path: '/events/$eventId/categories/$categoryId/edit'
+      fullPath: '/admin/events/$eventId/categories/$categoryId/edit'
+      preLoaderRoute: typeof AdminEventsEventIdCategoriesCategoryIdEditRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/elections/$electionId/voters/$voterId/edit': {
@@ -1061,15 +1359,15 @@ interface AdminRouteRouteChildren {
   AdminCategoriesNewRoute: typeof AdminCategoriesNewRoute
   AdminContestantsNewRoute: typeof AdminContestantsNewRoute
   AdminElectionsNewRoute: typeof AdminElectionsNewRoute
-  AdminEventsFeedRoute: typeof AdminEventsFeedRoute
-  AdminEventsManageRoute: typeof AdminEventsManageRoute
   AdminEventsNewRoute: typeof AdminEventsNewRoute
   AdminOrganizationsNewRoute: typeof AdminOrganizationsNewRoute
+  AdminUsersUserIdRoute: typeof AdminUsersUserIdRoute
   AdminCategoriesIndexRoute: typeof AdminCategoriesIndexRoute
   AdminContestantsIndexRoute: typeof AdminContestantsIndexRoute
   AdminElectionsIndexRoute: typeof AdminElectionsIndexRoute
   AdminEventsIndexRoute: typeof AdminEventsIndexRoute
   AdminOrganizationsIndexRoute: typeof AdminOrganizationsIndexRoute
+  AdminUsersIndexRoute: typeof AdminUsersIndexRoute
   AdminElectionsElectionIdAdminfeedRoute: typeof AdminElectionsElectionIdAdminfeedRoute
   AdminElectionsElectionIdEditRoute: typeof AdminElectionsElectionIdEditRoute
   AdminElectionsElectionIdFeedRoute: typeof AdminElectionsElectionIdFeedRouteWithChildren
@@ -1078,15 +1376,27 @@ interface AdminRouteRouteChildren {
   AdminElectionsElectionIdPayRoute: typeof AdminElectionsElectionIdPayRoute
   AdminElectionsElectionIdReceiptRoute: typeof AdminElectionsElectionIdReceiptRoute
   AdminElectionsElectionIdResultsRoute: typeof AdminElectionsElectionIdResultsRoute
+  AdminEventsEventIdEditRoute: typeof AdminEventsEventIdEditRoute
+  AdminEventsEventIdFeedRoute: typeof AdminEventsEventIdFeedRoute
+  AdminEventsEventIdManageRoute: typeof AdminEventsEventIdManageRoute
   AdminElectionsElectionIdCandidatesNewRoute: typeof AdminElectionsElectionIdCandidatesNewRoute
   AdminElectionsElectionIdPositionsNewRoute: typeof AdminElectionsElectionIdPositionsNewRoute
   AdminElectionsElectionIdVotersNewRoute: typeof AdminElectionsElectionIdVotersNewRoute
+  AdminEventsEventIdCategoriesNewRoute: typeof AdminEventsEventIdCategoriesNewRoute
+  AdminEventsEventIdContestantsNewRoute: typeof AdminEventsEventIdContestantsNewRoute
+  AdminEventsEventIdTransactionsNewRoute: typeof AdminEventsEventIdTransactionsNewRoute
   AdminElectionsElectionIdCandidatesIndexRoute: typeof AdminElectionsElectionIdCandidatesIndexRoute
   AdminElectionsElectionIdPositionsIndexRoute: typeof AdminElectionsElectionIdPositionsIndexRoute
   AdminElectionsElectionIdVotersIndexRoute: typeof AdminElectionsElectionIdVotersIndexRoute
+  AdminEventsEventIdCategoriesIndexRoute: typeof AdminEventsEventIdCategoriesIndexRoute
+  AdminEventsEventIdContestantsIndexRoute: typeof AdminEventsEventIdContestantsIndexRoute
+  AdminEventsEventIdTransactionsIndexRoute: typeof AdminEventsEventIdTransactionsIndexRoute
   AdminElectionsElectionIdCandidatesCandidateIdEditRoute: typeof AdminElectionsElectionIdCandidatesCandidateIdEditRoute
   AdminElectionsElectionIdPositionsPositionIdEditRoute: typeof AdminElectionsElectionIdPositionsPositionIdEditRoute
   AdminElectionsElectionIdVotersVoterIdEditRoute: typeof AdminElectionsElectionIdVotersVoterIdEditRoute
+  AdminEventsEventIdCategoriesCategoryIdEditRoute: typeof AdminEventsEventIdCategoriesCategoryIdEditRoute
+  AdminEventsEventIdContestantsContestantIdEditRoute: typeof AdminEventsEventIdContestantsContestantIdEditRoute
+  AdminEventsEventIdTransactionsTransactionIdEditRoute: typeof AdminEventsEventIdTransactionsTransactionIdEditRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
@@ -1096,15 +1406,15 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminCategoriesNewRoute: AdminCategoriesNewRoute,
   AdminContestantsNewRoute: AdminContestantsNewRoute,
   AdminElectionsNewRoute: AdminElectionsNewRoute,
-  AdminEventsFeedRoute: AdminEventsFeedRoute,
-  AdminEventsManageRoute: AdminEventsManageRoute,
   AdminEventsNewRoute: AdminEventsNewRoute,
   AdminOrganizationsNewRoute: AdminOrganizationsNewRoute,
+  AdminUsersUserIdRoute: AdminUsersUserIdRoute,
   AdminCategoriesIndexRoute: AdminCategoriesIndexRoute,
   AdminContestantsIndexRoute: AdminContestantsIndexRoute,
   AdminElectionsIndexRoute: AdminElectionsIndexRoute,
   AdminEventsIndexRoute: AdminEventsIndexRoute,
   AdminOrganizationsIndexRoute: AdminOrganizationsIndexRoute,
+  AdminUsersIndexRoute: AdminUsersIndexRoute,
   AdminElectionsElectionIdAdminfeedRoute:
     AdminElectionsElectionIdAdminfeedRoute,
   AdminElectionsElectionIdEditRoute: AdminElectionsElectionIdEditRoute,
@@ -1115,24 +1425,43 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminElectionsElectionIdPayRoute: AdminElectionsElectionIdPayRoute,
   AdminElectionsElectionIdReceiptRoute: AdminElectionsElectionIdReceiptRoute,
   AdminElectionsElectionIdResultsRoute: AdminElectionsElectionIdResultsRoute,
+  AdminEventsEventIdEditRoute: AdminEventsEventIdEditRoute,
+  AdminEventsEventIdFeedRoute: AdminEventsEventIdFeedRoute,
+  AdminEventsEventIdManageRoute: AdminEventsEventIdManageRoute,
   AdminElectionsElectionIdCandidatesNewRoute:
     AdminElectionsElectionIdCandidatesNewRoute,
   AdminElectionsElectionIdPositionsNewRoute:
     AdminElectionsElectionIdPositionsNewRoute,
   AdminElectionsElectionIdVotersNewRoute:
     AdminElectionsElectionIdVotersNewRoute,
+  AdminEventsEventIdCategoriesNewRoute: AdminEventsEventIdCategoriesNewRoute,
+  AdminEventsEventIdContestantsNewRoute: AdminEventsEventIdContestantsNewRoute,
+  AdminEventsEventIdTransactionsNewRoute:
+    AdminEventsEventIdTransactionsNewRoute,
   AdminElectionsElectionIdCandidatesIndexRoute:
     AdminElectionsElectionIdCandidatesIndexRoute,
   AdminElectionsElectionIdPositionsIndexRoute:
     AdminElectionsElectionIdPositionsIndexRoute,
   AdminElectionsElectionIdVotersIndexRoute:
     AdminElectionsElectionIdVotersIndexRoute,
+  AdminEventsEventIdCategoriesIndexRoute:
+    AdminEventsEventIdCategoriesIndexRoute,
+  AdminEventsEventIdContestantsIndexRoute:
+    AdminEventsEventIdContestantsIndexRoute,
+  AdminEventsEventIdTransactionsIndexRoute:
+    AdminEventsEventIdTransactionsIndexRoute,
   AdminElectionsElectionIdCandidatesCandidateIdEditRoute:
     AdminElectionsElectionIdCandidatesCandidateIdEditRoute,
   AdminElectionsElectionIdPositionsPositionIdEditRoute:
     AdminElectionsElectionIdPositionsPositionIdEditRoute,
   AdminElectionsElectionIdVotersVoterIdEditRoute:
     AdminElectionsElectionIdVotersVoterIdEditRoute,
+  AdminEventsEventIdCategoriesCategoryIdEditRoute:
+    AdminEventsEventIdCategoriesCategoryIdEditRoute,
+  AdminEventsEventIdContestantsContestantIdEditRoute:
+    AdminEventsEventIdContestantsContestantIdEditRoute,
+  AdminEventsEventIdTransactionsTransactionIdEditRoute:
+    AdminEventsEventIdTransactionsTransactionIdEditRoute,
 }
 
 const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
@@ -1148,12 +1477,15 @@ const rootRouteChildren: RootRouteChildren = {
   ElectionsRoute: ElectionsRoute,
   StoreRoute: StoreRoute,
   TicketsRoute: TicketsRoute,
+  AuthErrorRoute: AuthErrorRoute,
   AuthSigninRoute: AuthSigninRoute,
   AuthSignupRoute: AuthSignupRoute,
   VoteCastRoute: VoteCastRoute,
   VoteElectionRoute: VoteElectionRoute,
   EventsIndexRoute: EventsIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiWebhooksArkeselUssdRoute: ApiWebhooksArkeselUssdRoute,
+  ApiWebhooksPaystackRoute: ApiWebhooksPaystackRoute,
   EventsEventIdIndexRoute: EventsEventIdIndexRoute,
   NomineeNomineeIdIndexRoute: NomineeNomineeIdIndexRoute,
   EventsEventIdCategoriesIndexRoute: EventsEventIdCategoriesIndexRoute,

@@ -6,8 +6,7 @@ import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/elections/$electionId/positions/new")({
   component: CreatePosition,
-  loader: async ({params}) => {
-    const electionId = params.electionId;
+  loader: async () => {
     const elections = await getElectionsFn();
     return { elections }
   },

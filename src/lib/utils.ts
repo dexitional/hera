@@ -2,16 +2,60 @@ import type { ClassValue } from 'clsx'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { createStore } from '@tanstack/store';
+import { useEffect, useState } from 'react';
 
 
-export type ModalPage = 'card' | 'ussd' | 'ended' | 'stack' | 'profile'
+export type ModalPage = 'card' | 'ussd' | 'ended' | 'checkout' | 'success' | 'profile'
 export type ModalSize = 'lg' | 'xl' | '2xl' | '3xl' | '4xl'
-export type ModalState = { page: ModalPage | null; size: ModalSize }
+
+export type ModalNominee = {
+  id: string
+  name: string
+  tagline: string | null
+  imageUrl: string | null
+  code: string
+  categoryId: string
+  categoryName: string
+  eventId: string
+  eventTitle: string
+  unitPrice: number | null
+}
+
+export type ModalReceipt = {
+  votes: number
+  amount: number
+  reference: string
+}
+
+export type ModalState = {
+  page: ModalPage | null
+  size: ModalSize
+  open: boolean
+  nominee?: ModalNominee | null
+  receipt?: ModalReceipt | null
+}
+
+export const USSD_SHORTCODE = '*928*330#'
 
 export const modalPage = createStore<ModalState>({
   page: 'card',
   size: 'lg',
+  open: false,
+  nominee: null,
+  receipt: null,
 })
+
+/** Subscribes a component to the shared voting-modal store's live state. */
+export function useModalPageState(): ModalState {
+  const [state, setState] = useState<ModalState>(() => modalPage.state)
+
+  useEffect(() => {
+    const sub = modalPage.subscribe((value) => setState(value))
+    return () => sub.unsubscribe()
+  }, [])
+
+  return state
+}
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -114,6 +158,20 @@ export function prepareVotersForBulkImport<T extends VoterImportRow>(rows: T[]) 
   };
 }
 
+
+/** 5-char contestant interaction code: 1 alphanumeric char (no I/O) + 4 digits, uppercase. */
+export const generateContestantCode = () => {
+  const firstCharPool = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789"; // omit I, O (visually confusable with 1, 0)
+  const digits = "0123456789";
+  const randomValues = new Uint32Array(5);
+  globalThis.crypto.getRandomValues(randomValues);
+
+  let code = firstCharPool[randomValues[0] % firstCharPool.length];
+  for (let i = 1; i < 5; i++) {
+    code += digits[randomValues[i] % digits.length];
+  }
+  return code;
+};
 
 export const generateTokenCode = () => {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Omitted easily confused chars like 0, O, 1, I

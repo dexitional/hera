@@ -1,1577 +1,898 @@
 import { authMiddleware } from '#/middleware/authMiddleware';
 import { BUCKET_NAME, s3Client } from '#/lib/s3';
-import { chunkArray, prepareVotersForBulkImport, stripCountryCode } from '#/lib/utils';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { createServerFn } from '@tanstack/react-start';
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import sharp from 'sharp';
 import { db } from '../db';
-import { candidates, elections, electionVotes, positions, voters } from '../db/schema';
-// import * as XLSX from 'xlsx';
-import XLSX from 'xlsx-js-style';
+import { categories, contestants, events, eventTransactions } from '../db/schema';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
+import { generateContestantCode } from '#/lib/utils';
+import { creditCardVote } from './paystack-credit';
 
+// ==========================================
+// EVENTS FUNCTIONS
+// ==========================================
 
-// ELECTIONS FUNCTIONS
+// Public, unauthenticated listing for the voter-facing events directory.
+export const getActiveEventsFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware])
+  .handler(async () => {
+    return await db
+      .select({
+        id: events.id,
+        title: events.title,
+        description: events.description,
+        imageUrl: events.imageUrl,
+        startAt: events.startAt,
+        endAt: events.endAt,
+        unitPrice: events.unitPrice,
+        isActive: events.isActive,
+        categoriesCount: sql<number>`count(${categories.id})::int`,
+      })
+      .from(events)
+      .leftJoin(categories, eq(categories.eventId, events.id))
+      .where(eq<any>(events.isActive, true))
+      .groupBy(events.id)
+      .orderBy(desc(events.createdAt));
+  });
 
-export const getElectionsFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware,authMiddleware])
+// Public, unauthenticated single-event overview for the voter-facing event landing page.
+export const getPublicEventFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware])
+  .handler(async ({ data: eventId }: any) => {
+    const [eventRecord] = await db
+      .select()
+      .from(events)
+      .where(and(eq<any>(events.id, eventId), eq<any>(events.isActive, true)));
+
+    if (!eventRecord) {
+      throw new Error(`Event [${eventId}] not found or not currently active.`);
+    }
+
+    const categoryRows = await db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        description: categories.description,
+        code: categories.code,
+        contestantsCount: sql<number>`count(${contestants.id})::int`,
+      })
+      .from(categories)
+      .leftJoin(contestants, eq(contestants.categoryId, categories.id))
+      .where(eq<any>(categories.eventId, eventId))
+      .groupBy(categories.id)
+      .orderBy(asc(categories.createdAt));
+
+    return {
+      id: eventRecord.id,
+      title: eventRecord.title,
+      description: eventRecord.description,
+      startAt: eventRecord.startAt,
+      endAt: eventRecord.endAt,
+      unitPrice: eventRecord.unitPrice,
+      isActive: eventRecord.isActive,
+      categories: categoryRows,
+    };
+  });
+
+// Public, unauthenticated single-category overview (with contestants) for the voter-facing category page.
+export const getPublicCategoryFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware])
+  .handler(async ({ data: categoryId }: any) => {
+    const [row] = await db
+      .select({ category: categories, event: events })
+      .from(categories)
+      .innerJoin(events, eq(categories.eventId, events.id))
+      .where(and(eq<any>(categories.id, categoryId), eq<any>(events.isActive, true)));
+
+    if (!row) {
+      throw new Error(`Category [${categoryId}] not found or not currently active.`);
+    }
+
+    const contestantRows = await db
+      .select()
+      .from(contestants)
+      .where(eq<any>(contestants.categoryId, categoryId))
+      .orderBy(asc(contestants.order));
+
+    return {
+      id: row.category.id,
+      name: row.category.name,
+      description: row.category.description,
+      code: row.category.code,
+      event: {
+        id: row.event.id,
+        title: row.event.title,
+        startAt: row.event.startAt,
+        endAt: row.event.endAt,
+        unitPrice: row.event.unitPrice,
+      },
+      contestants: contestantRows.map((c) => ({
+        id: c.id,
+        name: c.name,
+        tagline: c.tagline,
+        imageUrl: c.imageUrl,
+        code: c.code,
+        order: c.order,
+      })),
+    };
+  });
+
+// Public, unauthenticated single-nominee profile for the voter-facing nominee page.
+export const getPublicContestantFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware])
+  .handler(async ({ data: contestantCode }: any) => {
+    const code = String(contestantCode ?? '').toUpperCase();
+    const [row] = await db
+      .select({ contestant: contestants, category: categories, event: events })
+      .from(contestants)
+      .innerJoin(categories, eq(contestants.categoryId, categories.id))
+      .innerJoin(events, eq(categories.eventId, events.id))
+      .where(and(eq<any>(contestants.code, code), eq<any>(events.isActive, true)));
+
+    if (!row) {
+      throw new Error(`Nominee [${code}] not found or not currently active.`);
+    }
+
+    return {
+      id: row.contestant.id,
+      name: row.contestant.name,
+      tagline: row.contestant.tagline,
+      imageUrl: row.contestant.imageUrl,
+      code: row.contestant.code,
+      category: { id: row.category.id, name: row.category.name },
+      event: {
+        id: row.event.id,
+        title: row.event.title,
+        startAt: row.event.startAt,
+        endAt: row.event.endAt,
+        unitPrice: row.event.unitPrice,
+      },
+    };
+  });
+
+export const getEventsFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context }) => {
     const admin: any = context?.user;
-    const resp = await db.select()
-      .from(elections)
-      .where(eq<any>(elections.adminId, admin.id));
-
-    return resp;
+    return await db
+      .select({
+        id: events.id,
+        title: events.title,
+        description: events.description,
+        startAt: events.startAt,
+        endAt: events.endAt,
+        unitPrice: events.unitPrice,
+        paymentAmount: events.paymentAmount,
+        paymentDeduction: events.paymentDeduction,
+        isActive: events.isActive,
+        adminId: events.adminId,
+        createdAt: events.createdAt,
+        categoriesCount: sql<number>`count(${categories.id})::int`,
+      })
+      .from(events)
+      .leftJoin(categories, eq(categories.eventId, events.id))
+      .where(eq<any>(events.adminId, admin.id))
+      .groupBy(events.id)
+      .orderBy(desc(events.createdAt));
   });
 
-export const getElectionFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: electionId }: any) => {
-    return await db.select().from(elections).where(eq<any>(elections.id, electionId));
+export const getEventFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
+  async ({ data: eventId }: any) => {
+    return await db.select().from(events).where(eq<any>(events.id, eventId));
   }
 );
 
-export const getElectionDataFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: electionId }: any) => {
-
-    try {
-      // Queries database matching positions to your raw election id parameter
-      const ballotData: any = await db.query.positions.findMany({
-        where: eq<any>(positions.electionId, electionId),
-        orderBy: [asc(positions.order)],
-        with: {
-          candidates: {
-            where: (candidates: any, { eq }: any) => eq(candidates.isActive, true),
-            orderBy: (candidates: any, { asc }: any) => [asc(candidates.order)],
-          },
-        },
-      });
-
-      return ballotData?.map((pos: any) => ({
-        id: pos.id,
-        electionId: pos.electionId,
-        title: pos.title,
-        slots: pos.slots,
-        candidates: pos?.candidates?.map((cand: any) => ({
-          id: cand.id,
-          positionId: cand.positionId,
-          name: cand.name,
-          teaser: cand.teaser,
-          imageUrl: cand.imageUrl,
-          order: cand.order,
-        })),
-      }));
-
-    } catch (error: any) {
-      console.error('Failed to resolve election ballot structural tree:', error);
-      throw new Error('Failed to pull ballot hierarchy.');
-    }
-
-
-  }
-);
-
-
-export const getActiveElectionsFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async () => {
-    return await db.select()
-      .from(elections)
-      .where(eq<any>(elections.isActive, true));
-  });
-
-
-export const createElectionFn = createServerFn({ method: 'POST' })
-  .middleware([arcjetMiddleware,authMiddleware])
+export const createEventFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data }: any) => {
-
-    try {
-
-      let finalAvatarUrl: string | undefined = undefined;
-      const file = data.get("image") as File | null;
-
-      if (file && file.size > 0) {
-        const arrayBuffer = await file.arrayBuffer();
-        const rawBuffer = Buffer.from(arrayBuffer);
-        const optimizedBuffer = await sharp(rawBuffer)
-          .resize(512, 512, { fit: "inside", withoutEnlargement: true }) // Caps size at 800px max width/height
-          .webp({ quality: 75 }) // Converts to modern WebP format at 75% quality optimization
-          .toBuffer();
-        // Enforce the new optimal webp file path structure
-        const uniqueFileName = `logos/${crypto.randomUUID()}.webp`;
-
-        // Upload to S3/R2
-        await s3Client.send(
-          new PutObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: uniqueFileName,
-            Body: optimizedBuffer,
-            ContentType: "image/webp",
-            CacheControl: "public, max-age=31536000, immutable",
-          })
-        );
-
-        // ## R2 CLOUD
-        const publicDomain = process.env.R2_PUBLIC_DOMAIN;
-        finalAvatarUrl = `${publicDomain}/${uniqueFileName}`;
-      }
-
-      const resp = await db.insert(elections).values({
-        title: data.get("title") as string,
-        adminId: context?.user?.id,
-        tag: data.get("tag") as string,
-        billVoters: data.get("billVoters") as number,
-        authMode: data.get("authMode") as string,
-        makePublic: data.get("makePublic") as boolean || false,
-        showFeed: data.get("showFeed") as boolean || false,
-        isActive: data.get("isActive") as boolean || true,
-        description: data.get("description") as string,
-        status: data.get("status") as string || 'staged',
-        startAt: new Date(data.get("startAt") as string),
-        endAt: new Date(data.get("endAt") as string),
-        ...(finalAvatarUrl && { imageUrl: finalAvatarUrl })
-      }).returning();
-
-      console.log(resp);
-
-      return resp;
-
-    } catch (error) {
-      console.log(error)
-    }
+    const admin: any = context?.user;
+    const [created] = await db.insert(events).values({
+      title: data.title,
+      description: data.description,
+      startAt: data.startAt ? new Date(data.startAt) : null,
+      endAt: data.endAt ? new Date(data.endAt) : null,
+      unitPrice: data.unitPrice != null && data.unitPrice !== '' ? Number(data.unitPrice) : null,
+      isActive: data.isActive ?? true,
+      adminId: admin.id,
+    }).returning();
+    return created;
   });
 
-export const updateElectionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
+export const updateEventFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const { id, title, description, startAt, endAt, unitPrice, isActive } = data;
 
-    try {
+    const [updated] = await db
+      .update(events)
+      .set({
+        title,
+        description,
+        startAt: startAt ? new Date(startAt) : null,
+        endAt: endAt ? new Date(endAt) : null,
+        unitPrice: unitPrice != null && unitPrice !== '' ? Number(unitPrice) : null,
+        isActive,
+      })
+      .where(and(eq<any>(events.id, id), eq<any>(events.adminId, admin.id)))
+      .returning();
 
-      let finalAvatarUrl: string | undefined = undefined;
-      const file = data.get("image") as File | null;
-
-      if (file && file.size > 0) {
-        const arrayBuffer = await file.arrayBuffer();
-        const rawBuffer = Buffer.from(arrayBuffer);
-        const optimizedBuffer = await sharp(rawBuffer)
-          .resize(512, 512, { fit: "inside", withoutEnlargement: true }) // Caps size at 800px max width/height
-          .webp({ quality: 75 }) // Converts to modern WebP format at 75% quality optimization
-          .toBuffer();
-        // Enforce the new optimal webp file path structure
-        const uniqueFileName = `logos/${crypto.randomUUID()}.webp`;
-
-        // Upload to S3/R2
-        await s3Client.send(
-          new PutObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: uniqueFileName,
-            Body: optimizedBuffer,
-            ContentType: "image/webp",
-            CacheControl: "public, max-age=31536000, immutable",
-          })
-        );
-
-        // ## R2 CLOUD
-        const publicDomain = process.env.R2_PUBLIC_DOMAIN;
-        finalAvatarUrl = `${publicDomain}/${uniqueFileName}`;
-      }
-      console.log("finalAvatarUrl", finalAvatarUrl);
-      console.log("data form: ", data)
-      const resp = await db
-        .update(elections)
-        .set({
-          title: data.get("title") as string,
-          tag: data.get("tag") as string,
-          billVoters: data.get("billVoters") as number,
-          authMode: data.get("authMode") as string,
-          makePublic: data.get("makePublic") as boolean,
-          showFeed: data.get("showFeed") as boolean,
-          isActive: data.get("isActive") as boolean,
-          description: data.get("description") as string,
-          status: data.get("status") as string,
-          startAt: new Date(data.get("startAt") as string),
-          endAt: new Date(data.get("endAt") as string),
-          ...(finalAvatarUrl && { imageUrl: finalAvatarUrl })
-        }).where(eq<any>(elections.id, data.get("id") as number)).returning();
-
-      console.log("resp", resp);
-
-      return resp
-
-    } catch (error) {
-      console.log(error)
-    }
+    return updated;
   });
 
+export const updateEventActiveStateFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const { eventId, isActive } = data;
 
-export const deleteElectionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: electionId }: any) => {
-    return await db.delete(elections).where(eq<any>(elections.id, electionId)).returning();
-  }
-);
+    const [updated] = await db
+      .update(events)
+      .set({ isActive: !!isActive })
+      .where(and(eq<any>(events.id, eventId), eq<any>(events.adminId, admin.id)))
+      .returning();
 
+    return updated;
+  });
 
+export const deleteEventFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data: eventId }: any) => {
+    const admin: any = context?.user;
+    return await db
+      .delete(events)
+      .where(and(eq<any>(events.id, eventId), eq<any>(events.adminId, admin.id)))
+      .returning();
+  });
 
-export const getElectionOverview = createServerFn({
-  method: "GET",
-})
-  .middleware([arcjetMiddleware])
-  .handler(async ({ data: electionId }): Promise<any> => {
-    // 1. Fetch primary election properties from the 'elections' table core node
-    const [electionRecord]: any = await db
+export const getEventOverviewFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data: eventId }: any) => {
+    const admin: any = context?.user;
+
+    const [eventRecord]: any = await db
       .select()
-      .from(elections)
-      .where(eq<any>(elections.id, electionId));
+      .from(events)
+      .where(and(eq<any>(events.id, eventId), eq<any>(events.adminId, admin.id)));
 
-    if (!electionRecord) {
-      throw new Error(`Election resource instance with ID [${electionId}] was not discovered.`);
+    if (!eventRecord) {
+      throw new Error(`Event instance [${eventId}] not found.`);
     }
 
-    // 2. Execute optimal high-concurrency sub-table count aggregations concurrently
     const [
-      [positionsCountResult],
-      [candidatesCountResult],
-      [votersCountResult],
-      [votesCountResult],
-    ]: any = await Promise.all([
-      // Count positions linked to this election instance
+      [categoriesCountResult],
+      [contestantsCountResult],
+      [transactionsCountResult],
+      [transactionTotals],
+    ] = await Promise.all([
       db
-        .select({ count: sql<number>`count(${positions.id})::int` })
-        .from(positions)
-        .where(eq<any>(positions.electionId, electionId)),
-
-      // Count candidates linked to this election by joining through positions
+        .select({ count: sql<number>`count(${categories.id})::int` })
+        .from(categories)
+        .where(eq<any>(categories.eventId, eventId)),
       db
-        .select({ count: sql<number>`count(${candidates.id})::int` })
-        .from(candidates)
-        .innerJoin(positions, eq<any>(candidates.positionId, positions.id))
-        .where(eq<any>(positions.electionId, electionId)),
-
-      // Count eligible registered voters enrolled for this election index
+        .select({ count: sql<number>`count(${contestants.id})::int` })
+        .from(contestants)
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .where(eq<any>(categories.eventId, eventId)),
       db
-        .select({ count: sql<number>`count(${voters.id})::int` })
-        .from(voters)
-        .where(eq<any>(voters.electionId, electionId)),
-
-      // Count total digital cryptographic ballots cast
-      // db
-      //   .select({ count: sql<number>`count(${electionVotes.id})::int` })
-      //   .from(electionVotes)
-      //   .where(eq<any>(electionVotes.electionId, electionId)),
-
+        .select({ count: sql<number>`count(${eventTransactions.id})::int` })
+        .from(eventTransactions)
+        .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .where(eq<any>(categories.eventId, eventId)),
       db
-        .select({ count: sql<number>`count(${voters.id})::int` })
-        .from(voters)
-        .where(and(
-          eq<any>(voters.electionId, electionId),
-          eq<any>(voters.hasVoted, true)
-        )),
+        .select({
+          totalPayAmount: sql<number>`coalesce(sum(${eventTransactions.payAmount}), 0)::int`,
+          totalVotes: sql<number>`coalesce(sum(${eventTransactions.votes}), 0)::int`,
+        })
+        .from(eventTransactions)
+        .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .where(and(eq<any>(categories.eventId, eventId), eq(eventTransactions.payStatus, true))),
     ]);
 
     return {
-      id: electionRecord.id,
-      tag: electionRecord.tag,
-      title: electionRecord.title,
-      status: electionRecord.status,
-      description: electionRecord.description,
-      // Standardizing JavaScript native Date timestamps cleanly to localized string strings
-      startAt: electionRecord?.startAt.toISOString(),
-      endAt: electionRecord?.endAt.toISOString(),
-      authMode: electionRecord.authMode ?? "OTP",
-      isActive: electionRecord.isActive,
+      id: eventRecord.id,
+      title: eventRecord.title,
+      description: eventRecord.description,
+      startAt: eventRecord.startAt ? eventRecord.startAt.toISOString() : null,
+      endAt: eventRecord.endAt ? eventRecord.endAt.toISOString() : null,
+      unitPrice: eventRecord.unitPrice,
+      paymentAmount: transactionTotals?.totalPayAmount ?? 0,
+      paymentDeduction: eventRecord.paymentDeduction,
+      isActive: eventRecord.isActive,
+      createdAt: eventRecord.createdAt ? eventRecord.createdAt.toISOString() : null,
       counts: {
-        positions: positionsCountResult?.count ?? 0,
-        candidates: candidatesCountResult?.count ?? 0,
-        voters: votersCountResult?.count ?? 0,
-        votesCast: votesCountResult?.count ?? 0,
+        categories: categoriesCountResult?.count ?? 0,
+        contestants: contestantsCountResult?.count ?? 0,
+        transactions: transactionsCountResult?.count ?? 0,
+        votesCast: transactionTotals?.totalVotes ?? 0,
       },
     };
   });
 
 
+// ==========================================
+// CATEGORY FUNCTIONS (events' equivalent of positions)
+// ==========================================
 
-export const getUnifiedElectionTelemetry = createServerFn({
-  method: "GET",
-})
- .middleware([arcjetMiddleware])
- .handler(async ({ data: electionId }): Promise<any> => {
+export const getCategoriesFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const eventId = data?.eventId ?? data;
+    const page = Math.max(Number(data?.page) || 1, 1);
+    const pageSize = Math.max(Number(data?.pageSize) || 15, 1);
+    const searchQuery = (data?.searchQuery || '').trim();
 
-  // Concurrently fetch telemetry data from your database layers
-  const [
-    [electionRecord],
-    [votersCountResult],
-    rawPositions,
-    rawCandidateTallies,
-    rawRecentVotes
-  ] = await Promise.all([
-    db.select().from(elections).where(eq<any>(elections.id, electionId)),
-    db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq<any>(voters.electionId, electionId)),
-    db.select().from(positions).where(eq<any>(positions.electionId, electionId)),
-    db
-      .select({
-        id: candidates.id,
-        name: candidates.name,
-        imageUrl: candidates.imageUrl,
-        positionId: candidates.positionId,
-        order: candidates.order,
-        voteCount: sql<number>`count(${electionVotes.id})::int`,
-      })
-      .from(candidates)
-      .innerJoin(positions, eq(candidates.positionId, positions.id))
-      .leftJoin(
-        electionVotes,
-        and(
-          eq(electionVotes.candidateId, candidates.id),
-          eq(electionVotes.positionId, candidates.positionId)
-        )
-      )
-      .where(eq<any>(positions.electionId, electionId))
-      .groupBy(candidates.id, candidates.name, candidates.imageUrl, candidates.positionId, candidates.order)
-      .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
-    db
-      .select({
-        id: electionVotes.id,
-        positionTitle: positions.title,
-        candidateName: candidates.name,
-        createdAt: electionVotes.createdAt,
-      })
-      .from(electionVotes)
-      .innerJoin(positions, eq(electionVotes.positionId, positions.id))
-      .leftJoin(candidates, eq(electionVotes.candidateId, candidates.id))
-      .where(eq<any>(electionVotes.electionId, electionId))
-      .orderBy(desc(electionVotes.createdAt))
-      .limit(15)
-  ]);
+    const limitValue = pageSize;
+    const offsetValue = (page - 1) * limitValue;
 
-  if (!electionRecord) {
-    throw new Error(`Election instance [${electionId}] not found.`);
-  }
-
-  const generateVoterMask = (index: number): string => {
-    return `voter_id_****_${1000 + (Math.abs(index) % 9000)}`;
-  };
-
-  const formatElapsedTime = (pastDate: Date): string => {
-    const now = new Date();
-    const diffMs = now.getTime() - pastDate.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    return `${Math.floor(diffMins / 60)}h ago`;
-  };
-
-  const formattedTallies: any[] = await Promise.all(
-    rawPositions.map(async (pos) => {
-      const positionCandidates = rawCandidateTallies
-        .filter((cand) => cand.positionId === pos.id)
-        .map((cand) => ({
-          id: cand.id,
-          name: cand.name,
-          imageUrl: cand.imageUrl ?? "",
-          votes: cand.voteCount,
-        }));
-
-      const [abstentionTally] = await db
-        .select({ count: sql<number>`count(${electionVotes.id})::int` })
-        .from(electionVotes)
-        .where(and(eq(electionVotes.positionId, pos.id), sql`${electionVotes.candidateId} IS NULL`));
-
-      positionCandidates.push({
-        id: null,
-        name: "Abstained (Blank Ballots)",
-        imageUrl: "",
-        votes: abstentionTally?.count || 0
-      } as any);
-
-      return {
-        id: pos.id,
-        title: pos.title,
-        slots: pos.slots,
-        totalVotesForPosition: positionCandidates.reduce((sum, c) => sum + c.votes, 0),
-        candidates: positionCandidates,
-      };
-    })
-  );
-
-  return {
-    electionDetails: {
-      title: electionRecord.title,
-      tag: electionRecord.tag,
-      totalEligibleVoters: votersCountResult?.count ?? 0
-    },
-    tallies: formattedTallies,
-    auditLedger: rawRecentVotes.map((log, index) => ({
-      id: `tx_${log.id}`,
-      positionTitle: log.candidateName ? `${log.positionTitle} (${log.candidateName})` : `${log.positionTitle} (Explicit Abstention)`,
-      voterMask: generateVoterMask(log.id + index),
-      channel: "WEB",
-      timestamp: formatElapsedTime(log.createdAt),
-    })),
-  };
-});
-
-
-/* EXPORT ELECTION RESULTS */
-
-export const exportElectionResultsToExcelFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware])
-  .handler(async ({ data }: any) => {
-    const { electionId } = data;
-
-    try {
-      // 1. Fetch telemetry data concurrently using your identical query matrix structure
-      const [
-        [electionRecord],
-        [votersCountResult],
-        rawPositions,
-        rawCandidateTallies,
-        rawRecentVotes
-      ] = await Promise.all([
-        db.select().from(elections).where(eq(elections.id, electionId)),
-        db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq(voters.electionId, electionId)),
-        db.select().from(positions).where(eq(positions.electionId, electionId)),
-        db
-          .select({
-            id: candidates.id,
-            name: candidates.name,
-            positionId: candidates.positionId,
-            order: candidates.order,
-            voteCount: sql<number>`count(${electionVotes.id})::int`,
-          })
-          .from(candidates)
-          .innerJoin(positions, eq(candidates.positionId, positions.id))
-          .leftJoin(
-            electionVotes,
-            and(
-              eq(electionVotes.candidateId, candidates.id),
-              eq(electionVotes.positionId, candidates.positionId)
-            )
-          )
-          .where(eq(positions.electionId, electionId))
-          .groupBy(candidates.id, candidates.name, candidates.positionId, candidates.order)
-          .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
-        db
-          .select({
-            id: electionVotes.id,
-            positionTitle: positions.title,
-            candidateName: candidates.name,
-            createdAt: electionVotes.createdAt,
-          })
-          .from(electionVotes)
-          .innerJoin(positions, eq(electionVotes.positionId, positions.id))
-          .leftJoin(candidates, eq(electionVotes.candidateId, candidates.id))
-          .where(eq(electionVotes.electionId, electionId))
-          .orderBy(desc(electionVotes.createdAt))
-          .limit(100) // Expanded limit context for richer reporting audits
-      ]);
-
-      if (!electionRecord) {
-        throw new Error(`Election instances index [${electionId}] not found.`);
-      }
-
-      // Initialize workbook target instance
-      const workbook = XLSX.utils.book_new();
-
-      // ================= SHEET 1: EXECUTIVE SUMMARY =================
-      const summaryRows = [
-        { 'Election Metric Description': 'Election Title', 'Value / Metric Tally': electionRecord.title },
-        { 'Election Metric Description': 'Election Identifier Tag', 'Value / Metric Tally': electionRecord.tag },
-        { 'Election Metric Description': 'Total Registered Eligible Voters', 'Value / Metric Tally': votersCountResult?.count ?? 0 },
-        { 'Election Metric Description': 'Configured Positions Scope Count', 'Value / Metric Tally': rawPositions.length },
-        { 'Election Metric Description': 'Registered Candidates Count', 'Value / Metric Tally': rawCandidateTallies.length },
-        { 'Election Metric Description': 'Export Generation Timestamp', 'Value / Metric Tally': new Date().toLocaleString() }
-      ];
-      const summarySheet = XLSX.utils.json_to_sheet(summaryRows);
-      summarySheet['!cols'] = [{ wch: 35 }, { wch: 45 }];
-      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
-
-
-      // ================= SHEET 2: FINAL RESULTS TALLIES =================
-      const talliesRows: any[] = [];
-
-      // Iterate over your structure synchronously to match abstentions accurately
-      for (const pos of rawPositions) {
-        // Find position candidates
-        const positionCandidates = rawCandidateTallies.filter((cand) => cand.positionId === pos.id);
-
-        // Fetch blank ballot tallies for the current positional layout chunk
-        const [abstentionTally] = await db
-          .select({ count: sql<number>`count(${electionVotes.id})::int` })
-          .from(electionVotes)
-          .where(and(eq(electionVotes.positionId, pos.id), sql`${electionVotes.candidateId} IS NULL`));
-
-        const abstentionCount = abstentionTally?.count || 0;
-        const totalVotesForPos = positionCandidates.reduce((sum, c) => sum + c.voteCount, 0) + abstentionCount;
-
-        // Header Row for each Position Block
-        talliesRows.push({
-          'Target Position': pos.title.toUpperCase(),
-          'Candidate Name': `Available Slots: ${pos.slots}`,
-          'Votes Counted': `Total Position Ballots: ${totalVotesForPos}`,
-          'Percentage Share': ''
-        });
-
-        // Map individual candidates inside this block
-        positionCandidates.forEach((cand) => {
-          const sharePct = totalVotesForPos > 0 ? ((cand.voteCount / totalVotesForPos) * 100).toFixed(2) + '%' : '0.00%';
-          talliesRows.push({
-            'Target Position': '',
-            'Candidate Name': cand.name,
-            'Votes Counted': cand.voteCount,
-            'Percentage Share': sharePct
-          });
-        });
-
-        // Add the Abstention context metrics tracking metric rows
-        const abstentionSharePct = totalVotesForPos > 0 ? ((abstentionCount / totalVotesForPos) * 100).toFixed(2) + '%' : '0.00%';
-        talliesRows.push({
-          'Target Position': '',
-          'Candidate Name': 'Abstained (Blank Ballots)',
-          'Votes Counted': abstentionCount,
-          'Percentage Share': abstentionSharePct
-        });
-
-        // Blank separator spacer row to ease readability between positions
-        talliesRows.push({ 'Target Position': '', 'Candidate Name': '', 'Votes Counted': '', 'Percentage Share': '' });
-      }
-
-      const talliesSheet = XLSX.utils.json_to_sheet(talliesRows);
-      talliesSheet['!cols'] = [{ wch: 25 }, { wch: 32 }, { wch: 22 }, { wch: 18 }];
-      XLSX.utils.book_append_sheet(workbook, talliesSheet, 'Final Results Tallies');
-
-
-      // ================= SHEET 3: RECENT AUDIT LEDGER =================
-      const generateVoterMask = (index: number): string => `voter_id_****_${1000 + (Math.abs(index) % 9000)}`;
-
-      const auditRows = rawRecentVotes.map((log, index) => ({
-        'Transaction Hash ID': `tx_${log.id}`,
-        'Action Description Reference': log.candidateName ? `${log.positionTitle} (${log.candidateName})` : `${log.positionTitle} (Explicit Abstention)`,
-        'Anonymous Voter Identifier': generateVoterMask(log.id + index),
-        'Channel System Route': 'WEB',
-        'Casting Date Log': new Date(log.createdAt).toLocaleString()
-      }));
-
-      const auditSheet = XLSX.utils.json_to_sheet(auditRows);
-      auditSheet['!cols'] = [{ wch: 16 }, { wch: 42 }, { wch: 26 }, { wch: 20 }, { wch: 24 }];
-      XLSX.utils.book_append_sheet(workbook, auditSheet, 'Recent Audit Ledger');
-
-
-      // 2. Generate multi-sheet binary base64 payloads data stream package
-      const excelBuffer64 = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
-      const cleanTag = electionRecord.tag.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-
-      return {
-        success: true,
-        filename: `election_${cleanTag}_certified_results.xlsx`,
-        base64Data: excelBuffer64
-      };
-
-    } catch (error: any) {
-      console.error('Export Election Results Server Function Error:', error);
-      return {
-        success: false,
-        error: error?.message || 'Failed to securely generate election analytics report workbook.',
-        filename: '',
-        base64Data: ''
-      };
+    const conditions: any = [eq(events.adminId, admin.id), eq(events.id, eventId)];
+    if (searchQuery) {
+      conditions.push(ilike(categories.name, `%${searchQuery}%`));
     }
+    const queryCondition = and(...conditions);
+
+    const [rows, [countResult]] = await Promise.all([
+      db
+        .select({
+          category: categories,
+          event: events,
+          contestantsCount: sql<number>`count(${contestants.id})::int`,
+        })
+        .from(categories)
+        .innerJoin(events, eq(categories.eventId, events.id))
+        .leftJoin(contestants, eq(contestants.categoryId, categories.id))
+        .where(queryCondition)
+        .groupBy(categories.id, events.id)
+        .orderBy(asc(categories.createdAt))
+        .limit(limitValue)
+        .offset(offsetValue),
+      db
+        .select({ total: count() })
+        .from(categories)
+        .innerJoin(events, eq(categories.eventId, events.id))
+        .where(queryCondition),
+    ]);
+
+    const totalCount = countResult?.total ?? 0;
+    const totalPages = Math.max(Math.ceil(totalCount / limitValue), 1);
+
+    return {
+      categories: rows,
+      pagination: { totalCount, totalPages, currentPage: page, pageSize: limitValue },
+    };
   });
 
-
-export const exportElectionResultsToFormatExcelFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware])
-  .handler(async ({ data }: any) => {
-    const { electionId } = data;
-    try {
-      // Fetch telemetry data layers concurrently
-      const [
-        [electionRecord],
-        [votersCountResult],
-        rawPositions,
-        rawCandidateTallies,
-        rawRecentVotes
-      ] = await Promise.all([
-        db.select().from(elections).where(eq(elections.id, electionId)),
-        db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq(voters.electionId, electionId)),
-        db.select().from(positions).where(eq(positions.electionId, electionId)),
-        db
-          .select({
-            id: candidates.id,
-            name: candidates.name,
-            positionId: candidates.positionId,
-            order: candidates.order,
-            voteCount: sql<number>`count(${electionVotes.id})::int`,
-          })
-          .from(candidates)
-          .innerJoin(positions, eq(candidates.positionId, positions.id))
-          .leftJoin(
-            electionVotes,
-            and(
-              eq(electionVotes.candidateId, candidates.id),
-              eq(electionVotes.positionId, candidates.positionId)
-            )
-          )
-          .where(eq(positions.electionId, electionId))
-          .groupBy(candidates.id, candidates.name, candidates.positionId, candidates.order)
-          .orderBy(asc(candidates.order), desc(sql`count(${electionVotes.id})`)),
-        db
-          .select({
-            id: electionVotes.id,
-            positionTitle: positions.title,
-            candidateName: candidates.name,
-            createdAt: electionVotes.createdAt,
-          })
-          .from(electionVotes)
-          .innerJoin(positions, eq(electionVotes.positionId, positions.id))
-          .leftJoin(candidates, eq(electionVotes.candidateId, candidates.id))
-          .where(eq(electionVotes.electionId, electionId))
-          .orderBy(desc(electionVotes.createdAt))
-        // .limit(100)
-      ]);
-
-      if (!electionRecord) {
-        throw new Error(`Election instances index [${electionId}] not found.`);
-      }
-
-      const workbook = XLSX.utils.book_new();
-
-      // Common style definitions helper configurations
-      const STYLES = {
-        mainHeader: {
-          font: { name: 'Arial', size: 11, bold: true, color: { rgb: 'FFFFFF' } },
-          fill: { fgColor: { rgb: '0A192A' } }, // Clean indigo background shade
-          alignment: { horizontal: 'left', vertical: 'center' }
-        },
-        positionRow: {
-          font: { name: 'Arial', size: 11, bold: true, color: { rgb: '1E1B4B' } },
-          fill: { fgColor: { rgb: 'E0E7FF' } }, // Light soft purple/blue section marker fill
-          alignment: { horizontal: 'left', vertical: 'center' }
-        },
-        voterAbstentionRow: {
-          font: { name: 'Arial', size: 10, italic: true, color: { rgb: '4B5563' } },
-          alignment: { horizontal: 'left', vertical: 'center' }
-        },
-        defaultText: {
-          font: { name: 'Arial', size: 10 },
-          alignment: { horizontal: 'left', vertical: 'center' }
-        }
-      };
-
-      // Helper function to format an array of objects to sheet cells with specific custom styling weights applied
-      const createStyledSheet = (headers: string[], rows: any[], columnWidths: { wch: number }[]) => {
-        const ws: XLSX.WorkSheet = {};
-        ws['!cols'] = columnWidths;
-
-        // 1. Generate Bold Header Row Elements
-        headers.forEach((header, colIndex) => {
-          const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIndex });
-          ws[cellRef] = { v: header, t: 's', s: STYLES.mainHeader };
-        });
-
-        // 2. Loop and map dataset records onto spreadsheet cells
-        rows.forEach((row, rowIndex) => {
-          const sheetRowIndex = rowIndex + 1;
-
-          // Check if this row represents an explicit structural position divider row block
-          const isPositionDivider = row._type === 'POSITION_HEADER';
-          const isAbstention = row._type === 'ABSTENTION_ROW';
-
-          let currentStyle = STYLES.defaultText;
-          if (isPositionDivider) currentStyle = STYLES.positionRow;
-          if (isAbstention) currentStyle = STYLES.voterAbstentionRow;
-
-          headers.forEach((_, colIndex) => {
-            const cellKey = Object.keys(row).filter(k => k !== '_type')[colIndex];
-            if (!cellKey) return;
-
-            const cellValue = row[cellKey];
-            const cellRef = XLSX.utils.encode_cell({ r: sheetRowIndex, c: colIndex });
-
-            ws[cellRef] = {
-              v: cellValue,
-              t: typeof cellValue === 'number' ? 'n' : 's',
-              s: currentStyle
-            };
-          });
-        });
-
-        // Set range limits safely
-        const maxRow = rows.length;
-        const maxCol = headers.length - 1;
-        ws['!ref'] = XLSX.utils.encode_range({ r: 0, c: 0 }, { r: maxRow, c: maxCol });
-
-        return ws;
-      };
-
-
-      // ================= SHEET 1: EXECUTIVE SUMMARY =================
-      const summaryHeaders = ['Election Metric Description', 'Value / Metric Tally'];
-      const summaryRows = [
-        { desc: 'Election Title', val: electionRecord.title },
-        { desc: 'Election Identifier Tag', val: electionRecord.tag },
-        { desc: 'Total Registered Eligible Voters', val: votersCountResult?.count ?? 0 },
-        { desc: 'Configured Positions Scope Count', val: rawPositions.length },
-        { desc: 'Registered Candidates Count', val: rawCandidateTallies.length },
-        { desc: 'Export Generation Timestamp', val: new Date().toLocaleString() }
-      ];
-      const summarySheet = createStyledSheet(summaryHeaders, summaryRows, [{ wch: 35 }, { wch: 45 }]);
-      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
-
-
-      // ================= SHEET 2: FINAL RESULTS TALLIES =================
-      const talliesHeaders = ['Target Position', 'Candidate Name', 'Votes Counted', 'Percentage Share'];
-      const talliesRows: any[] = [];
-
-      for (const pos of rawPositions) {
-        const positionCandidates = rawCandidateTallies.filter((cand) => cand.positionId === pos.id);
-        const [abstentionTally] = await db
-          .select({ count: sql<number>`count(${electionVotes.id})::int` })
-          .from(electionVotes)
-          .where(and(eq(electionVotes.positionId, pos.id), sql`${electionVotes.candidateId} IS NULL`));
-
-        const abstentionCount = abstentionTally?.count || 0;
-        const totalVotesForPos = positionCandidates.reduce((sum, c) => sum + c.voteCount, 0) + abstentionCount;
-
-        // Position Section Banner Row (receives positionRow styling automatically)
-        talliesRows.push({
-          _type: 'POSITION_HEADER',
-          posTitle: pos.title.toUpperCase(),
-          candName: `Available Slots: ${pos.slots}`,
-          vCount: `Total Ballots: ${totalVotesForPos}`,
-          pct: ''
-        });
-
-        // Map candidates rows
-        positionCandidates.forEach((cand) => {
-          const sharePct = totalVotesForPos > 0 ? ((cand.voteCount / totalVotesForPos) * 100).toFixed(2) + '%' : '0.00%';
-          talliesRows.push({
-            _type: 'DEFAULT',
-            posTitle: '',
-            candName: cand.name,
-            vCount: cand.voteCount,
-            pct: sharePct
-          });
-        });
-
-        // Add Blank Ballots Metric Context Row
-        const abstentionSharePct = totalVotesForPos > 0 ? ((abstentionCount / totalVotesForPos) * 100).toFixed(2) + '%' : '0.00%';
-        talliesRows.push({
-          _type: 'ABSTENTION_ROW',
-          posTitle: '',
-          candName: 'Abstained (Blank Ballots)',
-          vCount: abstentionCount,
-          pct: abstentionSharePct
-        });
-
-        // Empty row space element wrapper
-        talliesRows.push({ _type: 'DEFAULT', posTitle: '', candName: '', vCount: '', pct: '' });
-      }
-
-      const talliesSheet = createStyledSheet(talliesHeaders, talliesRows, [{ wch: 25 }, { wch: 32 }, { wch: 22 }, { wch: 18 }]);
-      XLSX.utils.book_append_sheet(workbook, talliesSheet, 'Final Results Tallies');
-
-
-      // ================= SHEET 3: RECENT AUDIT LEDGER =================
-      const auditHeaders = ['Transaction Hash ID', 'Action Description Reference', 'Anonymous Voter Identifier', 'Channel System Route', 'Casting Date Log'];
-      const generateVoterMask = (index: number): string => `voter_id_****_${1000 + (Math.abs(index) % 9000)}`;
-
-      const auditRows = rawRecentVotes.map((log, index) => ({
-        _type: 'DEFAULT',
-        txId: `tx_${log.id}`,
-        desc: log.candidateName ? `${log.positionTitle} (${log.candidateName})` : `${log.positionTitle} (Explicit Abstention)`,
-        mask: generateVoterMask(log.id + index),
-        channel: 'WEB',
-        date: new Date(log.createdAt).toLocaleString()
-      }));
-
-      const auditSheet = createStyledSheet(auditHeaders, auditRows, [{ wch: 18 }, { wch: 42 }, { wch: 26 }, { wch: 20 }, { wch: 24 }]);
-      XLSX.utils.book_append_sheet(workbook, auditSheet, 'Recent Audit Ledger');
-
-
-      // Convert styled document structures matrix to Base64 delivery package
-      const excelBuffer64 = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
-      const cleanTag = electionRecord.tag.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-
-      return {
-        success: true,
-        filename: `election_${cleanTag}_formatted_results.xlsx`,
-        base64Data: excelBuffer64
-      };
-
-    } catch (error: any) {
-      console.error('Export Election Results Style Script Error:', error);
-      return {
-        success: false,
-        error: error?.message || 'Failed to safely style generated excel workbook sheets content.',
-        filename: '', base64Data: ''
-      };
-    }
-  });
-
-
-
-
-
-// POSITION FUNCTIONS
-
-export const getPositionsListFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware,authMiddleware])
-  .handler(async ({ context }) => {
-    const admin: any = context?.user
-
-    return await db.select()
-      .from(positions)
-      .innerJoin(elections, eq<any>(positions.electionId, elections.id))
-      .where(eq<any>(elections.adminId, admin.id))
-      .orderBy(asc(positions.order), asc(positions.createdAt));
-  });
-
-export const getPositionsFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware,authMiddleware])
-  .handler(async ({ context }) => {
-    const admin: any = context?.user
-
-    return await db
-      .select({
-        position: positions,
-        election: elections,
-        candidatesCount: sql<number>`count(${candidates.id})::int`,
-      })
-      .from(positions)
-      .innerJoin(elections, eq<any>(positions.electionId, elections.id))
-      .leftJoin(candidates, eq<any>(candidates.positionId, positions.id))
-      .where(eq<any>(elections.adminId, admin.id))
-      .groupBy(positions.id, elections.id)
-      .orderBy(asc(positions.id));
-  }
-  );
-
-export const getPositionFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: positionId }: any) => {
-    return await db.select().from(positions).where(eq<any>(positions.id, positionId));
+export const getCategoryFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
+  async ({ data: categoryId }: any) => {
+    return await db.select().from(categories).where(eq<any>(categories.id, categoryId));
   }
 );
 
-export const createPositionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
+export const createCategoryFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
   async ({ data }: any) => {
-    return await db.insert(positions).values({
-      electionId: data.electionId,
-      order: data.order,
-      title: data.title,
-      slots: data.slots,
+    try {
+      return await db.insert(categories).values({
+        eventId: data.eventId,
+        name: data.name,
+        description: data.description,
+        code: data.code,
+      }).returning();
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        throw new Error('That category code is already in use for this event.');
+      }
+      throw error;
+    }
+  }
+);
+
+export const updateCategoryFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
+  async ({ data }: any) => {
+    try {
+      return await db
+        .update(categories)
+        .set({
+          name: data.name,
+          description: data.description,
+          code: data.code,
+        })
+        .where(eq<any>(categories.id, data.id))
+        .returning();
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        throw new Error('That category code is already in use for this event.');
+      }
+      throw error;
+    }
+  }
+);
+
+export const deleteCategoryFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
+  async ({ data: categoryId }: any) => {
+    return await db.delete(categories).where(eq<any>(categories.id, categoryId)).returning();
+  }
+);
+
+
+// ==========================================
+// CONTESTANT FUNCTIONS (events' equivalent of candidates)
+// ==========================================
+
+export const getContestantsFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const eventId = data?.eventId ?? data;
+    const page = Math.max(Number(data?.page) || 1, 1);
+    const pageSize = Math.max(Number(data?.pageSize) || 15, 1);
+    const searchQuery = (data?.searchQuery || '').trim();
+    const categoryFilter = data?.categoryFilter || 'ALL';
+
+    const limitValue = pageSize;
+    const offsetValue = (page - 1) * limitValue;
+
+    const conditions: any = [eq(events.adminId, admin.id), eq(events.id, eventId)];
+    if (searchQuery) {
+      conditions.push(ilike(contestants.name, `%${searchQuery}%`));
+    }
+    if (categoryFilter !== 'ALL') {
+      conditions.push(eq(categories.name, categoryFilter));
+    }
+    const queryCondition = and(...conditions);
+
+    const [rows, [countResult], categoryOptions] = await Promise.all([
+      db
+        .select()
+        .from(contestants)
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .innerJoin(events, eq(categories.eventId, events.id))
+        .where(queryCondition)
+        .orderBy(asc(categories.name), asc(contestants.order))
+        .limit(limitValue)
+        .offset(offsetValue),
+      db
+        .select({ total: count() })
+        .from(contestants)
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .innerJoin(events, eq(categories.eventId, events.id))
+        .where(queryCondition),
+      db
+        .select({ name: categories.name })
+        .from(categories)
+        .where(eq<any>(categories.eventId, eventId))
+        .orderBy(asc(categories.name)),
+    ]);
+
+    const totalCount = countResult?.total ?? 0;
+    const totalPages = Math.max(Math.ceil(totalCount / limitValue), 1);
+
+    return {
+      contestants: rows,
+      categoryNames: categoryOptions.map((c: any) => c.name),
+      pagination: { totalCount, totalPages, currentPage: page, pageSize: limitValue },
+    };
+  });
+
+export const getContestantFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
+  async ({ data: contestantId }: any) => {
+    return await db.select().from(contestants).where(eq<any>(contestants.id, contestantId));
+  }
+);
+
+export const createContestantFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
+  async ({ data }: any) => {
+    try {
+      let finalAvatarUrl: string | undefined = undefined;
+      const file = data.get("image") as File | null;
+
+      if (file && file.size > 0) {
+        const arrayBuffer = await file.arrayBuffer();
+        const rawBuffer = Buffer.from(arrayBuffer);
+        const optimizedBuffer = await sharp(rawBuffer)
+          .resize(800, 800, { fit: "inside", withoutEnlargement: true })
+          .webp({ quality: 75 })
+          .toBuffer();
+        const uniqueFileName = `contestants/${crypto.randomUUID()}.webp`;
+
+        await s3Client.send(
+          new PutObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: uniqueFileName,
+            Body: optimizedBuffer,
+            ContentType: "image/webp",
+            CacheControl: "public, max-age=31536000, immutable",
+          })
+        );
+
+        const publicDomain = process.env.R2_PUBLIC_DOMAIN;
+        finalAvatarUrl = `${publicDomain}/${uniqueFileName}`;
+      }
+
+      // The interaction code is system-generated (5 chars, globally unique) --
+      // retry on the rare collision rather than trusting client input.
+      let lastError: any;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        try {
+          return await db.insert(contestants).values({
+            categoryId: data.get("categoryId") as any,
+            name: data.get("name") as string,
+            tagline: data.get("tagline") as string,
+            order: data.get("order") as any,
+            code: generateContestantCode(),
+            ...(finalAvatarUrl && { imageUrl: finalAvatarUrl }),
+          }).returning();
+        } catch (error: any) {
+          if (error?.code === '23505' && String(error?.constraint).includes('code')) {
+            lastError = error;
+            continue;
+          }
+          throw error;
+        }
+      }
+      throw lastError;
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        throw new Error('That contestant code is already in use for this category.');
+      }
+      throw error;
+    }
+  }
+);
+
+export const updateContestantFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
+  async ({ data }: any) => {
+    try {
+      let finalAvatarUrl: string | undefined = undefined;
+      const file = data.get("image") as File | null;
+
+      if (file && file.size > 0) {
+        const arrayBuffer = await file.arrayBuffer();
+        const rawBuffer = Buffer.from(arrayBuffer);
+        const optimizedBuffer = await sharp(rawBuffer)
+          .resize(800, 800, { fit: "inside", withoutEnlargement: true })
+          .webp({ quality: 75 })
+          .toBuffer();
+        const uniqueFileName = `contestants/${crypto.randomUUID()}.webp`;
+
+        await s3Client.send(
+          new PutObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: uniqueFileName,
+            Body: optimizedBuffer,
+            ContentType: "image/webp",
+            CacheControl: "public, max-age=31536000, immutable",
+          })
+        );
+
+        const publicDomain = process.env.R2_PUBLIC_DOMAIN;
+        finalAvatarUrl = `${publicDomain}/${uniqueFileName}`;
+      }
+
+      return await db
+        .update(contestants)
+        .set({
+          categoryId: data.get("categoryId") as any,
+          name: data.get("name") as string,
+          tagline: data.get("tagline") as string,
+          order: data.get("order") as any,
+          code: String(data.get("code") ?? "").toUpperCase(),
+          ...(finalAvatarUrl && { imageUrl: finalAvatarUrl }),
+        })
+        .where(eq<any>(contestants.id, data.get("id") as any))
+        .returning();
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        throw new Error('That contestant code is already in use.');
+      }
+      throw error;
+    }
+  }
+);
+
+export const deleteContestantFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
+  async ({ data: contestantId }: any) => {
+    return await db.delete(contestants).where(eq<any>(contestants.id, contestantId)).returning();
+  }
+);
+
+
+// ==========================================
+// EVENT TRANSACTION FUNCTIONS (events' equivalent of voters)
+// ==========================================
+
+export const getEventTransactionsFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const eventId = data?.eventId ?? data;
+    const page = Math.max(Number(data?.page) || 1, 1);
+    const pageSize = Math.max(Number(data?.pageSize) || 15, 1);
+    const searchQuery = (data?.searchQuery || '').trim();
+    const statusFilter = data?.statusFilter || 'ALL';
+
+    const limitValue = pageSize;
+    const offsetValue = (page - 1) * limitValue;
+
+    const conditions: any = [eq(events.adminId, admin.id), eq(events.id, eventId)];
+    if (searchQuery) {
+      const searchPattern = `%${searchQuery}%`;
+      conditions.push(
+        or(
+          ilike(contestants.name, searchPattern),
+          ilike(eventTransactions.payPhone, searchPattern),
+          ilike(eventTransactions.transRef, searchPattern),
+        )
+      );
+    }
+    if (statusFilter === 'PAID') {
+      conditions.push(eq(eventTransactions.payStatus, true));
+    } else if (statusFilter === 'PENDING') {
+      conditions.push(eq(eventTransactions.payStatus, false));
+    }
+    const queryCondition = and(...conditions);
+
+    const [rows, [countResult]] = await Promise.all([
+      db
+        .select({
+          transaction: eventTransactions,
+          contestant: contestants,
+          category: categories,
+        })
+        .from(eventTransactions)
+        .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .innerJoin(events, eq(categories.eventId, events.id))
+        .where(queryCondition)
+        .orderBy(desc(eventTransactions.createdAt))
+        .limit(limitValue)
+        .offset(offsetValue),
+      db
+        .select({ total: count() })
+        .from(eventTransactions)
+        .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .innerJoin(events, eq(categories.eventId, events.id))
+        .where(queryCondition),
+    ]);
+
+    const totalCount = countResult?.total ?? 0;
+    const totalPages = Math.max(Math.ceil(totalCount / limitValue), 1);
+
+    return {
+      transactions: rows,
+      pagination: { totalCount, totalPages, currentPage: page, pageSize: limitValue },
+    };
+  });
+
+export const getEventTransactionFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
+  async ({ data: transactionId }: any) => {
+    return await db.select().from(eventTransactions).where(eq<any>(eventTransactions.id, transactionId));
+  }
+);
+
+export const createEventTransactionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
+  async ({ data }: any) => {
+    return await db.insert(eventTransactions).values({
+      contestantId: data.contestantId,
+      payAmount: data.payAmount != null && data.payAmount !== '' ? Number(data.payAmount) : null,
+      payStatus: !!data.payStatus,
+      payRef: data.payRef || null,
+      payPhone: data.payPhone,
+      transRef: data.transRef || null,
+      votes: data.votes != null && data.votes !== '' ? Number(data.votes) : 0,
+      channel: data.channel,
     }).returning();
   }
 );
 
-export const updatePositionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
+export const updateEventTransactionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
   async ({ data }: any) => {
     return await db
-      .update(positions)
+      .update(eventTransactions)
       .set({
-        electionId: data.electionId,
-        order: data.order,
-        title: data.title,
-        slots: data.slots,
+        contestantId: data.contestantId,
+        payAmount: data.payAmount != null && data.payAmount !== '' ? Number(data.payAmount) : null,
+        payStatus: !!data.payStatus,
+        payRef: data.payRef || null,
+        payPhone: data.payPhone,
+        transRef: data.transRef || null,
+        votes: data.votes != null && data.votes !== '' ? Number(data.votes) : 0,
+        channel: data.channel,
       })
-      .where(eq<any>(positions.id, data.id)).returning();
-  });
+      .where(eq<any>(eventTransactions.id, data.id))
+      .returning();
+  }
+);
 
-
-export const deletePositionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: positionId }: any) => {
-    return await db.delete(positions).where(eq<any>(positions.id, positionId)).returning();
+export const deleteEventTransactionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
+  async ({ data: transactionId }: any) => {
+    return await db.delete(eventTransactions).where(eq<any>(eventTransactions.id, transactionId)).returning();
   }
 );
 
 
-// CANDIDATES FUNCTIONS
+// ==========================================
+// EVENT LIVE TELEMETRY FEED (events' equivalent of election telemetry)
+// ==========================================
 
-export const getCandidatesFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware,authMiddleware])
-  .handler(async ({ context }) => {
-    //const admin = { id: '1' };
-    const admin: any = context?.user
-    // const admin = await assertAuthenticatedAdmin();
-    return await db.select()
-      .from(candidates)
-      .leftJoin(positions, eq<any>(candidates.positionId, positions.id))
-      .leftJoin(elections, eq<any>(positions.electionId, elections.id))
-      .where(eq<any>(elections.adminId, admin.id))
-      .orderBy(asc(positions.order), asc(positions.createdAt), asc(candidates.order));
-  });
-
-
-export const getCandidateFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: candidateId }: any) => {
-    return await db.select().from(candidates).where(eq<any>(candidates.id, candidateId));
-  }
-);
-
-export const createCandidateFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
-
-    try {
-
-      let finalAvatarUrl: string | undefined = undefined;
-      const file = data.get("image") as File | null;
-
-      if (file && file.size > 0) {
-        const arrayBuffer = await file.arrayBuffer();
-        const rawBuffer = Buffer.from(arrayBuffer);
-        const optimizedBuffer = await sharp(rawBuffer)
-          .resize(800, 800, { fit: "inside", withoutEnlargement: true }) // Caps size at 800px max width/height
-          .webp({ quality: 75 }) // Converts to modern WebP format at 75% quality optimization
-          .toBuffer();
-        // Enforce the new optimal webp file path structure
-        const uniqueFileName = `candidates/${crypto.randomUUID()}.webp`;
-
-        // Upload to S3/R2
-        await s3Client.send(
-          new PutObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: uniqueFileName,
-            Body: optimizedBuffer,
-            ContentType: "image/webp",
-            CacheControl: "public, max-age=31536000, immutable",
-          })
-        );
-
-        // ## R2 CLOUD
-        const publicDomain = process.env.R2_PUBLIC_DOMAIN;
-        finalAvatarUrl = `${publicDomain}/${uniqueFileName}`;
-      }
-
-      // Return Response
-      return await db.insert(candidates).values({
-        positionId: data.get("positionId") as number,
-        order: data.get("order") as number,
-        name: data.get("name") as string,
-        teaser: data.get("teaser") as string,
-        isActive: (data.get("isActive") || 'true') as boolean,
-        ...(finalAvatarUrl && { imageUrl: finalAvatarUrl })
-      }).returning();
-
-    } catch (error) {
-      console.log(error)
-    }
-
-  });
-
-export const updateCandidateFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
-
-    try {
-
-      let finalAvatarUrl: string | undefined = undefined;
-      const file = data.get("image") as File | null;
-      if (file && file.size > 0) {
-        // const fileExtension = file.name.split(".").pop();
-        // const uniqueFileName = `candidates/${crypto.randomUUID()}.${fileExtension}`;
-        const arrayBuffer = await file.arrayBuffer();
-        const rawBuffer = Buffer.from(arrayBuffer);
-        const optimizedBuffer = await sharp(rawBuffer)
-          .resize(800, 800, { fit: "inside", withoutEnlargement: true }) // Caps size at 800px max width/height
-          .webp({ quality: 75 }) // Converts to modern WebP format at 75% quality optimization
-          .toBuffer();
-        // Enforce the new optimal webp file path structure
-        const uniqueFileName = `candidates/${crypto.randomUUID()}.webp`;
-
-        // Upload to IDrive e2
-        await s3Client.send(
-          new PutObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: uniqueFileName,
-            Body: optimizedBuffer,
-            ContentType: "image/webp",
-            // ContentType: file.type,
-            CacheControl: "public, max-age=31536000, immutable",
-          })
-        );
-
-        // ## IDRIVE
-        // const endpointHost = process.env.IDRIVE_ENDPOINT!.replace("https://", "");
-        // finalAvatarUrl = `https://${BUCKET_NAME}.${endpointHost}/${uniqueFileName}`;
-
-        // ## R2 CLOUD
-        const publicDomain = process.env.R2_PUBLIC_DOMAIN;
-        finalAvatarUrl = `${publicDomain}/${uniqueFileName}`;
-      }
-
-      // Return Response
-      return await db
-        .update(candidates)
-        .set({
-          positionId: data.get("positionId") as number,
-          order: data.get("order") as number,
-          name: data.get("name") as string,
-          teaser: data.get("teaser") as string,
-          isActive: data.get("isActive") as boolean,
-          ...(finalAvatarUrl && { imageUrl: finalAvatarUrl })
-        })
-        .where(eq<any>(candidates.id, Number(data.get("id")))).returning();
-
-    } catch (error) {
-      console.log(error)
-    }
-  });
-
-
-export const deleteCandidateFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: candidateId }: any) => {
-    return await db.delete(candidates).where(eq<any>(candidates.id, candidateId)).returning();
-  }
-);
-
-
-// VOTERS FUNCTIONS
-
-export const getVotersListFn = createServerFn({ method: 'GET' })
+export const getEventTelemetryFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ context }) => {
-    // const admin = { id: '1' };
-    const admin: any = context.user.id;
-    return await db.select()
-      .from(voters)
-      .innerJoin(elections, eq<any>(positions.electionId, elections.id))
-      .where(eq<any>(elections.adminId, admin.id))
-      .orderBy(asc(positions.order), asc(positions.createdAt));
-  });
+  .handler(async ({ context, data: eventId }: any) => {
+    const admin: any = context?.user;
 
-export const getVotersFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ context }) => {
-    const admin: any = context.user.id;
-
-    return await db
-      .select()
-      .from(voters)
-      .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-      .where(eq<any>(elections.adminId, admin.id))
-      .orderBy(asc(voters.id));
-  }
-  );
-
-export const getVotersByElectionFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ data: electionId }) => {
-    return await db
-      .select()
-      .from(voters)
-      .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-      .where(eq<any>(elections.id, electionId))
-      .orderBy(asc(voters.id));
-  }
-  );
-
-
-
-
-export const getVoterFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: voterId }: any) => {
-    return await db.select().from(voters).where(eq<any>(voters.id, voterId));
-  }
-);
-
-export const getElectionByTagFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: tag }: any) => {
-    return await db.select().from(elections).where(eq<any>(elections.tag, tag));
-  }
-);
-
-
-
-export const createVoterFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
-    return await db.insert(voters).values({
-      electionId: data.electionId,
-      name: data.name,
-      username: data.username,
-      phoneNumber: data.phoneNumber,
-      email: data.email,
-      inviteToken: data.inviteToken,
-      isVerified: data.isVerified,
-    } as any).returning();
-  }
-);
-
-export const updateVoterFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
-    return await db
-      .update(voters)
-      .set({
-        electionId: data.electionId,
-        name: data.name,
-        username: data.username,
-        phoneNumber: data.phoneNumber,
-        email: data.email,
-        inviteToken: data.inviteToken,
-        isVerified: data.isVerified,
-      })
-      .where(eq<any>(voters.id, data.id)).returning();
-  });
-
-
-export const verifyVoterFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
-    try {
-      const [voter] = await db
-        .select()
-        .from(voters)
-        .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-        .where(and(eq<any>(voters.username, data.username), eq<any>(voters.inviteToken, data.password || data.phone)))
-        .orderBy(asc(voters.id));
-
-      console.log(voter);
-
-      if (voter) return { success: true, data: voter }
-      return { success: false, data: null }
-
-    } catch (error) {
-      console.log(error);
-      return { success: false, data: null }
-    }
-
-  });
-
-
-export const fetchGoogleProfileFromServer = createServerFn({ method: 'POST' })
-  .middleware([arcjetMiddleware])
-  .handler(async ({ data }: any) => {
-    try {
-      const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: {
-          Authorization: `Bearer ${data.accessToken}`,
-        },
-      });
-
-      if (!response.ok) throw new Error(`Google error status: ${response.status}`);
-
-      const profile = await response.json();
-      // Authenticate Voter 
-      const [voter] = await db
-        .select()
-        .from(voters)
-        .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-        .where(eq<any>(voters.email, profile?.email))
-        .orderBy(asc(voters.id));
-
-      if (voter) return { success: true, data: voter, message: null }
-      return { success: false, data: null, message: 'Voter is not eligible for this election' }
-
-      // setCookie('app_session', 'your-generated-session-token', {
-      //   httpOnly: true,
-      //   secure: true,
-      //   sameSite: 'lax',
-      //   path: '/',
-      // });
-
-    } catch (serverError: any) {
-      console.error(serverError);
-      return { success: false, data: null, message: serverError?.message }
-    }
-  });
-
-export const uploadVotersFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
-    const { voters: rows, duplicateUsernames } = prepareVotersForBulkImport(
-      Array.isArray(data) ? data : [],
-    );
-
-    if (rows.length === 0) {
-      throw new Error("No valid voters to import. Each row needs a username.");
-    }
-
-    try {
-      const chunks = chunkArray(rows, 500);
-      let imported = 0;
-
-      await db.transaction(async (tx) => {
-        for (const chunk of chunks) {
-          const inserted = await tx
-            .insert(voters)
-            .values(chunk)
-            .onConflictDoUpdate({
-              target: [voters.electionId, voters.username],
-              set: {
-                name: sql`EXCLUDED.name`,
-                phoneNumber: sql`EXCLUDED.phone_number`,
-                email: sql`EXCLUDED.email`,
-              },
-            })
-            .returning({ id: voters.id });
-
-          imported += inserted.length;
-        }
-      });
-
-      return {
-        success: true,
-        imported,
-        duplicateUsernames,
-        message:
-          duplicateUsernames.length > 0
-            ? `Imported ${imported} voter(s). Skipped ${duplicateUsernames.length} duplicate username(s) in the spreadsheet (kept the last row for each): ${duplicateUsernames.join(", ")}.`
-            : `Imported ${imported} voter(s).`,
-      };
-    } catch (error: any) {
-      const detail = error?.cause?.detail ?? error?.detail;
-      console.error("uploadVotersFn error:", detail ?? error?.message ?? error);
-      throw new Error(detail || error?.message || "Voter import failed");
-    }
-  },
-);
-
-
-export const inviteVoterFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: voterId }: any) => {
-    try {
-
-      // Fetch Voter
-      const [rec] = await db.select()
-        .from(voters)
-        .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-        .where(eq<any>(voters.id, voterId));
-
-      // Send Invite Code via SMS
-      const phone = rec?.voters?.phoneNumber.replaceAll("+", "").replaceAll(" ", "0");
-      const inviteToken = rec?.voters?.inviteToken;
-      const fname = rec?.voters?.name?.split(" ")[0];
-      const username = rec?.voters?.username;
-      const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${rec?.elections?.tag}`
-      const smsPayload: any = {
-        sender: process.env.SMS_SENDER_ID,
-        message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken} . Visit ${electionUrl} to vote!`,
-        recipients: [phone],
-      };
-      const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'api-key': process.env.SMS_API_KEY
-        } as any,
-        body: JSON.stringify(smsPayload)
-      });
-
-      if (!sms.ok) {
-        const errorText = await sms.text();
-        throw new Error(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`);
-      }
-
-      const resp = await sms.json();
-      if (resp) {
-        return await db
-          .update(voters)
-          .set({
-            isVerified: true,
-          })
-          .where(eq<any>(voters.id, voterId)).returning();
-      }
-
-    } catch (error: any) {
-      console.log(error.message)
-
-    }
-
-    //return await db.select().from(voters).where(eq<any>(voters.id, voterId));
-  }
-);
-
-
-export const inviteVotersFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: electionId }: any) => {
-    try {
-
-      // Fetch Voter
-      const rec = await db.select()
-        .from(voters)
-        .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-        .where(eq<any>(elections.id, electionId));
-
-      let mdata: any = {};
-      rec.map((r: any) => {
-        // let phone = r?.voters?.phoneNumber.replaceAll("+","").replaceAll(" ","0");
-
-        let rawPhone = String(r?.voters?.phoneNumber || '').trim();
-        rawPhone = rawPhone.replace(/[\s\-\(\)\+]/g, '');
-
-        let phone = rawPhone;
-        if (rawPhone.startsWith('0')) {
-          phone = '233' + rawPhone.slice(1);
-        } else if (rawPhone.startsWith('233')) {
-          phone = rawPhone;
-        } else if (rawPhone.length === 9) {
-          phone = '233' + rawPhone;
-        }
-
-        const inviteToken = r?.voters?.inviteToken;
-        const fname = r?.voters?.name?.split(" ")[0];
-        const username = r?.voters?.username;
-
-        mdata[phone] = { fname, username, inviteToken }
-      })
-
-      // Send Invite Code via SMS
-      const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${rec[0]?.elections?.tag}`
-      const smsPayload: any = {
-        sender: process.env.SMS_SENDER_ID,
-        message: `Hello <%fname%>, Please vote with Username: <%username%>, Password: <%inviteToken%> . Try and Visit ${electionUrl} to vote!`,
-        recipients: mdata,
-        sandbox: true
-      };
-
-      console.log("smsPayload: ", smsPayload)
-      let sms = { ok: 1, text: () => { }, status: 200 }
-      // const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/template/send`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'api-key': process.env.SMS_API_KEY
-      //   } as any,
-      //   body: JSON.stringify(smsPayload)
-      // });
-
-      if (!sms.ok) {
-        const errorText = await sms.text();
-        throw new Error(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`);
-      }
-
-      // const resp = await sms.json();
-      const resp: any = {};
-      if (resp) {
-        const { data: mt } = resp;
-        const sentInvites = mt?.map((r: any) => ("0" + stripCountryCode(r.recipient)));
-        return await db.update(voters).set({ isVerified: false }).where(inArray(voters.phoneNumber, sentInvites)).returning();
-      }
-
-    } catch (error: any) {
-      console.log(error.message)
-    }
-  }
-);
-
-
-export const exportVotersToExcelFn = createServerFn({ method: 'GET' })
-   .middleware([arcjetMiddleware])
-   .handler(async ({ data }: any) => {
-    const { electionId, statusFilter } = data;
-
-    try {
-      // 1. Establish core dynamic SQL filter conditions array
-      const conditions = [eq(voters.electionId, electionId)];
-
-      // Target specific voting boolean states conditionally 
-      if (statusFilter === 'VOTED') {
-        conditions.push(eq(voters.hasVoted, true));
-      } else if (statusFilter === 'PENDING') {
-        conditions.push(eq(voters.hasVoted, false));
-      }
-
-      // 2. Fetch full matching registry set using the and-wrapped criteria
-      const filteredVoters = await db
+    const [
+      [eventRecord],
+      rawCategories,
+      rawContestantTallies,
+      [summaryTotals],
+      rawRecentTransactions,
+    ] = await Promise.all([
+      db.select().from(events).where(and(eq<any>(events.id, eventId), eq<any>(events.adminId, admin.id))),
+      db.select().from(categories).where(eq<any>(categories.eventId, eventId)),
+      db
         .select({
-          name: voters.name,
-          username: voters.username,
-          phoneNumber: voters.phoneNumber,
-          email: voters.email,
-          inviteToken: voters.inviteToken,
-          hasVoted: voters.hasVoted,
-          isVerified: voters.isVerified,
-          invitedAt: voters.invitedAt,
+          id: contestants.id,
+          name: contestants.name,
+          tagline: contestants.tagline,
+          imageUrl: contestants.imageUrl,
+          categoryId: contestants.categoryId,
+          order: contestants.order,
+          voteCount: sql<number>`coalesce(sum(case when ${eventTransactions.payStatus} then ${eventTransactions.votes} else 0 end), 0)::int`,
         })
-        .from(voters)
-        .where(and(...conditions));
+        .from(contestants)
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .leftJoin(eventTransactions, eq(eventTransactions.contestantId, contestants.id))
+        .where(eq<any>(categories.eventId, eventId))
+        .groupBy(contestants.id, contestants.name, contestants.tagline, contestants.imageUrl, contestants.categoryId, contestants.order)
+        .orderBy(asc(contestants.order)),
+      db
+        .select({
+          totalVotes: sql<number>`coalesce(sum(${eventTransactions.votes}), 0)::int`,
+          totalAmount: sql<number>`coalesce(sum(${eventTransactions.payAmount}), 0)::int`,
+          totalTransactions: sql<number>`count(${eventTransactions.id})::int`,
+        })
+        .from(eventTransactions)
+        .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .where(and(eq<any>(categories.eventId, eventId), eq(eventTransactions.payStatus, true))),
+      db
+        .select({
+          id: eventTransactions.id,
+          contestantName: contestants.name,
+          categoryName: categories.name,
+          payPhone: eventTransactions.payPhone,
+          payAmount: eventTransactions.payAmount,
+          votes: eventTransactions.votes,
+          channel: eventTransactions.channel,
+          createdAt: eventTransactions.createdAt,
+        })
+        .from(eventTransactions)
+        .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .where(and(eq<any>(categories.eventId, eventId), eq(eventTransactions.payStatus, true)))
+        .orderBy(desc(eventTransactions.createdAt))
+        .limit(15),
+    ]);
 
-      if (filteredVoters.length === 0) {
-        throw new Error(`No records matching the '${statusFilter.toLowerCase()}' condition were found to export.`);
-      }
-
-      // 3. Convert records array into organized worksheet mapping matrices
-      const formattedRows = filteredVoters.map((voter) => ({
-        'Full Name': voter.name,
-        'Access Username': voter.username,
-        'Phone Number': voter.phoneNumber,
-        'Email Address': voter.email,
-        'Invitation Code': voter.inviteToken,
-        'Voting Status': voter.hasVoted ? 'Voted' : 'Pending',
-        'Account Verified': voter.isVerified ? 'Yes' : 'No',
-        'Date Invited': voter.invitedAt ? new Date(voter.invitedAt).toLocaleDateString() : 'N/A',
-      }));
-
-      const worksheet = XLSX.utils.json_to_sheet(formattedRows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Registry');
-
-      worksheet['!cols'] = [
-        { wch: 24 }, { wch: 18 }, { wch: 16 }, { wch: 28 },
-        { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 14 }
-      ];
-
-      const excelBuffer64 = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
-      const stateLabel = statusFilter.toLowerCase();
-
-      return {
-        success: true,
-        filename: `election_${electionId}_voters_${stateLabel}_export.xlsx`,
-        base64Data: excelBuffer64,
-      };
-    } catch (error: any) {
-      console.error('Server Function Error:', error);
-      return {
-        success: false,
-        error: error?.message || 'Failed to safely compile data structures to Excel.',
-        filename: '',
-        base64Data: '',
-      };
+    if (!eventRecord) {
+      throw new Error(`Event instance [${eventId}] not found.`);
     }
-  });
 
+    const maskPhone = (phone: string) => (phone ? `${phone.slice(0, 4)}****${phone.slice(-2)}` : 'unknown');
 
-export const deleteVoterFn = createServerFn({ method: 'POST' })
- .middleware([arcjetMiddleware])
- .handler(
-  async ({ data: voterId }: any) => {
-    return await db.delete(voters).where(eq<any>(voters.id, voterId)).returning();
-  }
-);
+    const formatElapsedTime = (pastDate: Date): string => {
+      const now = new Date();
+      const diffMs = now.getTime() - pastDate.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      return `${Math.floor(diffMins / 60)}h ago`;
+    };
 
-
-
-// CAST VOTE BALLOT
-
-// interface CastBallotPayload {
-//   voterId: number;
-//   electionId: number;
-//   selections: {
-//     positionId: number;
-//     candidateId: number;
-//     receiptSignature: string;
-//   }[];
-// }
-
-
-// export const castBallotServerFn = createServerFn({ method: 'POST' })
-//   .inputValidator((payload: CastBallotPayload) => payload)
-//   .handler(async ({ data }: any) => {
-//     const { voterId, electionId, selections } = data;
-
-//     console.log(`Initializing atomic ballot transaction for voter node: ${voterId}`);
-
-//     // Execute within an atomic SQL transaction block
-//     return await db.transaction(async (tx) => {
-
-//       // 1. CRITICAL SECURITY GUARD: Verify the user has not already voted
-//       const [voterRecord] = await tx
-//         .select()
-//         .from(voters)
-//         .where(and(eq<any>(voters.id, voterId), eq<any>(voters.electionId, electionId)))
-//         .limit(1);
-
-//       if (!voterRecord) {
-//         throw new Error('Voter profile configuration not found.');
-//       }
-
-//       if (voterRecord.hasVoted) {
-//         throw new Error('Security Breach: This account token has already cast a ballot.');
-//       }
-
-//       // 2. BULK INSERTS: If the voter didn't completely abstain, map into the db rows
-//       if (selections.length > 0) {
-//         const rowsToInsert = selections.map((vote: any) => ({
-//           electionId: electionId,
-//           positionId: vote.positionId,
-//           candidateId: vote.candidateId,
-//           receiptSignature: vote.receiptSignature,
-//         }));
-
-//         await tx.insert(electionVotes).values(rowsToInsert);
-//       }
-
-//       // 3. FLIP ACCOUNT STATE FLAG: Set hasVoted to true to block double voting
-//       await tx
-//         .update(voters)
-//         .set({ hasVoted: true })
-//         .where(eq<any>(voters.id, voterId));
-
-//       return { 
-//         success: true, 
-//         message: "Ballot cleanly parsed and written to immutable transaction log tables." 
-//       };
-//     });
-//   });
-
-
-interface VoteSelectionInput {
-  positionId: number;
-  candidateId: number | null; // Natively receives 'null' directly from our UI for Abstentions
-  receiptSignature: string;
-}
-
-interface CastBallotPayload {
-  voterId: number;
-  electionId: number;
-  selections: VoteSelectionInput[];
-}
-
-export const castBallotServerFn = createServerFn({
-  method: "POST",
-})
-  .inputValidator((data: unknown) => {
-    return data as { data: CastBallotPayload };
-  })
-  .middleware([arcjetMiddleware])
-  .handler(async ({ data }: any) => {
-    const { voterId, electionId, selections } = data;
-
-    try {
-      // Execute the entire ballot block inside an atomic SQL transaction isolation container
-      const result = await db.transaction(async (tx) => {
-
-        // 1. Critical Concurrency Guard: Fetch the voter and place an exclusive row-level lock (FOR UPDATE)
-        // This stops two parallel automated fetch cycles from registering rapid spam requests simultaneously
-        const [voterCheck] = await tx
-          .select()
-          .from(voters)
-          .where(
-            and(
-              eq<any>(voters.id, voterId),
-              eq<any>(voters.electionId, electionId)
-            )
-          )
-          .for('update'); // Exclusive Postgres row lock engine trigger
-
-        // 2. Fallback defensive structural intercept check
-        if (!voterCheck) {
-          throw new Error("Voter registration identity record not found for this election.");
-        }
-
-        if (voterCheck.hasVoted) {
-          throw new Error("Security Alert: This voter credential index has already cast a ballot.");
-        }
-
-        // 3. Batch insert the ballot selections into the database ledger block
-        const ballotPayloads = selections.map((vote: any) => ({
-          electionId: electionId,
-          positionId: vote.positionId,
-          candidateId: vote.candidateId, // If null, writes gracefully to Postgres to log an intentional Abstention
-          receiptSignature: vote.receiptSignature,
+    const formattedTallies = rawCategories.map((cat) => {
+      const categoryContestants = rawContestantTallies
+        .filter((c) => c.categoryId === cat.id)
+        .map((c, idx) => ({
+          id: c.id,
+          name: c.name,
+          teaser: c.tagline ?? "",
+          imageUrl: c.imageUrl ?? "",
+          ballotNumber: c.order ?? idx + 1,
+          votes: c.voteCount,
         }));
 
-        await tx.insert(electionVotes).values(ballotPayloads);
-
-        // 4. Close and lock the voting gate immediately
-        await tx
-          .update(voters)
-          .set({ hasVoted: true })
-          .where(eq<any>(voters.id, voterId));
-
-        return { success: true };
-      });
-
-      return result;
-
-    } catch (error) {
-      console.error("[CRITICAL DB BALLOT EXCEPTION]:", error);
       return {
-        success: false,
-        message: error instanceof Error ? error.message : "An unexpected server database transaction error occurred.",
+        id: cat.id,
+        title: cat.name,
+        totalVotesForPosition: categoryContestants.reduce((sum, c) => sum + c.votes, 0),
+        candidates: categoryContestants,
       };
+    });
+
+    return {
+      eventDetails: {
+        title: eventRecord.title,
+        unitPrice: eventRecord.unitPrice,
+        totalCategories: rawCategories.length,
+      },
+      summary: {
+        totalVotes: summaryTotals?.totalVotes ?? 0,
+        totalAmount: summaryTotals?.totalAmount ?? 0,
+        totalTransactions: summaryTotals?.totalTransactions ?? 0,
+      },
+      tallies: formattedTallies,
+      auditLedger: rawRecentTransactions.map((log) => ({
+        id: `tx_${log.id}`,
+        positionTitle: `${log.contestantName} (${log.categoryName})`,
+        voterMask: maskPhone(log.payPhone),
+        channel: log.channel,
+        amount: log.payAmount,
+        votes: log.votes,
+        timestamp: formatElapsedTime(log.createdAt),
+      })),
+    };
+  });
+
+
+// ==========================================
+// PUBLIC CARD CHECKOUT (Paystack)
+// ==========================================
+
+// Verifies a Paystack transaction server-side and, only once payment is confirmed,
+// credits the corresponding vote transaction. Never trust the client's "it succeeded"
+// signal for money -- always re-check with Paystack directly using the secret key.
+export const verifyAndCastCardVoteFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware])
+  .handler(async ({ data }: any) => {
+    const { reference, contestantId, votes, payEmail, payPhone } = data;
+
+    if (!reference || !contestantId || !votes) {
+      throw new Error('Missing required payment details.');
+    }
+
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    if (!secretKey || /^sk_test_0+$/.test(secretKey)) {
+      throw new Error('Card payments are not configured for this platform yet.');
+    }
+
+    const verifyResponse = await fetch(
+      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+      { headers: { Authorization: `Bearer ${secretKey}` } },
+    );
+    const verifyResult: any = await verifyResponse.json();
+
+    if (!verifyResponse.ok || !verifyResult?.status || verifyResult.data?.status !== 'success') {
+      throw new Error(verifyResult?.message || 'Payment verification failed.');
+    }
+
+    const result = await creditCardVote({
+      reference,
+      contestantId,
+      votes: Number(votes),
+      payPhone: payPhone || payEmail || verifyResult.data.customer?.email,
+      amountKobo: verifyResult.data.amount,
+      transRef: verifyResult.data.id ? String(verifyResult.data.id) : null,
+      channel: 'WEB',
+    });
+
+    switch (result.status) {
+      case 'credited':
+        return {
+          success: true,
+          votes: result.votes,
+          amount: result.amount,
+          reference: result.reference,
+        };
+      case 'already_recorded':
+        throw new Error('This payment has already been recorded.');
+      case 'not_found':
+        throw new Error(result.reason);
+      case 'amount_mismatch':
+        throw new Error('Paid amount does not match the expected vote total.');
     }
   });

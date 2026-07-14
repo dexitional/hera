@@ -49,6 +49,7 @@ export default function AuthElection({ data }: any) {
           electionEnd: dt?.elections?.endAt,
           electionAutoStart: dt?.elections?.autoStop,
           electionImageUrl: dt?.elections?.imageUrl,
+          inviteToken: dt?.voters?.inviteToken,
         }
 
         if(user.electionId != data.id){
@@ -121,6 +122,7 @@ export default function AuthElection({ data }: any) {
           electionEnd: dt?.elections?.endAt,
           electionAutoStart: dt?.elections?.autoStop,
           electionImageUrl: dt?.elections?.imageUrl,
+          inviteToken: dt?.voters?.inviteToken,
         }
 
         if(user.electionId != data.id){
@@ -204,6 +206,7 @@ export default function AuthElection({ data }: any) {
             electionEnd: dt?.elections?.endAt,
             electionAutoStart: dt?.elections?.autoStop,
             electionImageUrl: dt?.elections?.imageUrl,
+            inviteToken: dt?.voters?.inviteToken,
           }
 
           console.log("user:", user)

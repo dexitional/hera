@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import moment from 'moment';
 import { 
@@ -244,7 +244,8 @@ function ElectionsDirectory() {
                           
                           {/* Dedicated Manage Button linking to election subcontext */}
                           <Link
-                            to={`/admin/elections/${election?.id}/manage`}
+                            to="/admin/elections/$electionId/manage"
+                            params={{ electionId: String(election?.id) }}
                             className="inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 transition-all shadow-sm"
                           >
                             <Sliders className="w-3 h-3 text-purple-400" />
@@ -254,7 +255,8 @@ function ElectionsDirectory() {
                           {/* Quick Overrides Menu Group */}
                           <div className="flex items-center gap-1 border-l border-zinc-800 pl-2">
                             <Link
-                              to={`/admin/elections/${election?.id}/edit`}
+                              to="/admin/elections/$electionId/edit"
+                              params={{ electionId: String(election?.id) }}
                               title="Edit Election"
                               className="p-1.5 rounded text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
                             >

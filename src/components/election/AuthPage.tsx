@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, Users, ThumbsUp, Mail, Lock, ArrowRight, LoaderIcon, Loader2, LoaderCircle } from 'lucide-react';
+import { Shield, Users, ThumbsUp, Mail, Lock, ArrowRight, LoaderCircle } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { authClient } from '#/lib/auth-client';
 
@@ -57,6 +57,7 @@ export default function AuthPage({ error }: any) {
         await authClient.signIn.social({
             provider: "google",
             callbackURL: "/admin",
+            errorCallbackURL: "/auth/error",
             //newUserCallbackURL: "/welcome",  // Newly registered users go here instead
             // Called if the sign-in process fails
             onError: (ctx: any) => {

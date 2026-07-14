@@ -6,7 +6,6 @@ import {
   Loader2,
   Smartphone,
   MessageCircleWarning,
-  PhoneForwarded,
   PhoneCallIcon,
   ArrowLeft
 } from "lucide-react";
@@ -21,7 +20,7 @@ import {
   getSmsProgressFn
 } from "#/server/tenant-elections";
 import * as XLSX from 'xlsx';
-import { addCountryCode, generateSixDigitCode, stripCountryCode } from "#/lib/utils";
+import { generateSixDigitCode, stripCountryCode } from "#/lib/utils";
 
 const VOTERS_PAGE_SIZE = 15;
 
@@ -57,7 +56,7 @@ function VotersDirectory() {
 
   const queryClient = useQueryClient();
   const { electionId } = Route.useParams();
-  const [isExporting, setIsExporting] = useState(false);
+  const [, setIsExporting] = useState(false);
 
   // const [voters, setVoters] = useState<VoterRecord[]>(INITIAL_VOTERS);
   const [searchQuery, setSearchQuery] = useState("");
@@ -409,7 +408,8 @@ function VotersDirectory() {
 
             {/* Create Single Voter Route Anchor Link */}
             <Link
-              to={`/admin/elections/${electionId}/voters/new`} 
+              to="/admin/elections/$electionId/voters/new"
+              params={{ electionId }}
               className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs px-3.5 py-2 rounded-lg font-medium shadow-md transition-all"
             >
               <UserPlus className="w-4 h-4" />
@@ -534,8 +534,8 @@ function VotersDirectory() {
                             <span>Invite</span>
                           </button>
                           <Link
-                            to={`/admin/elections/${electionId}/voters/${voter?.id}/edit`} 
-                            
+                            to="/admin/elections/$electionId/voters/$voterId/edit"
+                            params={{ electionId, voterId: String(voter?.id) }}
                             title="Edit Voter Profile"
                             className="p-1.5 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
                           >

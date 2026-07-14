@@ -1,4 +1,8 @@
-export default function NomineeCard() {
+import { USSD_SHORTCODE, type ModalNominee } from '#/lib/utils';
+import { DialogClose } from './ui/dialog';
+import { User } from 'lucide-react';
+
+export default function NomineeCard({ nominee }: { nominee: ModalNominee | null }) {
   return (
     <div className=" overflow-y-auto max-h-[90vh] custom-scrollbar">
       <div className=" relative bg-[#18181b]">
@@ -21,33 +25,37 @@ export default function NomineeCard() {
               <div className=" mb-6">
                 <div className=" bg-zinc-900 px-4 py-2 rounded-full border border-white/5">
                   <h3 className=" text-xs font-medium text-white tracking-wider uppercase">
-                    ENSSA UCC DINNER &amp; AWARDS NIGHT&#39;25 (Cena de las Estrellas)
+                    {nominee?.eventTitle ?? "Event"}
                   </h3>
                 </div>
               </div>
               <div className=" relative mb-6">
                 <div className=" absolute inset-0 -m-1 bg-blue-500/20 rounded-full blur-sm"></div>
-                <div className=" relative w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-white/10 overflow-hidden">
-                  <img
-                    alt="Seth "
-                    loading="lazy"
-                    decoding="async"
-                    className="object-cover object-[center_20%] rounded-full"
-                    src="https://res.cloudinary.com/dm4pbkgma/image/upload/v1752444866/nominees/nominee_686915970e9be31b4cc967c4.jpg"
-                    style={{
-                      position: "absolute",
-                      height: "100%",
-                      width: "100%",
-                      inset: 0,
-                      color: "transparent",
-                    }}
-                  />
+                <div className=" relative w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-white/10 overflow-hidden bg-zinc-900 flex items-center justify-center">
+                  {nominee?.imageUrl ? (
+                    <img
+                      alt={nominee.name}
+                      loading="lazy"
+                      decoding="async"
+                      className="object-cover object-[center_20%] rounded-full"
+                      src={nominee.imageUrl}
+                      style={{
+                        position: "absolute",
+                        height: "100%",
+                        width: "100%",
+                        inset: 0,
+                        color: "transparent",
+                      }}
+                    />
+                  ) : (
+                    <User className="w-12 h-12 text-zinc-600" />
+                  )}
                   <div className=" absolute inset-0 bg-black/20 mix-blend-overlay rounded-full"></div>
                 </div>
               </div>
               <div className=" text-center space-y-2">
-                <h2 className=" text-xl font-bold text-white tracking-tight">Seth </h2>
-                <p className=" text-sm text-zinc-400">Just a boy🌚</p>
+                <h2 className=" text-xl font-bold text-white tracking-tight">{nominee?.name ?? "Nominee"}</h2>
+                {nominee?.tagline && <p className=" text-sm text-zinc-400">{nominee.tagline}</p>}
                 <div className=" flex items-center justify-center gap-2 text-xs"></div>
               </div>
             </div>
@@ -58,7 +66,7 @@ export default function NomineeCard() {
                     <div className=" bg-zinc-900 px-4 py-3 rounded-2xl border border-white/5">
                       <div className=" flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="tabler-icon tabler-icon-phone w-5 h-5 text-blue-400"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"></path></svg>
-                        <span className=" text-xl font-bold text-white tracking-widest">4288</span>
+                        <span className=" text-xl font-bold text-white tracking-widest">{nominee?.code ?? "----"}</span>
                       </div>
                     </div>
                   </div>
@@ -68,11 +76,11 @@ export default function NomineeCard() {
                   <div className=" space-y-3">
                     <div className=" flex items-center gap-3 text-zinc-300">
                       <span className=" w-6 h-6 flex items-center justify-center bg-zinc-900 rounded-full text-xs font-bold text-white border border-white/5">1</span>
-                      <span className=" text-sm">Dial *920*401#</span>
+                      <span className=" text-sm">Dial {USSD_SHORTCODE}</span>
                     </div>
                     <div className=" flex items-center gap-3 text-zinc-300">
                       <span className=" w-6 h-6 flex items-center justify-center bg-zinc-900 rounded-full text-xs font-bold text-white border border-white/5">2</span>
-                      <span className=" text-sm">Enter nominee code: 2123</span>
+                      <span className=" text-sm">Enter nominee code: {nominee?.code ?? "----"}</span>
                     </div>
                     <div className=" flex items-center gap-3 text-zinc-300">
                       <span className=" w-6 h-6 flex items-center justify-center bg-zinc-900 rounded-full text-xs font-bold text-white border border-white/5">3</span>
@@ -96,9 +104,9 @@ export default function NomineeCard() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 text-sm text-blue-400 hover:text-blue-300 transition-colors truncate"
-                      href="https://heravote.com/nominee/2123"
+                      href={nominee ? `${typeof window !== 'undefined' ? window.location.origin : ''}/nominee/${nominee.code}` : '#'}
                     >
-                      heravote.com/nominee/2123
+                      {typeof window !== 'undefined' ? window.location.host : 'heravote.com'}/nominee/{nominee?.code ?? ''}
                     </a>
                     <button
                       title="Copy link"
@@ -111,9 +119,11 @@ export default function NomineeCard() {
               </div>
               <div className=" space-y-4 mt-6 md:mt-8">
                 <div className=" flex justify-center">
-                  <button className=" px-6 py-2.5 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 transition-colors text-sm font-medium border border-white/10">
-                    Close
-                  </button>
+                  <DialogClose asChild>
+                    <button className=" px-6 py-2.5 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 transition-colors text-sm font-medium border border-white/10">
+                      Close
+                    </button>
+                  </DialogClose>
                 </div>
                 <div className=" text-center">
                   <p className=" text-xs text-zinc-600">Powered by Heravote</p>

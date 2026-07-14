@@ -11,7 +11,7 @@ export const arcjetMiddleware = createMiddleware().server(async ({ next }) => {
   }
 
   // 2. Run the request through the Arcjet engine
-  const decision:any = await aj.protect(request, { requested: 1 });
+  const decision:any = await (aj as any).protect(request, { requested: 1 });
 
   // 3. If Arcjet signals a block, intercept the request and throw a 429
   if (decision.isDenied()) {

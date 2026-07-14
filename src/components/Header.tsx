@@ -1,24 +1,12 @@
-import { authClient, useSession } from "#/lib/auth-client";
+import { useSession } from "#/lib/auth-client";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 export default function Header() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const { data: sessionData, isPending, error }: any = useSession();
+  const { data: sessionData }: any = useSession();
 
   const user = sessionData?.user;
-
-  const handleSignOut = async () => {
-    
-    await authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          // Redirect the user back to the login page upon successful logout
-          window.location.href = "/login";
-        },
-      },
-    });
-  };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-[#0a192a] border-b border-[#23232b] shadow-md print:hidden">

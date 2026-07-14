@@ -9,8 +9,7 @@ export const Route = createFileRoute('/auth/signup')({
 
 function RouteComponent() {
 
-  const [ loading, setLoading ] = useState(false)
-  const [ msg, setMsg ] = useState();
+  const [ , setLoading ] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -46,7 +45,7 @@ function RouteComponent() {
        
     // })
 
-    const { data, error }: any = await authClient.signUp.email({
+    const { error }: any = await authClient.signUp.email({
         name: formData.name,
         email: formData.email,
         password: formData.password,
@@ -66,6 +65,7 @@ function RouteComponent() {
     await authClient.signIn.social({
         provider: "google",
         callbackURL: "/admin",
+        errorCallbackURL: "/auth/error",
         newUserCallbackURL: "/welcome",  // Newly registered users go here instead
         // Called if the sign-in process fails
         onError: (ctx: any) => {

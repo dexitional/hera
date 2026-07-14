@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 // cspell:ignore USSD INFOBAR
-import { getUnifiedElectionAdminStats, getUnifiedElectionTelemetry } from "#/server/tenant-elections";
+import { getUnifiedElectionAdminStats } from "#/server/tenant-elections";
 import { useSuspenseQuery } from "@tanstack/react-query";
 
 
@@ -46,7 +46,7 @@ function ElectionLiveFeed() {
     data: { electionDetails, tallies: ballotTally, auditLedger: auditLog },
   }: any = useSuspenseQuery(electionsQueryOptions(electionId));
 
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [, setIsSyncing] = useState(false);
 
   const totalVotesCast =
     ballotTally && ballotTally.length > 0

@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { CheckCircle2, ChevronDown, Award, Hash } from "lucide-react";
+import { CheckCircle2, Award, Hash } from "lucide-react";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createPositionFn, updatePositionFn } from "#/server/tenant-elections";
 
-export default function PositionAdminForm({ data: { data, elections, electionId } }: any) {
+export default function PositionAdminForm({ data: { data, electionId } }: any) {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
     const router = useRouter();
@@ -18,7 +18,6 @@ export default function PositionAdminForm({ data: { data, elections, electionId 
       id: data?.id,
     });
   
-    const [dropdowns, setDropdowns] = useState({ electionId: false });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitSuccess, setSubmitSuccess] = useState(false);
     const isEditMode = data != null;
@@ -31,17 +30,6 @@ export default function PositionAdminForm({ data: { data, elections, electionId 
       }));
     };
   
-    const selectOption = (field: "electionId", value: number) => {
-      setFormData((prev: any) => ({ ...prev, [field]: value }));
-      setDropdowns((prev) => ({ ...prev, [field]: false }));
-    };
-  
-    const selectedElectionLabel = elections?.find(
-      (e: any) => e.id === formData?.electionId
-    )?.title || "Select an Election";
-  
-   
-
     const createMutation = useMutation({
         mutationFn: createPositionFn,
         onSuccess: () => {

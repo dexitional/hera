@@ -1,7 +1,9 @@
-type PayPage = 'card' | 'ussd' | 'ended' | 'stack'
+import { USSD_SHORTCODE, type ModalNominee } from '#/lib/utils';
 
-export default function VotePayCard({ onSelectMode }: { onSelectMode: (p: PayPage) => void }) {
-  
+type PayPage = 'card' | 'ussd' | 'ended' | 'checkout'
+
+export default function VotePayCard({ nominee, onSelectMode }: { nominee: ModalNominee | null; onSelectMode: (p: PayPage) => void }) {
+
   return (
     <div className="max-h-[90vh] overflow-y-auto">
         <div className="p-4 sm:p-6">
@@ -14,11 +16,11 @@ export default function VotePayCard({ onSelectMode }: { onSelectMode: (p: PayPag
                 <span className="text-xs sm:text-sm font-medium text-purple-400">Cast Your Vote</span>
                 </div>
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">Vote for Patrick Annan and Vanessa Ekua Dadzie </h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">Vote for {nominee?.name ?? "this nominee"}</h2>
             <p className="text-zinc-400 text-sm">Choose your preferred voting method below</p>
             </div>
             <div className="space-y-3 sm:space-y-4 mb-6">
-            <button className="w-full group" tabIndex={0} onClick={() => onSelectMode('stack')}>
+            <button className="w-full group" tabIndex={0} onClick={() => onSelectMode('checkout')}>
                 <div className="bg-linear-to-r from-purple-600 to-blue-600 p-4 sm:p-5 rounded-xl sm:rounded-2xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 shadow-lg">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 sm:gap-4">
@@ -56,7 +58,7 @@ export default function VotePayCard({ onSelectMode }: { onSelectMode: (p: PayPag
                     </div>
                     </div>
                     <div className="bg-slate-600/20 px-2 py-1 sm:px-3 sm:py-1 rounded-full">
-                    <span className="text-slate-300 text-xs font-medium">*920*401#</span>
+                    <span className="text-slate-300 text-xs font-medium">{USSD_SHORTCODE}</span>
                     </div>
                 </div>
                 </div>

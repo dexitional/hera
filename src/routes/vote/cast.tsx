@@ -1,8 +1,10 @@
 import LiveBallotSimulation from '#/components/election/LiveBallotSimulation';
-import { useAuthStore } from '#/lib/voterStore';
+import { useAuthStore, waitForHydration } from '#/lib/voterStore';
 import { getElectionDataFn } from '#/server/tenant-elections';
-import { useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query';
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 // Utility to restore state from localStorage to in-memory store if needed
 function restoreAuthFromStorageIfNeeded() {
@@ -17,69 +19,81 @@ function restoreAuthFromStorageIfNeeded() {
       }
     }
   } catch (e) {
-    // Ignore errors
+    console.warn('Failed to restore voter session from localStorage:', e);
   }
 }
 
 const electionsQueryOptions = (electionId: any) => ({
   queryKey: ['election-page', electionId],
-  queryFn: () => getElectionDataFn({ data: electionId })
+  queryFn: () => getElectionDataFn({ data: electionId }),
+  enabled: !!electionId,
 });
 
 export const Route = createFileRoute('/vote/cast')({
   component: RouteComponent,
-  beforeLoad: async ({ location }) => {
-    // Only run on client
-    if (typeof window !== 'undefined') {
-      // Wait until persistence is hydrated, if necessary
-      if (useAuthStore.persist?.hasHydrated && !useAuthStore.persist.hasHydrated()) {
-        await new Promise((resolve) => {
-          const unsub = useAuthStore.persist.onHydrate(() => {
-            unsub();
-            setTimeout(resolve, 0);
-          });
-        });
-      }
-      // After hydrated, ensure data from localStorage to in-memory store
-      restoreAuthFromStorageIfNeeded();
-    }
-    // Optionally, redirect unauthenticated users:
-    const { user } = useAuthStore.getState();
-    if (!user) {
-      throw redirect({
-        to: '/elections',
-        search: { redirect: location.pathname }
-      });
-    }
-  },
-
-  loader: async ({ context }) => {
-    if (typeof window !== 'undefined') {
-      if (useAuthStore.persist?.hasHydrated && !useAuthStore.persist.hasHydrated()) {
-        await new Promise((resolve) => {
-          const unsub = useAuthStore.persist.onHydrate(() => {
-            unsub();
-            setTimeout(resolve, 0);
-          });
-        });
-      }
-      restoreAuthFromStorageIfNeeded();
-    }
-    const { user }: any = useAuthStore.getState();
-    if (!user?.electionId) throw new Error("No user or electionId found.");
-    return await context.queryClient.ensureQueryData(electionsQueryOptions(user.electionId));
-  }
+  // Voter auth lives only in the browser (zustand + localStorage) -- there's no server-side
+  // voter session, so it's never safe to gate or redirect from beforeLoad/loader: on a hard
+  // refresh those run server-side first, see no user, and would kick the voter out before the
+  // browser gets a chance to hydrate the real session. All of that is done client-side below.
 });
 
+function LoadingShell() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#18181b]">
+      <Loader2 className="animate-spin text-purple-500" />
+    </div>
+  );
+}
+
 function RouteComponent() {
-  // When store reloads/hydrates, this updates
+  const navigate = useNavigate();
+  const [isHydrated, setIsHydrated] = useState(false);
   const user: any = useAuthStore((state) => state.user);
 
-  // If user is undefined (rare edge case outside loader), prevent rendering
-  if (!user?.electionId) {
-    return <div className="text-center text-red-500">Please log in to access election voting.</div>;
+  // Wait for zustand's localStorage persistence to hydrate (this also covers a fresh
+  // server-render, where the store starts empty until the client takes over), then
+  // backfill from localStorage directly as a fallback if the persist middleware hasn't.
+  useEffect(() => {
+    let cancelled = false;
+    waitForHydration().then(() => {
+      if (cancelled) return;
+      restoreAuthFromStorageIfNeeded();
+      setIsHydrated(true);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Only once we're certain hydration finished (and localStorage genuinely had no
+  // session) do we send the voter away -- never before, and never on the server.
+  useEffect(() => {
+    if (isHydrated && !user?.electionId) {
+      navigate({ to: '/elections' });
+    }
+  }, [isHydrated, user?.electionId, navigate]);
+
+  const { data, isLoading, isError, error } = useQuery(electionsQueryOptions(user?.electionId));
+
+  if (!isHydrated || !user?.electionId) {
+    return <LoadingShell />;
   }
 
-  const { data }: any = useSuspenseQuery(electionsQueryOptions(user.electionId));
+  if (isLoading) {
+    return <LoadingShell />;
+  }
+
+  if (isError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#18181b] px-4 text-center">
+        <p className="text-sm font-semibold text-red-400">Couldn't load your ballot.</p>
+        <p className="max-w-sm text-xs text-zinc-500">
+          {error instanceof Error ? error.message : "Please try signing in again."}
+        </p>
+        <a href="/elections" className="text-xs font-medium text-purple-400 transition-colors hover:text-purple-300">
+          Return to Elections
+        </a>
+      </div>
+    );
+  }
+
   return <LiveBallotSimulation user={user} data={data} />;
 }

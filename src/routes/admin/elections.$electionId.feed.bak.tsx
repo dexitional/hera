@@ -1,29 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import React, { useState, useEffect } from "react";
-import { 
-  BarChart3, Users, Award, ShieldAlert, Activity, 
-  RefreshCw, CheckCircle2, User, HelpCircle,
+import { useState, useEffect } from "react";
+import {
+  BarChart3, Users, Award, ShieldAlert, Activity,
+  RefreshCw, CheckCircle2, User,
   Loader2, Ban
 } from "lucide-react";
 // cspell:ignore USSD INFOBAR
 import { getUnifiedElectionTelemetry } from "#/server/tenant-elections";
 import { useSuspenseQuery } from "@tanstack/react-query";
-
-interface CandidateTally {
-  id: number | null; 
-  name: string;
-  imageUrl: string | null;
-  votes: number;
-}
-
-interface PositionFeedGroup {
-  id: number;
-  title: string;
-  slots: number;
-  totalVotesForPosition: number;
-  candidates: CandidateTally[];
-}
-
 
 const electionsQueryOptions = (electionId: any) => ({
   queryKey: ['election-telemetry', electionId ],
@@ -48,7 +32,7 @@ function ElectionLiveFeed() {
   const { electionId } = Route.useParams(); 
   let { data: { electionDetails, tallies: ballotTally, auditLedger: auditLog }}: any = useSuspenseQuery(electionsQueryOptions(electionId));
   
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [, setIsSyncing] = useState(false);
 
   const totalVotesCast = ballotTally && ballotTally.length > 0 
     ? Math.max(...ballotTally.map((p: any) => p.totalVotesForPosition || 0)) 

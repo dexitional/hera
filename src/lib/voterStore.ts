@@ -3,8 +3,20 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 
 export interface User {
   id: string
-  email: string
+  username: string
   name: string
+  phoneNumber: string
+  email: string
+  electionId: string
+  hasVoted: boolean
+  electionTitle: string
+  electionStatus: string
+  electionStart: string
+  electionEnd: string
+  electionAutoStart: boolean
+  electionImageUrl: string
+  // The voter's OTP/password secret, re-verified server-side when the ballot is cast.
+  inviteToken: string
 }
 
 interface AuthState {

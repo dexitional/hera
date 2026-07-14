@@ -1,9 +1,10 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { 
-  CheckCircle2, RotateCcw, 
-  Lock, Award, User, Fingerprint, AlertCircle, ShieldAlert, Home, 
-  ShieldCheck
+import {
+  CheckCircle2, RotateCcw,
+  Lock, Award, User, Fingerprint, AlertCircle, ShieldAlert, Home,
+  ShieldCheck, ArrowLeft,
+  FingerprintIcon
 } from "lucide-react";
 import { castBallotServerFn } from "#/server/tenant-elections";
 
@@ -14,12 +15,12 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
   const navigate = useNavigate();
   const [voter] = useState<any>(user);
   // const [ballotPositions] = useState<PositionGroup[]>(data);
-  const [selections, setSelections] = useState<Record<number, number>>({});
+  const [selections, setSelections] = useState<Record<string, string | number>>({});
   const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ ballotSuccess, setBallotSuccess ] = useState(false);
 
-  const handleSelectCandidate = (positionId: number, candidateId: number) => {
+  const handleSelectCandidate = (positionId: string, candidateId: string | number) => {
     setSelections((prev) => ({ ...prev, [positionId]: candidateId }));
     
     setTimeout(() => {
@@ -36,30 +37,33 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleGoToPreviousStep = () => {
+    setActiveStepIndex((prev) => Math.max(0, prev - 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const handleFinalizeVotesSubmit = async () => {
     setIsSubmitting(true);
     try {
      
       const formattedSelections: any = Object.entries(selections).map(([positionId, candidateId]) => ({
-          positionId: parseInt(positionId),
+          positionId,
           // Transforms frontend flag value -1 into null for compliance with Drizzle schema
           candidateId: candidateId === -1 ? null : candidateId,
-          receiptSignature: `sig_sha256_${crypto.randomUUID().replace(/-/g, "")}`
       }));
 
       // Check to make sure selections are made for all portfolios
       if(formattedSelections.length !== ballotPositions.length)
         throw new Error("Please check your network connection\nReset ballot and reselect candidates.");
-   
-      console.log("Selection Count check: ", formattedSelections.length, ballotPositions.length);
-      // 2. Invoke the type-safe RPC action directly over the network network pipeline
+
       const response = await castBallotServerFn({
          data: {
           voterId: voter?.id,
           electionId: voter?.electionId,
+          inviteToken: voter?.inviteToken,
           selections: formattedSelections
         }
-      });
+      } as any);
 
       if (response.success) {
         setBallotSuccess(true);
@@ -216,11 +220,21 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
                     })}
                   </div>
 
-                  <div className="border-t border-zinc-900 pt-4 flex justify-center">
+                  <div className="border-t border-zinc-900 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-center gap-3">
+                    {posIndex > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleGoToPreviousStep}
+                        className="order-2 sm:order-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all bg-[#0a192a]/50 border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-700"
+                      >
+                        <ArrowLeft className="w-3.5 h-3.5" />
+                        <span>Previous</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleSelectCandidate(position.id, -1)}
-                      className={`flex items-center justify-center gap-2 w-64 px-4 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all bg-[#0a192a]/50 border-zinc-800 text-zinc-500 hover:text-amber-400 hover:border-amber-500/40`}
+                      className={`order-1 sm:order-2 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all bg-red-500/50 border-zinc-800 text-white hover:text-amber-400 hover:border-amber-500/40`}
                     >
                       <AlertCircle className="w-3.5 h-3.5" />
                       <span>Abstain / Skip Portfolio</span>
@@ -273,21 +287,32 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-zinc-600 pt-4">
-                  <button
-                    type="button"
-                    onClick={handleResetBallot}
-                    disabled={isSubmitting}
-                    className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 text-xs font-semibold px-2 py-1.5 transition-colors"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" /> RESET BALLOT
-                  </button>
+                  <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={handleGoToPreviousStep}
+                      disabled={isSubmitting}
+                      className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-zinc-300 text-xs font-semibold px-2 py-1.5 transition-colors"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" /> BACK
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResetBallot}
+                      disabled={isSubmitting}
+                      className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-zinc-300 text-xs font-semibold px-2 py-1.5 transition-colors"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> RESET BALLOT
+                    </button>
+                  </div>
 
                   <button
                     type="button"
                     onClick={handleFinalizeVotesSubmit}
                     disabled={isSubmitting}
-                    className="inline-flex items-center justify-center text-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow-xl disabled:opacity-40 transition-all"
+                    className="inline-flex items-center justify-center text-center gap-2 bg-green-700 hover:bg-purple-500 text-white text-sm font-bold px-5 py-2.5 rounded-lg shadow-xl disabled:opacity-40 transition-all"
                   >
+                     <FingerprintIcon className="w-6 h-6" />
                     {isSubmitting ? "Signing Ledger..." : "CONFIRM & CAST BALLOT"}
                   </button>
                 </div>

@@ -46,7 +46,6 @@ export default defineWebSocketHandler({
     peer.publish("global-chat-room", JSON.stringify({
       type: "MESSAGE",
       payload: newEvent,
-      debugContext: `Verified with token length: ${secretKey?.length}`
     }));
   },
 

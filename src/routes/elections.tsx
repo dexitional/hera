@@ -154,7 +154,8 @@ function RouteComponent() {
                     <div className="flex gap-3">
                       { !(rightNow < row.startAt || rightNow > row.endAt) && (
                       <Link
-                            to={`/vote/election?page=${encodeURIComponent(row.tag)}`}
+                            to="/vote/election"
+                            search={{ page: row.tag }}
                             className="group relative flex h-10 w-full cursor-pointer items-center justify-start gap-2.5 rounded-lg bg-[#E3F09B] pl-4 font-semibold text-sm text-[#131313] shadow-[5px_5px_10px_rgba(0,0,0,0.116)] transition-all duration-500 hover:bg-[#c0ff14] active:scale-[0.97]"
                       >
                          <Link2 className="h-[25px] w-auto transition-transform duration-1500 ease-in-out group-hover:rotate-250"/>

@@ -32,7 +32,7 @@ export default function ElectionAdminForm({ data }: any) {
           aotp: "One-Time Password - Version 2 (OTP-SMS/Voice)",
         };
       
-        const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
           const { name, value } = e.target;
           setFormData((prev:any) => ({ ...prev, [name]: value }));
         };

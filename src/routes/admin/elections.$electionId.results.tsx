@@ -55,7 +55,6 @@ export const Route = createFileRoute("/admin/elections/$electionId/results")({
 });
 
 function StatCard({
-  icon: Icon,
   label,
   value,
   sublabel,
@@ -206,11 +205,6 @@ function ElectionFinalResultsPage() {
   const { electionId } = Route.useParams();
   const { data }: any = useSuspenseQuery(electionResultsQueryOptions(electionId));
   const { election, stats, positions } = data;
-
-  const dateRange =
-    election.startAt && election.endAt
-      ? `${moment(election.startAt).format("MMM D, YYYY, h:mm A")} — ${moment(election.endAt).format("MMM D, YYYY, h:mm A")}`
-      : "Schedule not set";
 
   return (
     <div className="min-h-screen  py-8 print:bg-white print:py-0 print:[color-adjust:exact] print:[-webkit-print-color-adjust:exact]">

@@ -4,9 +4,9 @@ import crypto from 'crypto';
  * Generates an unforgeable digital signature using SHA256 and the server's private key.
  */
 export function generateBallotReceiptSignature(payload: {
-  electionId: number;
-  positionId: number;
-  candidateId: number;
+  electionId: string;
+  positionId: string;
+  candidateId: string | number;
   timestamp: string;
 }): string {
   // Convert object metrics into a single deterministic string row layout

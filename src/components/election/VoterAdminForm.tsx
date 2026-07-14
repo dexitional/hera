@@ -1,11 +1,11 @@
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import React, { useState } from "react";
-import { CheckCircle2, ChevronDown, User, Mail, Phone, Key, RefreshCw } from "lucide-react";
+import { CheckCircle2, User, Mail, Phone, Key, RefreshCw } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createVoterFn, updateVoterFn } from "#/server/tenant-elections";
 import { generateSixDigitCode } from "#/lib/utils";
 
-export default function VoterAdminForm({ data: { data, elections, electionId }}: any) {
+export default function VoterAdminForm({ data: { data, electionId }}: any) {
   
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -24,7 +24,6 @@ export default function VoterAdminForm({ data: { data, elections, electionId }}:
     id: data?.id,
   });
 
-  const [dropdowns, setDropdowns] = useState({ electionId: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess] = useState(false);
   const isEditMode = data != null;
@@ -33,15 +32,6 @@ export default function VoterAdminForm({ data: { data, elections, electionId }}:
     const { name, value } = e.target;
     setFormData((prev: any) => ({ ...prev, [name]: value }));
   };
-
-  const selectOption = (field: "electionId", value: number) => {
-    setFormData((prev: any) => ({ ...prev, [field]: value }));
-    setDropdowns((prev: any) => ({ ...prev, [field]: false }));
-  };
-
-  const selectedElectionLabel = elections?.find(
-    (e:any) => e.id === formData.electionId
-  )?.title || "Select an Election";
 
   const regenerateCode = () => {
     setFormData((prev: any) => ({ ...prev, inviteToken: generateSixDigitCode() }));

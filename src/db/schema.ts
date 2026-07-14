@@ -1,5 +1,6 @@
-import { relations } from 'drizzle-orm';
-import { pgTable, serial, text, integer, timestamp, varchar, boolean, doublePrecision, unique, index } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
+import { pgTable, uuid, text, integer, timestamp, varchar, boolean, doublePrecision, unique, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { uuidv7 } from '../lib/uuid';
 
 // ==========================================
 // BETTER AUTH REQUIRED CORE TABLES
@@ -10,7 +11,11 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull(),
   image: text("image"),
-  role: text("role").notNull().default("user"), 
+  role: text("role").notNull().default("user"),
+  phone: text("phone"),
+  banned: boolean("banned").default(false),
+  banReason: text("ban_reason"),
+  banExpires: timestamp("ban_expires"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
 });
@@ -23,6 +28,7 @@ export const session = pgTable('session', {
   updatedAt: timestamp('updated_at').notNull(),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
+  impersonatedBy: text('impersonated_by'),
   userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
 });
 
@@ -55,20 +61,23 @@ export const verification = pgTable('verification', {
 //  EVENTS APP TABLES 
 // ==========================================
 export const events = pgTable('events', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
   title: text('title').notNull(),
   description: text('description').notNull(),
+  imageUrl: text('image_url'),
+  startAt: timestamp('start_at', { mode: 'date' }),
+  endAt: timestamp('end_at', { mode: 'date' }),
   unitPrice: doublePrecision('unit_price'),
   paymentAmount: doublePrecision('payment_amount'),
   paymentDeduction: doublePrecision('payment_deduction'),
-  isActive: boolean('is_active').default(true).notNull(),
+  isActive: boolean('is_active').default(false).notNull(),
   adminId: text('admin_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const categories = pgTable('categories', {
-  id: serial('id').primaryKey(),
-  eventId: integer('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
   name: text('name').notNull(),
   description: text('description').notNull(),
   code: text('code').notNull(), 
@@ -78,37 +87,43 @@ export const categories = pgTable('categories', {
 }));
 
 export const contestants = pgTable('contestants', {
-  id: serial('id').primaryKey(),
-  categoryId: integer('category_id').references(() => categories.id, { onDelete: 'cascade' }).notNull(),
+  id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
+  categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'cascade' }).notNull(),
   name: text('name').notNull(),
   tagline: text('tagline').notNull(),
   order: integer('order'),
   imageUrl: text('image_url'),
-  code: text('code').notNull(), 
+  code: text('code').notNull().unique(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (t) => ({
-  categoryContestantCodeUniq: unique().on(t.categoryId, t.code)
-}));
+});
 
-export const votes = pgTable('votes', {
-  id: serial('id').primaryKey(),
-  eventId: integer('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
-  categoryId: integer('category_id').references(() => categories.id, { onDelete: 'cascade' }).notNull(),
-  contestantId: integer('contestant_id').references(() => contestants.id, { onDelete: 'cascade' }).notNull(),
-  voterPhone: text('voter_phone').notNull(),
-  voteCount: integer('vote_count').default(1).notNull(),
+export const eventTransactions = pgTable('event_transactions', {
+  id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
+  contestantId: uuid('contestant_id').references(() => contestants.id, { onDelete: 'cascade' }).notNull(),
+  payAmount: doublePrecision('pay_amount'),
+  payStatus: boolean('pay_status').default(false).notNull(), 
+  payRef: text('pay_ref'), 
+  payPhone: text('pay_phone').notNull(),
+  transRef: text('trans_ref'), 
+  votes: integer('votes').default(0).notNull(),
   channel: text('channel').notNull(), 
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => ({
-  voterPhoneIdx: index('votes_voter_phone_idx').on(t.voterPhone),
-  contestantVotesIdx: index('votes_contestant_idx').on(t.contestantId)
+  voterPhoneIdx: index('trans_voter_phone_idx').on(t.payPhone),
+  contestantVotesIdx: index('event_contestant_idx').on(t.contestantId),
+  // Enforces idempotency at the DB level: a given Paystack reference can only ever
+  // be credited once, even under concurrent requests (e.g. the client's verify call
+  // and the webhook firing for the same charge at nearly the same time). Partial
+  // (WHERE pay_ref IS NOT NULL) so manually-entered admin transactions without a
+  // payRef are unaffected.
+  payRefUniqueIdx: uniqueIndex('event_transactions_pay_ref_uniq_idx').on(t.payRef).where(sql`${t.payRef} is not null`),
 }));
 
 // ==========================================
 // ELECTION APP TABLES 
 // ==========================================
 export const elections = pgTable('elections', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
   adminId: text('admin_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
   tag: text('tag').notNull(),
   title: text('title').notNull(),
@@ -126,13 +141,13 @@ export const elections = pgTable('elections', {
   makePublic: boolean('make_public').default(false).notNull(),
   publicToken: text('public_token'),
   showFeed: boolean('show_feed').default(false).notNull(),
-  isActive: boolean('is_active'),
+  isActive: boolean('is_active').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const positions = pgTable('positions', {
-  id: serial('id').primaryKey(),
-  electionId: integer('election_id').references(() => elections.id, { onDelete: 'cascade' }).notNull(),
+  id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
+  electionId: uuid('election_id').references(() => elections.id, { onDelete: 'cascade' }).notNull(),
   title: text('title').notNull(),
   order: integer('order'),
   slots: integer('slots').default(1).notNull(),
@@ -140,8 +155,8 @@ export const positions = pgTable('positions', {
 });
 
 export const candidates = pgTable('candidates', {
-  id: serial('id').primaryKey(),
-  positionId: integer('position_id').references(() => positions.id, { onDelete: 'cascade' }).notNull(),
+  id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
+  positionId: uuid('position_id').references(() => positions.id, { onDelete: 'cascade' }).notNull(),
   name: text('name').notNull(),
   teaser: text('teaser'),
   order: integer('order'),
@@ -151,8 +166,8 @@ export const candidates = pgTable('candidates', {
 });
 
 export const voters = pgTable('voters', {
-  id: serial('id').primaryKey(),
-  electionId: integer('election_id').references(() => elections.id, { onDelete: 'cascade' }).notNull(),
+  id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
+  electionId: uuid('election_id').references(() => elections.id, { onDelete: 'cascade' }).notNull(),
   name: text('name').notNull(), 
   username: varchar('username', { length: 50 }).notNull(), 
   phoneNumber: text('phone_number').notNull(),
@@ -168,10 +183,10 @@ export const voters = pgTable('voters', {
 }));
 
 export const electionVotes = pgTable('election_votes', {
-  id: serial('id').primaryKey(),
-  electionId: integer('election_id').references(() => elections.id, { onDelete: 'cascade' }).notNull(),
-  positionId: integer('position_id').references(() => positions.id, { onDelete: 'cascade' }).notNull(),
-  candidateId: integer('candidate_id').references(() => candidates.id, { onDelete: 'cascade' }), 
+  id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
+  electionId: uuid('election_id').references(() => elections.id, { onDelete: 'cascade' }).notNull(),
+  positionId: uuid('position_id').references(() => positions.id, { onDelete: 'cascade' }).notNull(),
+  candidateId: uuid('candidate_id').references(() => candidates.id, { onDelete: 'cascade' }),
   receiptSignature: text('receipt_signature').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => ({
@@ -224,7 +239,6 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
     references: [user.id],
   }),
   categories: many(categories),
-  votes: many(votes), // Secure fix: Allows finding total votes within an event container
 }));
 
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
@@ -233,7 +247,6 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
     references: [events.id],
   }),
   contestants: many(contestants),
-  votes: many(votes),
 }));
 
 export const contestantsRelations = relations(contestants, ({ one, many }) => ({
@@ -241,20 +254,12 @@ export const contestantsRelations = relations(contestants, ({ one, many }) => ({
     fields: [contestants.categoryId],
     references: [categories.id],
   }),
-  votes: many(votes),
+  transactions: many(eventTransactions),
 }));
 
-export const votesRelations = relations(votes, ({ one }) => ({
-  event: one(events, {
-    fields: [votes.eventId],
-    references: [events.id],
-  }),
-  category: one(categories, {
-    fields: [votes.categoryId],
-    references: [categories.id],
-  }),
+export const eventTransactionsRelations = relations(eventTransactions, ({ one }) => ({
   contestant: one(contestants, {
-    fields: [votes.contestantId],
+    fields: [eventTransactions.contestantId],
     references: [contestants.id],
   }),
 }));

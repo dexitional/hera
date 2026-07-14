@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import React, { useState, useEffect, useRef } from "react";
-import { 
-  Plus, Search, Edit2, Trash2, FolderTree, 
-  Filter, ChevronDown, Hash, Users, ArrowUpDown 
+import { useState, useEffect, useRef } from "react";
+import {
+  Plus, Search, Edit2, Trash2, FolderTree,
+  Filter, ChevronDown, Users, ArrowUpDown
 } from "lucide-react";
 
 interface CategoryRecord {

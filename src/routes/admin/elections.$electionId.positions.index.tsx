@@ -1,8 +1,9 @@
 import { deletePositionFn, getPositionsFn } from "#/server/tenant-elections";
 import {
+  keepPreviousData,
   useMutation,
+  useQuery,
   useQueryClient,
-  useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import {
@@ -20,9 +21,17 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-const electionsQueryOptions = (electionId: any) => ({
-  queryKey: ["positions-admin", electionId],
-  queryFn: () => getPositionsFn({ data: electionId }),
+const POSITIONS_PAGE_SIZE = 15;
+
+const positionsQueryOptions = (params: {
+  electionId: any;
+  page: number;
+  pageSize: number;
+  searchQuery: string;
+}) => ({
+  queryKey: ["positions-admin", params.electionId, params.page, params.pageSize, params.searchQuery],
+  queryFn: () => getPositionsFn({ data: params } as any),
+  placeholderData: keepPreviousData,
 });
 
 
@@ -30,7 +39,9 @@ export const Route = createFileRoute("/admin/elections/$electionId/positions/")(
   component: PositionsDirectory,
   loader: async ({ context,params }) => {
     const electionId = params.electionId;
-    return await context.queryClient.ensureQueryData(electionsQueryOptions(electionId));
+    await context.queryClient.ensureQueryData(positionsQueryOptions({
+      electionId, page: 1, pageSize: POSITIONS_PAGE_SIZE, searchQuery: "",
+    }));
   },
   pendingComponent: () => (
     <div className="flex justify-center p-12">
@@ -41,9 +52,34 @@ export const Route = createFileRoute("/admin/elections/$electionId/positions/")(
 
 function PositionsDirectory() {
   const queryClient = useQueryClient();
-  const { electionId } = Route.useParams(); 
-  const { data }: any = useSuspenseQuery(electionsQueryOptions(electionId));
-  const positions: any = data?.map((r: any) => ({
+  const { electionId } = Route.useParams();
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [selectedElectionFilter, setSelectedElectionFilter] =
+    useState<string>("ALL");
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [jumpToPageInput, setJumpToPageInput] = useState("");
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Debounce the raw search input before it drives a server request
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearchQuery(searchQuery.trim()), 300);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  // Any change to the active search should snap the view back to page 1
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchQuery]);
+
+  const { data }: any = useQuery(positionsQueryOptions({
+    electionId, page, pageSize: POSITIONS_PAGE_SIZE, searchQuery: debouncedSearchQuery,
+  }));
+
+  const positions: any = (data?.positions ?? []).map((r: any) => ({
     id: r?.position.id,
     electionId: r.election?.id,
     title: r.position?.title,
@@ -52,20 +88,24 @@ function PositionsDirectory() {
     order: r.position?.order,
     candidatesCount: r.candidatesCount,
   }));
-  
-  // const [positions, setPositions] = useState<any[]>(initials);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedElectionFilter, setSelectedElectionFilter] =
-    useState<string>("ALL");
-  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const totalCount: number = data?.pagination?.totalCount ?? 0;
+  const totalPages: number = Math.max(data?.pagination?.totalPages ?? 1, 1);
+  const isFetchingPositions = !data;
 
   // Dynamically extract unique elections to populate filtering dropdown options
+  // (this page is already scoped to a single election, so this is effectively ALL vs. the one title)
   const uniqueElections = [
     "ALL",
     ...Array.from(new Set(positions.map((p: any) => p.electionTitle))),
   ];
+
+  const handleJumpToPage = () => {
+    const parsed = Number(jumpToPageInput);
+    if (!Number.isFinite(parsed)) return;
+    setPage(Math.min(Math.max(Math.floor(parsed), 1), totalPages));
+    setJumpToPageInput("");
+  };
 
   // Smart Click-Away Closing listener
   useEffect(() => {
@@ -81,22 +121,20 @@ function PositionsDirectory() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Pipeline sorting out row inclusions reactively
+  // Search now runs server-side (see getPositionsFn); the election filter is
+  // applied client-side since this page is already scoped to a single election.
   const filteredPositions = positions.filter((position: any) => {
-    const matchesSearch = position?.title
-      ?.toLowerCase()
-      .includes(searchQuery?.toLowerCase());
-    const matchesFilter =
+    return (
       selectedElectionFilter === "ALL" ||
-      position?.electionTitle === selectedElectionFilter;
-    return matchesSearch && matchesFilter;
+      position?.electionTitle === selectedElectionFilter
+    );
   });
 
   const deleteMutation = useMutation({
     mutationFn: deletePositionFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["positions-admin"] });
-      return redirect({ to: `/admin/elections/${electionId}/positions` });
+      return redirect({ to: '/admin/elections/$electionId/positions', params: { electionId } });
     },
     onError: (error: any) => console.error(error.message),
   });
@@ -136,7 +174,8 @@ function PositionsDirectory() {
 
         <div className="flex items-center gap-3 shrink-0">
           <Link
-            to={`/admin/elections/${electionId}/positions/new`}
+            to="/admin/elections/$electionId/positions/new"
+            params={{ electionId }}
             className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs px-3.5 py-2 rounded-lg font-medium shadow-md transition-all"
           >
             <Plus className="w-4 h-4" />
@@ -279,7 +318,8 @@ function PositionsDirectory() {
                     <td className="px-6 py-4 align-middle text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Link
-                          to={`/admin/elections/${electionId}/positions/${position?.id}/edit`}
+                          to="/admin/elections/$electionId/positions/$positionId/edit"
+                          params={{ electionId, positionId: String(position?.id) }}
                           title="Edit Position Config"
                           className="p-1.5 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
                         >
@@ -308,6 +348,55 @@ function PositionsDirectory() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* ================= PAGINATION BOTTOM ELEMENT BAR ================= */}
+        <div className="p-4 bg-zinc-900/40 border-t border-zinc-800/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="text-xs text-zinc-400">
+            {isFetchingPositions
+              ? "Loading positions..."
+              : <>Showing Page <b className="text-white">{page}</b> of <b className="text-white">{totalPages}</b> ({totalCount} entries)</>
+            }
+          </span>
+
+          <div className="flex gap-2 w-full sm:w-auto justify-end items-center">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 border border-zinc-800 rounded-lg bg-zinc-900 text-zinc-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-zinc-800 transition-all cursor-pointer"
+            >
+              Previous
+            </button>
+
+            {/* Jump To Page Number Input */}
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={jumpToPageInput}
+                onChange={(e) => setJumpToPageInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleJumpToPage()}
+                placeholder={`${page}`}
+                className="w-14 bg-[#0a192a]/50 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white text-center placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <button
+                disabled={!jumpToPageInput}
+                onClick={handleJumpToPage}
+                className="text-xs px-3 py-1.5 border border-zinc-800 rounded-lg bg-zinc-900 text-zinc-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-zinc-800 transition-all cursor-pointer"
+              >
+                Go
+              </button>
+            </div>
+
+            <button
+              disabled={page >= totalPages}
+              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 border border-zinc-800 rounded-lg bg-zinc-900 text-zinc-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-zinc-800 transition-all cursor-pointer"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </div>

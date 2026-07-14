@@ -1,9 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import React, { useState, useEffect } from "react";
-import { 
-  BarChart3, Building2, Calendar, Sparkles, CircleDollarSign, 
-  Percent, Coins, Activity, ArrowUpRight, TrendingUp, Users, 
-  UserCheck, History, ShieldAlert, CheckCircle2 
+import { useState, useEffect } from "react";
+import {
+  BarChart3, Calendar, Sparkles,
+  ArrowUpRight, Users
 } from "lucide-react";
 
 interface GlobalMetricsSummary {
@@ -41,6 +40,9 @@ export const Route = createFileRoute("/admin/")({
 });
 
 function GlobalAdminDashboard() {
+  const { user }: any = Route.useRouteContext();
+  const isSuperAdmin = user?.role === 'super';
+
   // Simulated reactive state engine mapping database aggregations inside Drizzle
   const [metrics, setMetrics] = useState<GlobalMetricsSummary>({
     totalOrganizations: 3,
@@ -195,29 +197,31 @@ function GlobalAdminDashboard() {
               <Link to="/admin/elections" className="absolute inset-0 z-10" />
             </div>
 
-            {/* CARD 4: GLOBAL USER ROSTER */}
-            {/* <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-5 flex flex-col justify-between hover:border-zinc-700/80 transition-all group relative overflow-hidden">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-lg bg-orange-950/30 border border-orange-900/30 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-orange-400" />
+            {/* CARD 4: SUPER ADMIN USERS REGISTRY (visible to role="super" only) */}
+            {isSuperAdmin && (
+              <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-5 flex flex-col justify-between hover:border-zinc-700/80 transition-all group relative overflow-hidden">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-lg bg-orange-950/30 border border-orange-900/30 flex items-center justify-center">
+                      <Users className="w-5 h-5 text-orange-400" />
+                    </div>
+                    <span className="text-xs font-mono font-bold bg-zinc-900 border border-zinc-800 text-zinc-400 px-2 py-0.5 rounded">
+                      Super Admin
+                    </span>
                   </div>
-                  <span className="text-xs font-mono font-bold bg-zinc-900 border border-zinc-800 text-zinc-400 px-2 py-0.5 rounded">
-                    {metrics.totalUsers.toLocaleString()} Users Registered
-                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
+                      <span>Users Registry</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-zinc-600 group-hover:text-orange-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                    </h3>
+                    <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+                      Create and manage tenant accounts, verify or disable access, reset credentials, and administer each account's election workspace.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
-                    <span>Users Registry</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-zinc-600 group-hover:text-orange-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-                  </h3>
-                  <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
-                    Review global multi-tenant user accounts, verify phone uniqueness, and manage premium plan statuses.
-                  </p>
-                </div>
+                <Link to="/admin/users" className="absolute inset-0 z-10" />
               </div>
-              <Link to="/admin" className="absolute inset-0 z-10" />
-            </div> */}
+            )}
 
             {/* CARD 5: BETTER AUTH ACCOUNTS & SESSIONS */}
             {/* <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-5 flex flex-col justify-between hover:border-zinc-700/80 transition-all group relative overflow-hidden">

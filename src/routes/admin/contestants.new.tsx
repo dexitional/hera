@@ -25,7 +25,7 @@ function ContestantFormContainer() {
   return <ContestantForm />;
 }
 
-export function ContestantForm({ initialData, onSuccess }: ContestantFormProps) {
+export function ContestantForm({ initialData }: ContestantFormProps) {
   const isEditMode = !!initialData;
   const fileInputRef = useRef<HTMLInputElement>(null);
 

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Sliders, Users, Award, ShieldCheck, ArrowUpRight, Plus,
   Calendar, Key, ToggleLeft, ToggleRight, CheckCircle2, LayoutGrid, BarChart3,
@@ -14,7 +14,7 @@ import {
   FileText,
   ArrowLeft
 } from "lucide-react";
-import { exportElectionResultsToExcelFn, exportElectionResultsToFormatExcelFn, extendElectionEndTimeFn, getElectionOverview, resetElectionFn, updateElectionPublicStateFn, updateElectionStatusFn } from "#/server/tenant-elections";
+import { exportElectionResultsToFormatExcelFn, extendElectionEndTimeFn, getElectionOverview, resetElectionFn, updateElectionPublicStateFn, updateElectionStatusFn } from "#/server/tenant-elections";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import moment from "moment";
 
@@ -24,6 +24,9 @@ type ElectionStatus = typeof ELECTION_STATUSES[number];
 const electionsQueryOptions = (electionId: any) => ({
   queryKey: ['election-overview', electionId ],
   queryFn: () => getElectionOverview({ data: electionId }),
+  refetchInterval: 30 * 1000,
+  staleTime: 30 * 1000,
+  refetchIntervalInBackground: true,
 });
 
 export const Route = createFileRoute("/admin/elections/$electionId/manage")({
@@ -56,7 +59,7 @@ function ManageElectionConsole() {
   const [isPublic, setIsPublic] = useState<boolean>(!!election.makePublic);
   // Computes active mathematical voter turnout percentage on runtime execution profiles
   const turnoutPercentage = ((election.counts.votesCast / election.counts.voters) * 100).toFixed(1);
-  const [isExportingResults, setIsExportingResults] = useState(false);
+  const [, setIsExportingResults] = useState(false);
 
   const statusMutation = useMutation({ mutationFn: updateElectionStatusFn });
   const publicStateMutation = useMutation({ mutationFn: updateElectionPublicStateFn });
@@ -206,7 +209,8 @@ function ManageElectionConsole() {
                   {/* Edit / Reset Quick Actions */}
                   <div className="flex items-center gap-2 shrink-0">
                     <Link
-                      to={`/admin/elections/${election?.id}/edit`}
+                      to="/admin/elections/$electionId/edit"
+                      params={{ electionId: String(election?.id) }}
                       title="Edit Main Election Form"
                       className="flex flex-col items-center justify-center gap-2 px-3 h-14 rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
                     >
@@ -360,19 +364,22 @@ function ManageElectionConsole() {
             </p>
             <div className="flex flex-col gap-1.5 mt-3">
               <Link
-                to={`/admin/elections/${election?.id}/invoice`}
+                to="/admin/elections/$electionId/invoice"
+                params={{ electionId: String(election?.id) }}
                 className="flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-[10px] font-semibold py-1.5 rounded-lg transition-all"
               >
                 <FileText className="w-3 h-3" /> Generate Invoice
               </Link>
               <Link
-                to={`/admin/elections/${election?.id}/pay`}
+                to="/admin/elections/$electionId/pay"
+                params={{ electionId: String(election?.id) }}
                 className="flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-semibold py-1.5 rounded-lg transition-all"
               >
                 <CreditCard className="w-3 h-3" /> Pay Invoice
               </Link>
               <Link
-                to={`/admin/elections/${election?.id}/receipt`}
+                to="/admin/elections/$electionId/receipt"
+                params={{ electionId: String(election?.id) }}
                 className="flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-[10px] font-semibold py-1.5 rounded-lg transition-all"
               >
                 <Receipt className="w-3 h-3" /> Print Receipt
@@ -411,13 +418,15 @@ function ManageElectionConsole() {
               
               <div className="flex items-center gap-2 mt-6 border-t border-zinc-900 pt-4 w-full">
                 <Link
-                  to={`/admin/elections/${election?.id}/positions/new`}
+                  to="/admin/elections/$electionId/positions/new"
+                  params={{ electionId: String(election?.id) }}
                   className="flex-1 inline-flex items-center justify-center gap-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs py-2 rounded-lg font-medium transition-all"
                 >
                   <Plus className="w-3.5 h-3.5" /> <span>Add New Position</span>
                 </Link>
                 <Link
-                  to={`/admin/elections/${election?.id}/positions`}
+                  to="/admin/elections/$electionId/positions"
+                  params={{ electionId: String(election?.id) }}
                   className="inline-flex items-center justify-center w-10 h-8 rounded-lg border border-zinc-800 bg-[#0a192a]/50 text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
                   title="View Registry List"
                 >
@@ -447,13 +456,15 @@ function ManageElectionConsole() {
               
               <div className="flex items-center gap-2 mt-6 border-t border-zinc-900 pt-4 w-full">
                 <Link
-                  to={`/admin/elections/${election?.id}/candidates/new`}
+                  to="/admin/elections/$electionId/candidates/new"
+                  params={{ electionId: String(election?.id) }}
                   className="flex-1 inline-flex items-center justify-center gap-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs py-2 rounded-lg font-medium transition-all"
                 >
                   <Plus className="w-3.5 h-3.5" /> <span>Add New Candidate</span>
                 </Link>
                 <Link
-                  to={`/admin/elections/${election?.id}/candidates`}
+                  to="/admin/elections/$electionId/candidates"
+                  params={{ electionId: String(election?.id) }}
                   className="inline-flex items-center justify-center w-10 h-8 rounded-lg border border-zinc-800 bg-[#0a192a]/50 text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
                   title="Open Candidates Grid"
                 >
@@ -483,13 +494,15 @@ function ManageElectionConsole() {
               
               <div className="flex items-center gap-2 mt-6 border-t border-zinc-900 pt-4 w-full">
                 <Link
-                  to="/admin/voters/new"
+                  to="/admin/elections/$electionId/voters/new"
+                  params={{ electionId: String(election?.id) }}
                   className="flex-1 inline-flex items-center justify-center gap-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs py-2 rounded-lg font-medium transition-all"
                 >
                   <Plus className="w-3.5 h-3.5" /> <span>Add New Voter</span>
                 </Link>
                 <Link
-                  to={`/admin/elections/${election?.id}/voters`}
+                  to="/admin/elections/$electionId/voters"
+                  params={{ electionId: String(election?.id) }}
                   className="inline-flex items-center justify-center w-10 h-8 rounded-lg border border-zinc-800 bg-[#0a192a]/50 text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
                   title="Open Voters Directory"
                 >

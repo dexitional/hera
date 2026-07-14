@@ -1,6 +1,7 @@
 import { DialogClose } from "./ui/dialog";
+import { USSD_SHORTCODE, type ModalNominee } from '#/lib/utils';
 
-export default function VoteUSSD({ onBack }: { onBack: () => void }) {
+export default function VoteUSSD({ nominee, onBack }: { nominee: ModalNominee | null; onBack: () => void }) {
   return (
     <div className="p-4 sm:p-6">
       <div className="space-y-4 sm:space-y-6">
@@ -23,7 +24,7 @@ export default function VoteUSSD({ onBack }: { onBack: () => void }) {
             </div>
           </div>
           <div className="bg-slate-800/30 p-3 rounded-lg">
-            <span className="text-xl sm:text-2xl font-bold text-white tracking-wider break-all">1585</span>
+            <span className="text-xl sm:text-2xl font-bold text-white tracking-wider break-all">{nominee?.code ?? "----"}</span>
           </div>
         </div>
         <div className="bg-blue-500/10 p-3 sm:p-4 rounded-xl border border-blue-500/20">
@@ -32,7 +33,7 @@ export default function VoteUSSD({ onBack }: { onBack: () => void }) {
             <span className="text-sm font-medium text-blue-400">Dial this code</span>
           </div>
           <div className="bg-slate-800/30 p-3 rounded-lg">
-            <span className="text-xl sm:text-2xl font-bold text-white tracking-wider">*920*401#</span>
+            <span className="text-xl sm:text-2xl font-bold text-white tracking-wider">{USSD_SHORTCODE}</span>
           </div>
         </div>
         <div className="space-y-3 sm:space-y-4">
@@ -40,11 +41,11 @@ export default function VoteUSSD({ onBack }: { onBack: () => void }) {
           <div className="space-y-2 sm:space-y-3">
             <div className="flex items-start gap-3 text-zinc-300">
               <div className="w-6 h-6 flex items-center justify-center bg-purple-500/20 rounded-full text-xs font-bold text-purple-400 border border-purple-500/30 shrink-0 mt-0.5">1</div>
-              <span className="text-sm wrap-break-word">Dial *920*401# on your phone</span>
+              <span className="text-sm wrap-break-word">Dial {USSD_SHORTCODE} on your phone</span>
             </div>
             <div className="flex items-start gap-3 text-zinc-300">
               <div className="w-6 h-6 flex items-center justify-center bg-purple-500/20 rounded-full text-xs font-bold text-purple-400 border border-purple-500/30 shrink-0 mt-0.5">2</div>
-              <span className="text-sm wrap-break-word">Enter nominee code: 1585</span>
+              <span className="text-sm wrap-break-word">Enter nominee code: {nominee?.code ?? "----"}</span>
             </div>
             <div className="flex items-start gap-3 text-zinc-300">
               <div className="w-6 h-6 flex items-center justify-center bg-purple-500/20 rounded-full text-xs font-bold text-purple-400 border border-purple-500/30 shrink-0 mt-0.5">3</div>

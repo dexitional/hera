@@ -1,28 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   BarChart3, Users, Award, ShieldAlert, Activity,
-  RefreshCw, CheckCircle2, User, HelpCircle,
+  RefreshCw, CheckCircle2, User,
   Loader2, Ban, ChevronLeft, ChevronRight, ArrowLeft
 } from "lucide-react";
 // cspell:ignore USSD INFOBAR
 import { getUnifiedElectionTelemetry } from "#/server/tenant-elections";
 import { useSuspenseQuery } from "@tanstack/react-query";
-
-interface CandidateTally {
-  id: number | null; 
-  name: string;
-  imageUrl: string | null;
-  votes: number;
-}
-
-interface PositionFeedGroup {
-  id: number;
-  title: string;
-  slots: number;
-  totalVotesForPosition: number;
-  candidates: CandidateTally[];
-}
 
 const electionsQueryOptions = (electionId: any) => ({
   queryKey: ['election-telemetry', electionId ],

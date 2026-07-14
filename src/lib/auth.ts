@@ -1,4 +1,6 @@
 import { betterAuth } from "better-auth";
+import { admin } from "better-auth/plugins";
+import { adminAc, userAc } from "better-auth/plugins/admin/access";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { db } from "../db"; // Your optimized Drizzle instance
@@ -9,7 +11,14 @@ export const auth = betterAuth({
   }),
   user: {
     fields: {
-      role: "role", 
+      role: "role",
+    },
+    additionalFields: {
+      phone: {
+        type: "string",
+        required: false,
+        input: true,
+      },
     },
   },
   socialProviders: {
@@ -29,6 +38,16 @@ export const auth = betterAuth({
     }
   },
   plugins: [
-    tanstackStartCookies() 
+    admin({
+      defaultRole: "user",
+      adminRoles: ["super"],
+      // Reuse the plugin's built-in full-permission "admin" role, just re-keyed as "super"
+      // to match this app's role convention (adminRoles above tells the plugin to use it).
+      roles: {
+        super: adminAc,
+        user: userAc,
+      },
+    }),
+    tanstackStartCookies()
   ]
 } as any);

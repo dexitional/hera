@@ -11,6 +11,7 @@ import { candidates, elections, electionVotes, positions, voters, user } from '.
 import XLSX from 'xlsx-js-style';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
 import { getRequest } from '@tanstack/react-start/server';
+import { generateBallotReceiptSignature } from './ballot-signature';
 
 
 // ELECTIONS FUNCTIONS
@@ -196,7 +197,7 @@ export const updateElectionFn = createServerFn({ method: 'POST' }).middleware([a
           startAt: new Date(data.get("startAt") as string),
           endAt: new Date(data.get("endAt") as string),
           ...(finalAvatarUrl && { imageUrl: finalAvatarUrl })
-        }).where(eq<any>(elections.id, data.get("id") as number)).returning();
+        }).where(eq<any>(elections.id, data.get("id") as string)).returning();
 
       console.log("resp", resp);
 
@@ -241,7 +242,11 @@ export const resetElectionFn = createServerFn({ method: 'POST' })
     const [electionRecord] = await db
       .select({ id: elections.id })
       .from(elections)
-      .where(and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id)));
+      .where(
+        admin.role === 'super'
+          ? eq<any>(elections.id, electionId)
+          : and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id))
+      );
 
     if (!electionRecord) {
       throw new Error(`Election instance [${electionId}] not found.`);
@@ -269,7 +274,11 @@ export const extendElectionEndTimeFn = createServerFn({ method: 'POST' })
     const [electionRecord] = await db
       .select({ id: elections.id, endAt: elections.endAt })
       .from(elections)
-      .where(and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id)));
+      .where(
+        admin.role === 'super'
+          ? eq<any>(elections.id, electionId)
+          : and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id))
+      );
 
     if (!electionRecord) {
       throw new Error(`Election instance [${electionId}] not found.`);
@@ -302,13 +311,15 @@ export const getElectionOverview = createServerFn({
   .handler(async ({ context, data: electionId }): Promise<any> => {
     // 1. Fetch primary election properties from the 'elections' table core node
     const admin: any = context?.user;
+    // Super admins can open any tenant's election console; regular admins only their own.
+    const ownershipFilter = admin.role === 'super'
+      ? eq<any>(elections.id, electionId)
+      : and(eq<any>(elections.adminId, admin.id), eq<any>(elections.id, electionId));
     const [electionRecord]: any = await db
       .select()
       .from(elections)
-      .where(and(eq<any>(elections.adminId, admin.id), eq<any>(elections.id, electionId)));
-      // .innerJoin(elections, eq<any>(positions.electionId, elections.id))
-      // .where(and(eq<any>(elections.adminId, admin.id), eq<any>(elections.id, electionId)))
-    
+      .where(ownershipFilter);
+
     if (!electionRecord) {
       throw new Error(`Election resource instance with ID [${electionId}] was not discovered.`);
     }
@@ -462,10 +473,9 @@ export const getUnifiedElectionTelemetry = createServerFn({
   method: "GET",
 })
  .middleware([arcjetMiddleware,authMiddleware])
- .handler(async ({ context, data: electionId }): Promise<any> => {
+ .handler(async ({ data: electionId }): Promise<any> => {
 
   // Concurrently fetch telemetry data from your database layers
-  const admin: any = context?.user;
   const [
     [electionRecord],
     [votersCountResult],
@@ -577,7 +587,7 @@ export const getUnifiedElectionTelemetry = createServerFn({
     auditLedger: rawRecentVotes.map((log, index) => ({
       id: `tx_${log.id}`,
       positionTitle: log.candidateName ? `${log.positionTitle} (${log.candidateName})` : `${log.positionTitle} (Explicit Abstention)`,
-      voterMask: generateVoterMask(log.id + index),
+      voterMask: generateVoterMask(index),
       channel: "WEB",
       timestamp: formatElapsedTime(log.createdAt),
     })),
@@ -702,7 +712,7 @@ export const getUnifiedElectionAdminStats = createServerFn({
     auditLedger: rawRecentVotes.map((log, index) => ({
       id: `tx_${log.id}`,
       positionTitle: log.candidateName ? `${log.positionTitle} (${log.candidateName})` : `${log.positionTitle} (Explicit Abstention)`,
-      voterMask: generateVoterMask(log.id + index),
+      voterMask: generateVoterMask(index),
       channel: "WEB",
       timestamp: formatElapsedTime(log.createdAt),
     })),
@@ -845,7 +855,7 @@ export const exportElectionResultsToExcelFn = createServerFn({ method: 'GET' })
       const auditRows = rawRecentVotes.map((log, index) => ({
         'Transaction Hash ID': `tx_${log.id}`,
         'Action Description Reference': log.candidateName ? `${log.positionTitle} (${log.candidateName})` : `${log.positionTitle} (Explicit Abstention)`,
-        'Anonymous Voter Identifier': generateVoterMask(log.id + index),
+        'Anonymous Voter Identifier': generateVoterMask(index),
         'Channel System Route': 'WEB',
         'Casting Date Log': new Date(log.createdAt).toLocaleString()
       }));
@@ -1078,7 +1088,7 @@ export const exportElectionResultsToFormatExcelFn = createServerFn({ method: 'GE
         _type: 'DEFAULT',
         txId: `tx_${log.id}`,
         desc: log.candidateName ? `${log.positionTitle} (${log.candidateName})` : `${log.positionTitle} (Explicit Abstention)`,
-        mask: generateVoterMask(log.id + index),
+        mask: generateVoterMask(index),
         channel: 'WEB',
         date: new Date(log.createdAt).toLocaleString()
       }));
@@ -1138,7 +1148,11 @@ export const getElectionFinalResultsFn = createServerFn({ method: 'GET' })
         })
         .from(elections)
         .innerJoin(user, eq(elections.adminId, user.id))
-        .where(and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id))),
+        .where(
+          admin.role === 'super'
+            ? eq<any>(elections.id, electionId)
+            : and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id))
+        ),
       db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq<any>(voters.electionId, electionId)),
       db
         .select({ count: sql<number>`count(${voters.id})::int` })
@@ -1254,27 +1268,63 @@ export const getPositionsListFn = createServerFn({ method: 'GET' })
     return await db.select()
       .from(positions)
       .innerJoin(elections, eq<any>(positions.electionId, elections.id))
-      .where(and(eq<any>(elections.adminId, admin.id), eq<any>(elections.id, electionId)))
+      .where(
+        admin.role === 'super'
+          ? eq<any>(elections.id, electionId)
+          : and(eq<any>(elections.adminId, admin.id), eq<any>(elections.id, electionId))
+      )
       .orderBy(asc(positions.order), asc(positions.createdAt));
   });
 
 export const getPositionsFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware,authMiddleware])
-  .handler(async ({ data: electionId, context }) => {
-    const admin: any = context?.user
+  .handler(async ({ data, context }: any) => {
+    const electionId = data?.electionId ?? data;
+    const admin: any = context?.user;
+    const page = Math.max(Number(data?.page) || 1, 1);
+    const pageSize = Math.max(Number(data?.pageSize) || 15, 1);
+    const searchQuery = (data?.searchQuery || "").trim();
 
-    return await db
-      .select({
-        position: positions,
-        election: elections,
-        candidatesCount: sql<number>`count(${candidates.id})::int`,
-      })
-      .from(positions)
-      .innerJoin(elections, eq<any>(positions.electionId, elections.id))
-      .leftJoin(candidates, eq<any>(candidates.positionId, positions.id))
-      .where(and(eq<any>(elections.adminId, admin.id), eq<any>(elections.id, electionId)))
-      .groupBy(positions.id, elections.id)
-      .orderBy(asc(positions.id));
+    const limitValue = pageSize;
+    const offsetValue = (page - 1) * limitValue;
+
+    const conditions: any = admin.role === 'super'
+      ? [eq(elections.id, electionId)]
+      : [eq(elections.adminId, admin.id), eq(elections.id, electionId)];
+    if (searchQuery) {
+      conditions.push(ilike(positions.title, `%${searchQuery}%`));
+    }
+    const queryCondition = and(...conditions);
+
+    const [rows, [countResult]] = await Promise.all([
+      db
+        .select({
+          position: positions,
+          election: elections,
+          candidatesCount: sql<number>`count(${candidates.id})::int`,
+        })
+        .from(positions)
+        .innerJoin(elections, eq<any>(positions.electionId, elections.id))
+        .leftJoin(candidates, eq<any>(candidates.positionId, positions.id))
+        .where(queryCondition)
+        .groupBy(positions.id, elections.id)
+        .orderBy(asc(positions.order), asc(positions.createdAt))
+        .limit(limitValue)
+        .offset(offsetValue),
+      db
+        .select({ total: count() })
+        .from(positions)
+        .innerJoin(elections, eq<any>(positions.electionId, elections.id))
+        .where(queryCondition),
+    ]);
+
+    const totalCount = countResult?.total ?? 0;
+    const totalPages = Math.max(Math.ceil(totalCount / limitValue), 1);
+
+    return {
+      positions: rows,
+      pagination: { totalCount, totalPages, currentPage: page, pageSize: limitValue },
+    };
 });
 
 export const getPositionFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
@@ -1319,14 +1369,56 @@ export const deletePositionFn = createServerFn({ method: 'POST' }).middleware([a
 
 export const getCandidatesFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware,authMiddleware])
-  .handler(async ({ data: electionId, context }) => {
-    const admin: any = context?.user
-    return await db.select()
-      .from(candidates)
-      .leftJoin(positions, eq<any>(candidates.positionId, positions.id))
-      .leftJoin(elections, eq<any>(positions.electionId, elections.id))
-      .where(and(eq<any>(elections.adminId, admin.id), eq<any>(elections.id, electionId)))
-      .orderBy(asc(positions.order), asc(positions.createdAt), asc(candidates.order));
+  .handler(async ({ data, context }: any) => {
+    const electionId = data?.electionId ?? data;
+    const admin: any = context?.user;
+    const page = Math.max(Number(data?.page) || 1, 1);
+    const pageSize = Math.max(Number(data?.pageSize) || 15, 1);
+    const searchQuery = (data?.searchQuery || "").trim();
+    const positionFilter = data?.positionFilter || "ALL";
+
+    const limitValue = pageSize;
+    const offsetValue = (page - 1) * limitValue;
+
+    const conditions: any = admin.role === 'super'
+      ? [eq(elections.id, electionId)]
+      : [eq(elections.adminId, admin.id), eq(elections.id, electionId)];
+    if (searchQuery) {
+      conditions.push(ilike(candidates.name, `%${searchQuery}%`));
+    }
+    if (positionFilter !== "ALL") {
+      conditions.push(eq(positions.title, positionFilter));
+    }
+    const queryCondition = and(...conditions);
+
+    const [rows, [countResult], positionOptions] = await Promise.all([
+      db.select()
+        .from(candidates)
+        .leftJoin(positions, eq<any>(candidates.positionId, positions.id))
+        .leftJoin(elections, eq<any>(positions.electionId, elections.id))
+        .where(queryCondition)
+        .orderBy(asc(positions.order), asc(positions.createdAt), asc(candidates.order))
+        .limit(limitValue)
+        .offset(offsetValue),
+      db.select({ total: count() })
+        .from(candidates)
+        .leftJoin(positions, eq<any>(candidates.positionId, positions.id))
+        .leftJoin(elections, eq<any>(positions.electionId, elections.id))
+        .where(queryCondition),
+      db.select({ title: positions.title })
+        .from(positions)
+        .where(eq<any>(positions.electionId, electionId))
+        .orderBy(asc(positions.order)),
+    ]);
+
+    const totalCount = countResult?.total ?? 0;
+    const totalPages = Math.max(Math.ceil(totalCount / limitValue), 1);
+
+    return {
+      candidates: rows,
+      positionTitles: positionOptions.map((p: any) => p.title),
+      pagination: { totalCount, totalPages, currentPage: page, pageSize: limitValue },
+    };
   });
 
 
@@ -1372,7 +1464,7 @@ export const createCandidateFn = createServerFn({ method: 'POST' }).middleware([
 
       // Return Response
       return await db.insert(candidates).values({
-        positionId: data.get("positionId") as number,
+        positionId: data.get("positionId") as string,
         order: data.get("order") as number,
         name: data.get("name") as string,
         teaser: data.get("teaser") as string,
@@ -1430,14 +1522,14 @@ export const updateCandidateFn = createServerFn({ method: 'POST' }).middleware([
       return await db
         .update(candidates)
         .set({
-          positionId: data.get("positionId") as number,
+          positionId: data.get("positionId") as string,
           order: data.get("order") as number,
           name: data.get("name") as string,
           teaser: data.get("teaser") as string,
           isActive: data.get("isActive") as boolean,
           ...(finalAvatarUrl && { imageUrl: finalAvatarUrl })
         })
-        .where(eq<any>(candidates.id, Number(data.get("id")))).returning();
+        .where(eq<any>(candidates.id, data.get("id") as string)).returning();
 
     } catch (error) {
       console.log(error)
@@ -2326,7 +2418,7 @@ export const castBallotServerFn = createServerFn({
 })
   .middleware([arcjetMiddleware])
   .handler(async ({ data }: any) => {
-    const { voterId, electionId, selections } = data;
+    const { voterId, electionId, selections, inviteToken } = data;
     const request = getRequest();
     const ip = request?.headers.get('x-forwarded-for')?.split(',')[0] || request?.headers.get('x-real-ip') || '127.0.0.1';
 
@@ -2352,16 +2444,28 @@ export const castBallotServerFn = createServerFn({
           throw new Error("Voter registration identity record not found for this election.");
         }
 
+        // 3. CRITICAL SECURITY GUARD: Re-verify the voter's OTP/password secret server-side.
+        // Prevents anyone who merely guesses a voterId from casting a ballot on someone else's behalf.
+        if (!inviteToken || voterCheck.inviteToken !== inviteToken) {
+          throw new Error("Security Alert: Invalid voter credential. Please sign in again.");
+        }
+
         if (voterCheck.hasVoted) {
           throw new Error("Security Alert: This voter credential index has already cast a ballot.");
         }
 
-        // 3. Batch insert the ballot selections into the database ledger block
+        // 4. Batch insert the ballot selections, each stamped with a real server-generated signature
+        const signatureTimestamp = new Date().toISOString();
         const ballotPayloads = selections.map((vote: any) => ({
           electionId: electionId,
           positionId: vote.positionId,
           candidateId: vote.candidateId, // If null, writes gracefully to Postgres to log an intentional Abstention
-          receiptSignature: vote.receiptSignature,
+          receiptSignature: generateBallotReceiptSignature({
+            electionId,
+            positionId: vote.positionId,
+            candidateId: vote.candidateId ?? 0,
+            timestamp: signatureTimestamp,
+          }),
         }));
 
         await tx.insert(electionVotes).values(ballotPayloads);

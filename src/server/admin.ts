@@ -1,30 +1,22 @@
 import { createServerFn } from '@tanstack/react-start';
 import { db } from '../db';
 import crypto from 'crypto';
-import { voters, electionVotes, elections, positions, candidates, votes, contestants } from '../db/schema';
+import { voters, electionVotes, elections, positions, candidates, eventTransactions, contestants } from '../db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 // import { createAndInviteVoters } from './invites'; // Preserved from previous code logic
 import { generateBallotReceiptSignature } from './ballot-signature';
 
 
 interface VoterInviteInput {
-    electionId: number;
+    electionId: string;
     phoneNumbers: string[]; // List of formatting numbers: ["+233540000000", ...]
 }
 
 interface BallotSubmission {
     token: string;
-    electionId: number;
-    selections: { positionId: number; candidateId: number }[];
+    electionId: string;
+    selections: { positionId: string; candidateId: string }[];
 }
-
-interface UpgradedVoterInput {
-    name: string;
-    username: string;
-    phoneNumber: string;
-}
-
-
 
 //#### GENERAL UTILITY FUNCTIONS
 
@@ -164,14 +156,14 @@ export const createSecureElection = createServerFn({ method: 'POST'})
 )
 
 export const getCategoryLeaderboard = createServerFn({ method: 'GET'})
-.handler(async ({ eventId, categoryId }:any) => {
+.handler(async ({ categoryId }:any) => {
     return await db.select({
       id: contestants.id,
       name: contestants.name,
-      totalVotes: sql<number>`sum(${votes.voteCount})::int`
+      totalVotes: sql<number>`coalesce(sum(case when ${eventTransactions.payStatus} then ${eventTransactions.votes} else 0 end), 0)::int`
     })
     .from(contestants)
-    .leftJoin(votes, and(eq(votes.contestantId, contestants.id), eq(votes.eventId, eventId)))
+    .leftJoin(eventTransactions, eq(eventTransactions.contestantId, contestants.id))
     .where(eq(contestants.categoryId, categoryId))
     .groupBy(contestants.id)
     .orderBy(sql`totalVotes DESC`);
