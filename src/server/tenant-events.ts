@@ -4,6 +4,7 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { createServerFn } from '@tanstack/react-start';
 import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import sharp from 'sharp';
+import XLSX from 'xlsx-js-style';
 import { db } from '../db';
 import { categories, contestants, events, eventTransactions } from '../db/schema';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
@@ -68,6 +69,7 @@ export const getPublicEventFn = createServerFn({ method: 'GET' })
       id: eventRecord.id,
       title: eventRecord.title,
       description: eventRecord.description,
+      imageUrl: eventRecord.imageUrl,
       startAt: eventRecord.startAt,
       endAt: eventRecord.endAt,
       unitPrice: eventRecord.unitPrice,
@@ -161,6 +163,7 @@ export const getEventsFn = createServerFn({ method: 'GET' })
         id: events.id,
         title: events.title,
         description: events.description,
+        imageUrl: events.imageUrl,
         startAt: events.startAt,
         endAt: events.endAt,
         unitPrice: events.unitPrice,
@@ -188,14 +191,40 @@ export const createEventFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data }: any) => {
     const admin: any = context?.user;
+
+    let imageUrl: string | undefined;
+    const file = data.get("image") as File | null;
+    if (file && file.size > 0) {
+      const arrayBuffer = await file.arrayBuffer();
+      const rawBuffer = Buffer.from(arrayBuffer);
+      const optimizedBuffer = await sharp(rawBuffer)
+        .resize(1200, 675, { fit: "cover" })
+        .webp({ quality: 80 })
+        .toBuffer();
+      const uniqueFileName = `events/${crypto.randomUUID()}.webp`;
+
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: uniqueFileName,
+          Body: optimizedBuffer,
+          ContentType: "image/webp",
+          CacheControl: "public, max-age=31536000, immutable",
+        })
+      );
+
+      imageUrl = `${process.env.R2_PUBLIC_DOMAIN}/${uniqueFileName}`;
+    }
+
     const [created] = await db.insert(events).values({
-      title: data.title,
-      description: data.description,
-      startAt: data.startAt ? new Date(data.startAt) : null,
-      endAt: data.endAt ? new Date(data.endAt) : null,
-      unitPrice: data.unitPrice != null && data.unitPrice !== '' ? Number(data.unitPrice) : null,
-      isActive: data.isActive ?? true,
+      title: data.get("title") as string,
+      description: data.get("description") as string,
+      startAt: data.get("startAt") ? new Date(data.get("startAt") as string) : null,
+      endAt: data.get("endAt") ? new Date(data.get("endAt") as string) : null,
+      unitPrice: data.get("unitPrice") ? Number(data.get("unitPrice")) : null,
+      isActive: data.get("isActive") === "true",
       adminId: admin.id,
+      ...(imageUrl && { imageUrl }),
     }).returning();
     return created;
   });
@@ -204,19 +233,43 @@ export const updateEventFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data }: any) => {
     const admin: any = context?.user;
-    const { id, title, description, startAt, endAt, unitPrice, isActive } = data;
+
+    let imageUrl: string | undefined;
+    const file = data.get("image") as File | null;
+    if (file && file.size > 0) {
+      const arrayBuffer = await file.arrayBuffer();
+      const rawBuffer = Buffer.from(arrayBuffer);
+      const optimizedBuffer = await sharp(rawBuffer)
+        .resize(1200, 675, { fit: "cover" })
+        .webp({ quality: 80 })
+        .toBuffer();
+      const uniqueFileName = `events/${crypto.randomUUID()}.webp`;
+
+      await s3Client.send(
+        new PutObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: uniqueFileName,
+          Body: optimizedBuffer,
+          ContentType: "image/webp",
+          CacheControl: "public, max-age=31536000, immutable",
+        })
+      );
+
+      imageUrl = `${process.env.R2_PUBLIC_DOMAIN}/${uniqueFileName}`;
+    }
 
     const [updated] = await db
       .update(events)
       .set({
-        title,
-        description,
-        startAt: startAt ? new Date(startAt) : null,
-        endAt: endAt ? new Date(endAt) : null,
-        unitPrice: unitPrice != null && unitPrice !== '' ? Number(unitPrice) : null,
-        isActive,
+        title: data.get("title") as string,
+        description: data.get("description") as string,
+        startAt: data.get("startAt") ? new Date(data.get("startAt") as string) : null,
+        endAt: data.get("endAt") ? new Date(data.get("endAt") as string) : null,
+        unitPrice: data.get("unitPrice") ? Number(data.get("unitPrice")) : null,
+        isActive: data.get("isActive") === "true",
+        ...(imageUrl && { imageUrl }),
       })
-      .where(and(eq<any>(events.id, id), eq<any>(events.adminId, admin.id)))
+      .where(and(eq<any>(events.id, data.get("id") as any), eq<any>(events.adminId, admin.id)))
       .returning();
 
     return updated;
@@ -297,6 +350,7 @@ export const getEventOverviewFn = createServerFn({ method: 'GET' })
       id: eventRecord.id,
       title: eventRecord.title,
       description: eventRecord.description,
+      imageUrl: eventRecord.imageUrl,
       startAt: eventRecord.startAt ? eventRecord.startAt.toISOString() : null,
       endAt: eventRecord.endAt ? eventRecord.endAt.toISOString() : null,
       unitPrice: eventRecord.unitPrice,
@@ -836,6 +890,305 @@ export const getEventTelemetryFn = createServerFn({ method: 'GET' })
         timestamp: formatElapsedTime(log.createdAt),
       })),
     };
+  });
+
+
+// ==========================================
+// EVENT FINAL RESULTS (print / export)
+// ==========================================
+
+// Certified-style final results for an event: categories with their contestants
+// ranked by paid votes and the top vote-getter in each category flagged as the
+// winner. Unlike elections (multi-seat positions with abstention ballots),
+// events are single-winner-per-category pageant/award-style contests with no
+// abstention concept -- every eventTransaction row is itself a paid vote.
+export const getEventFinalResultsFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const eventId = data?.eventId ?? data;
+    const admin: any = context?.user;
+
+    const [
+      [eventRecord],
+      rawCategories,
+      rawContestantTallies,
+      [summaryTotals],
+    ] = await Promise.all([
+      db.select().from(events).where(and(eq<any>(events.id, eventId), eq<any>(events.adminId, admin.id))),
+      db.select().from(categories).where(eq<any>(categories.eventId, eventId)).orderBy(asc(categories.createdAt)),
+      db
+        .select({
+          id: contestants.id,
+          name: contestants.name,
+          teaser: contestants.tagline,
+          imageUrl: contestants.imageUrl,
+          code: contestants.code,
+          order: contestants.order,
+          categoryId: contestants.categoryId,
+          voteCount: sql<number>`coalesce(sum(case when ${eventTransactions.payStatus} then ${eventTransactions.votes} else 0 end), 0)::int`,
+        })
+        .from(contestants)
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .leftJoin(eventTransactions, eq(eventTransactions.contestantId, contestants.id))
+        .where(eq<any>(categories.eventId, eventId))
+        .groupBy(contestants.id, contestants.name, contestants.tagline, contestants.imageUrl, contestants.code, contestants.order, contestants.categoryId),
+      db
+        .select({
+          totalVotes: sql<number>`coalesce(sum(${eventTransactions.votes}), 0)::int`,
+          totalAmount: sql<number>`coalesce(sum(${eventTransactions.payAmount}), 0)::int`,
+          totalTransactions: sql<number>`count(${eventTransactions.id})::int`,
+        })
+        .from(eventTransactions)
+        .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .where(and(eq<any>(categories.eventId, eventId), eq(eventTransactions.payStatus, true))),
+    ]);
+
+    if (!eventRecord) {
+      throw new Error(`Event instance [${eventId}] not found.`);
+    }
+
+    const categoryResults = rawCategories.map((cat, catIdx) => {
+      const categoryContestants = rawContestantTallies.filter((c) => c.categoryId === cat.id);
+      const totalVotesForCategory = categoryContestants.reduce((sum, c) => sum + c.voteCount, 0);
+      const highestVotes = Math.max(0, ...categoryContestants.map((c) => c.voteCount));
+
+      const rankedContestants = categoryContestants
+        .map((c, idx) => ({
+          id: c.id,
+          name: c.name,
+          teaser: c.teaser ?? '',
+          imageUrl: c.imageUrl ?? '',
+          code: c.code,
+          ballotNumber: c.order ?? idx + 1,
+          votes: c.voteCount,
+          percentage: totalVotesForCategory > 0 ? (c.voteCount / totalVotesForCategory) * 100 : 0,
+          isWinner: highestVotes > 0 && c.voteCount === highestVotes,
+        }))
+        .sort((a, b) => b.votes - a.votes);
+
+      return {
+        id: cat.id,
+        title: cat.name,
+        order: catIdx,
+        totalVotesForCategory,
+        contestants: rankedContestants,
+      };
+    });
+
+    return {
+      event: {
+        id: eventRecord.id,
+        title: eventRecord.title,
+        description: eventRecord.description,
+        imageUrl: eventRecord.imageUrl,
+        startAt: eventRecord.startAt ? eventRecord.startAt.toISOString() : null,
+        endAt: eventRecord.endAt ? eventRecord.endAt.toISOString() : null,
+        isActive: eventRecord.isActive,
+      },
+      stats: {
+        totalVotes: summaryTotals?.totalVotes ?? 0,
+        totalTransactions: summaryTotals?.totalTransactions ?? 0,
+        grossRevenue: summaryTotals?.totalAmount ?? 0,
+        totalCategories: rawCategories.length,
+        totalContestants: rawContestantTallies.length,
+      },
+      categories: categoryResults,
+    };
+  });
+
+// Certified-style 3-sheet Excel export (Executive Summary, Final Results Tallies,
+// Recent Transaction Ledger) -- mirrors exportElectionResultsToFormatExcelFn's
+// structure/styling for a consistent admin experience across both modules.
+export const exportEventResultsToExcelFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const { eventId } = data;
+    const admin: any = context?.user;
+    try {
+      const [
+        [eventRecord],
+        rawCategories,
+        rawContestantTallies,
+        rawRecentTransactions,
+      ] = await Promise.all([
+        db.select().from(events).where(and(eq<any>(events.id, eventId), eq<any>(events.adminId, admin.id))),
+        db.select().from(categories).where(eq<any>(categories.eventId, eventId)).orderBy(asc(categories.createdAt)),
+        db
+          .select({
+            id: contestants.id,
+            name: contestants.name,
+            categoryId: contestants.categoryId,
+            order: contestants.order,
+            voteCount: sql<number>`coalesce(sum(case when ${eventTransactions.payStatus} then ${eventTransactions.votes} else 0 end), 0)::int`,
+          })
+          .from(contestants)
+          .innerJoin(categories, eq(contestants.categoryId, categories.id))
+          .leftJoin(eventTransactions, eq(eventTransactions.contestantId, contestants.id))
+          .where(eq<any>(categories.eventId, eventId))
+          .groupBy(contestants.id, contestants.name, contestants.categoryId, contestants.order)
+          .orderBy(asc(contestants.order)),
+        db
+          .select({
+            id: eventTransactions.id,
+            categoryName: categories.name,
+            contestantName: contestants.name,
+            payPhone: eventTransactions.payPhone,
+            payAmount: eventTransactions.payAmount,
+            votes: eventTransactions.votes,
+            channel: eventTransactions.channel,
+            createdAt: eventTransactions.createdAt,
+          })
+          .from(eventTransactions)
+          .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+          .innerJoin(categories, eq(contestants.categoryId, categories.id))
+          .where(and(eq<any>(categories.eventId, eventId), eq(eventTransactions.payStatus, true)))
+          .orderBy(desc(eventTransactions.createdAt)),
+      ]);
+
+      if (!eventRecord) {
+        throw new Error(`Event instance [${eventId}] not found.`);
+      }
+
+      const workbook = XLSX.utils.book_new();
+
+      const STYLES = {
+        mainHeader: {
+          font: { name: 'Arial', size: 11, bold: true, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: '0A192A' } },
+          alignment: { horizontal: 'left', vertical: 'center' }
+        },
+        categoryRow: {
+          font: { name: 'Arial', size: 11, bold: true, color: { rgb: '1E1B4B' } },
+          fill: { fgColor: { rgb: 'E0E7FF' } },
+          alignment: { horizontal: 'left', vertical: 'center' }
+        },
+        defaultText: {
+          font: { name: 'Arial', size: 10 },
+          alignment: { horizontal: 'left', vertical: 'center' }
+        }
+      };
+
+      const createStyledSheet = (headers: string[], rows: any[], columnWidths: { wch: number }[]) => {
+        const ws: XLSX.WorkSheet = {};
+        ws['!cols'] = columnWidths;
+
+        headers.forEach((header, colIndex) => {
+          const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIndex });
+          ws[cellRef] = { v: header, t: 's', s: STYLES.mainHeader };
+        });
+
+        rows.forEach((row, rowIndex) => {
+          const sheetRowIndex = rowIndex + 1;
+          const isCategoryDivider = row._type === 'CATEGORY_HEADER';
+          const currentStyle = isCategoryDivider ? STYLES.categoryRow : STYLES.defaultText;
+
+          headers.forEach((_, colIndex) => {
+            const cellKey = Object.keys(row).filter(k => k !== '_type')[colIndex];
+            if (!cellKey) return;
+
+            const cellValue = row[cellKey];
+            const cellRef = XLSX.utils.encode_cell({ r: sheetRowIndex, c: colIndex });
+
+            ws[cellRef] = {
+              v: cellValue,
+              t: typeof cellValue === 'number' ? 'n' : 's',
+              s: currentStyle
+            };
+          });
+        });
+
+        const maxRow = rows.length;
+        const maxCol = headers.length - 1;
+        ws['!ref'] = XLSX.utils.encode_range({ r: 0, c: 0 }, { r: maxRow, c: maxCol });
+
+        return ws;
+      };
+
+      // ================= SHEET 1: EXECUTIVE SUMMARY =================
+      const totalVotes = rawContestantTallies.reduce((sum, c) => sum + c.voteCount, 0);
+      const grossRevenue = rawRecentTransactions.reduce((sum, t) => sum + (t.payAmount ?? 0), 0);
+      const summaryHeaders = ['Event Metric Description', 'Value / Metric Tally'];
+      const summaryRows = [
+        { desc: 'Event Title', val: eventRecord.title },
+        { desc: 'Configured Categories Count', val: rawCategories.length },
+        { desc: 'Enrolled Contestants Count', val: rawContestantTallies.length },
+        { desc: 'Total Paid Votes', val: totalVotes },
+        { desc: 'Gross Revenue Collected (GHS)', val: grossRevenue.toFixed(2) },
+        { desc: 'Recorded Transactions', val: rawRecentTransactions.length },
+        { desc: 'Export Generation Timestamp', val: new Date().toLocaleString() },
+      ];
+      const summarySheet = createStyledSheet(summaryHeaders, summaryRows, [{ wch: 35 }, { wch: 45 }]);
+      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
+
+      // ================= SHEET 2: FINAL RESULTS TALLIES =================
+      const talliesHeaders = ['Category', 'Contestant Name', 'Votes Counted', 'Percentage Share'];
+      const talliesRows: any[] = [];
+
+      for (const cat of rawCategories) {
+        const categoryContestants = rawContestantTallies.filter((c) => c.categoryId === cat.id);
+        const totalVotesForCat = categoryContestants.reduce((sum, c) => sum + c.voteCount, 0);
+
+        talliesRows.push({
+          _type: 'CATEGORY_HEADER',
+          catTitle: cat.name.toUpperCase(),
+          contName: '',
+          vCount: `Total Votes: ${totalVotesForCat}`,
+          pct: '',
+        });
+
+        categoryContestants
+          .sort((a, b) => b.voteCount - a.voteCount)
+          .forEach((c) => {
+            const sharePct = totalVotesForCat > 0 ? ((c.voteCount / totalVotesForCat) * 100).toFixed(2) + '%' : '0.00%';
+            talliesRows.push({
+              _type: 'DEFAULT',
+              catTitle: '',
+              contName: c.name,
+              vCount: c.voteCount,
+              pct: sharePct,
+            });
+          });
+
+        talliesRows.push({ _type: 'DEFAULT', catTitle: '', contName: '', vCount: '', pct: '' });
+      }
+
+      const talliesSheet = createStyledSheet(talliesHeaders, talliesRows, [{ wch: 25 }, { wch: 32 }, { wch: 18 }, { wch: 18 }]);
+      XLSX.utils.book_append_sheet(workbook, talliesSheet, 'Final Results Tallies');
+
+      // ================= SHEET 3: RECENT TRANSACTION LEDGER =================
+      const ledgerHeaders = ['Transaction ID', 'Category (Contestant)', 'Masked Phone', 'Channel', 'Amount (GHS)', 'Votes', 'Date'];
+      const ledgerRows = rawRecentTransactions.map((tx) => ({
+        _type: 'DEFAULT',
+        txId: `tx_${tx.id}`,
+        desc: `${tx.categoryName} (${tx.contestantName})`,
+        mask: tx.payPhone ? `${tx.payPhone.slice(0, 4)}****${tx.payPhone.slice(-2)}` : 'unknown',
+        channel: tx.channel,
+        amount: tx.payAmount ?? 0,
+        votes: tx.votes,
+        date: new Date(tx.createdAt).toLocaleString(),
+      }));
+
+      const ledgerSheet = createStyledSheet(ledgerHeaders, ledgerRows, [{ wch: 16 }, { wch: 34 }, { wch: 20 }, { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 22 }]);
+      XLSX.utils.book_append_sheet(workbook, ledgerSheet, 'Recent Transaction Ledger');
+
+      const excelBuffer64 = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+      const cleanTitle = eventRecord.title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+
+      return {
+        success: true,
+        filename: `event_${cleanTitle}_results.xlsx`,
+        base64Data: excelBuffer64,
+      };
+    } catch (error: any) {
+      console.error('Export Event Results Error:', error);
+      return {
+        success: false,
+        error: error?.message || 'Failed to generate the event results workbook.',
+        filename: '',
+        base64Data: '',
+      };
+    }
   });
 
 

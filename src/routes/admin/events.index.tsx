@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import {
   Plus, Search, Edit2, Trash2, Sliders,
-  Sparkles, Filter, ChevronDown, CheckCircle, XCircle, FolderTree, Coins, Loader2
+  Sparkles, Filter, ChevronDown, CheckCircle, XCircle, FolderTree, Coins, Loader2, ImageOff
 } from "lucide-react";
 import { deleteEventFn, getEventsFn } from "#/server/tenant-events";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
@@ -158,11 +158,20 @@ function EventsDirectory() {
                     <tr key={event.id} className="hover:bg-zinc-900/20 transition-colors group">
 
                       <td className="px-6 py-4 max-w-xs">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-white tracking-wide text-sm">{event.title}</span>
-                          <p className="text-xs text-zinc-500 mt-1 line-clamp-2 leading-relaxed">
-                            {event.description}
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0">
+                            {event.imageUrl ? (
+                              <img src={event.imageUrl} alt={event.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <ImageOff className="w-4 h-4 text-zinc-600" />
+                            )}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-semibold text-white tracking-wide text-sm truncate">{event.title}</span>
+                            <p className="text-xs text-zinc-500 mt-1 line-clamp-2 leading-relaxed">
+                              {event.description}
+                            </p>
+                          </div>
                         </div>
                       </td>
 

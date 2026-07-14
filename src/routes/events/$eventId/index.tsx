@@ -43,6 +43,17 @@ function RouteComponent() {
             </Link>
           </div>
 
+          {event.imageUrl && (
+            <div className="mb-6 rounded-3xl overflow-hidden border border-slate-600/20 relative h-48 md:h-64 lg:h-72 w-full">
+              <img
+                alt={event.title}
+                src={event.imageUrl}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#18181b] via-transparent to-transparent" />
+            </div>
+          )}
+
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <h1

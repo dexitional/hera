@@ -1,19 +1,25 @@
-import React, { useState } from "react";
-import { CheckCircle2, Coins, ToggleLeft, Calendar } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { CheckCircle2, Coins, ToggleLeft, Calendar, UploadCloud, FileImage, X, AlertCircle } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createEventFn, updateEventFn } from "#/server/tenant-events";
 import { useNavigate } from "@tanstack/react-router";
+import { convertToFormData } from "#/lib/utils";
 import moment from "moment";
 
 export default function EventAdminForm({ data }: any) {
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<any>(data ?? { isActive: true });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const isEditMode = data != null;
+
+  // Local state tracking for the image before bucket dispatch
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -22,6 +28,28 @@ export default function EventAdminForm({ data }: any) {
 
   const handleCheckboxChange = (name: string) => {
     setFormData((prev: any) => ({ ...prev, [name]: !prev[name] }));
+  };
+
+  const handleFileChange = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Invalid file type. Please upload an image asset.");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      setUploadError("File is too large. Event image maximum size is 3MB.");
+      return;
+    }
+    setUploadError(null);
+    setSelectedFile(file);
+    setFormData((prev: any) => ({ ...prev, image: file }));
+  };
+
+  const removeSelectedFile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedFile(null);
+    setUploadError(null);
+    setFormData((prev: any) => ({ ...prev, image: null }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const createMutation = useMutation({
@@ -44,10 +72,11 @@ export default function EventAdminForm({ data }: any) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const newFormData = convertToFormData(formData);
       if (isEditMode) {
-        editMutation.mutate({ data: { ...formData } } as any);
+        editMutation.mutate({ data: newFormData } as any);
       } else {
-        createMutation.mutate({ data: { ...formData } } as any);
+        createMutation.mutate({ data: newFormData } as any);
       }
       setSubmitSuccess(true);
       setTimeout(() => navigate({ to: '/admin/events' }), 2000);
@@ -111,6 +140,74 @@ export default function EventAdminForm({ data }: any) {
                               onChange={handleInputChange}
                               className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm px-3 py-2 h-[36px] transition-all disabled:opacity-50"
                             />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Event Image / Logo Row */}
+                      <div className="px-6 py-5">
+                        <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-start">
+                          <div className="col-span-4 flex flex-col pt-1.5">
+                            <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                              Event Image / Logo
+                            </label>
+                          </div>
+                          <div className="order-1 col-span-8 w-full">
+
+                            <input
+                              type="file"
+                              ref={fileInputRef}
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                            />
+
+                            <div
+                              onClick={() => fileInputRef.current?.click()}
+                              className={`w-full border-2 border-dashed rounded-lg p-4 bg-[#0a192a]/50 text-center flex flex-col items-center justify-center group transition-colors cursor-pointer relative ${selectedFile ? 'border-purple-500/50 bg-purple-950/5' : 'border-zinc-800 hover:border-zinc-700'}`}
+                            >
+                              {!selectedFile ? (
+                                <>
+                                  <UploadCloud className="w-6 h-6 text-zinc-500 group-hover:text-purple-400 transition-colors mb-2" />
+                                  <span className="text-xs font-medium text-zinc-300">Upload event banner or logo</span>
+                                  <span className="text-[10px] text-zinc-500 mt-1">Recommended 16:9 landscape, up to 3MB</span>
+                                </>
+                              ) : (
+                                <div className="w-full flex items-center justify-between px-2 text-left">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-8 h-8 rounded bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0">
+                                      <FileImage className="w-4 h-4 text-purple-400" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-xs font-medium text-zinc-200 truncate max-w-[240px]">{selectedFile?.name}</p>
+                                      <p className="text-[10px] text-zinc-500 mt-0.5">{(selectedFile?.size / 1024).toFixed(1)} KB</p>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    onClick={removeSelectedFile}
+                                    type="button"
+                                    className="p-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            {uploadError && (
+                              <div className="text-red-400 text-xs mt-2 flex items-center gap-1.5">
+                                <AlertCircle className="w-3.5 h-3.5" />
+                                {uploadError}
+                              </div>
+                            )}
+
+                            {!selectedFile && formData?.imageUrl && (
+                              <div className="mt-3 relative w-full max-w-xs rounded-lg overflow-hidden border border-zinc-800">
+                                <img src={formData.imageUrl} alt="Current event image" className="w-full h-32 object-cover" />
+                              </div>
+                            )}
+
                           </div>
                         </div>
                       </div>

@@ -55,7 +55,12 @@ export async function initiateMomoCharge(params: InitiateMomoChargeParams): Prom
 
   const result: any = await response.json();
   if (!response.ok || !result?.status) {
-    throw new Error(result?.message || 'Failed to initiate mobile money charge.');
+    // Paystack's top-level `message` is often just a generic wrapper (e.g.
+    // "Charge attempted"); the actual decline reason (e.g. "Declined. Please
+    // use the test mobile money number since you are doing a test
+    // transaction.") lives nested under data.message when present.
+    const reason = result?.data?.message || result?.message || 'Failed to initiate mobile money charge.';
+    throw new Error(reason);
   }
 
   return {

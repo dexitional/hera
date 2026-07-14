@@ -1,10 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Sliders, FolderTree, UserCheck, Coins, ArrowUpRight, Plus,
   Percent, CircleDollarSign, BarChart3, LayoutGrid, Flame, Pencil,
-  ArrowLeft, Loader2, Receipt,
+  ArrowLeft, Loader2, Receipt, Activity, FileSpreadsheet,
 } from "lucide-react";
-import { getEventOverviewFn, updateEventActiveStateFn } from "#/server/tenant-events";
+import { exportEventResultsToExcelFn, getEventOverviewFn, updateEventActiveStateFn } from "#/server/tenant-events";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -30,11 +30,55 @@ export const Route = createFileRoute("/admin/events/$eventId/manage")({
 function ManageEventConsole() {
   const { eventId } = Route.useParams();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data: event }: any = useSuspenseQuery(eventOverviewQueryOptions(eventId));
 
   const [isActive, setIsActive] = useState<boolean>(!!event.isActive);
+  const [isExportingResults, setIsExportingResults] = useState(false);
 
   const activeStateMutation = useMutation({ mutationFn: updateEventActiveStateFn });
+
+  const handleExportResults = async () => {
+    try {
+      setIsExportingResults(true);
+
+      const result = await exportEventResultsToExcelFn({ data: { eventId } } as any);
+
+      if (!result.success || !result.base64Data) {
+        alert(result.error || "Export failed to execute correctly.");
+        return;
+      }
+
+      const byteCharacters = atob(result.base64Data);
+      const byteArrays = [];
+      const sliceSize = 512;
+
+      for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+        const slice = byteCharacters.slice(offset, offset + sliceSize);
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+          byteNumbers[i] = slice.charCodeAt(i);
+        }
+        byteArrays.push(new Uint8Array(byteNumbers));
+      }
+
+      const fileBlob = new Blob(byteArrays, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const downloadUrl = window.URL.createObjectURL(fileBlob);
+      const linkElement = document.createElement('a');
+
+      linkElement.href = downloadUrl;
+      linkElement.download = result.filename;
+      document.body.appendChild(linkElement);
+      linkElement.click();
+
+      document.body.removeChild(linkElement);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err: any) {
+      console.error("Event results export failed:", err);
+    } finally {
+      setIsExportingResults(false);
+    }
+  };
 
   const handleToggleActive = () => {
     if (activeStateMutation.isPending) return;
@@ -64,16 +108,25 @@ function ManageEventConsole() {
 
       {/* ================= WORKSPACE CONSOLE BREADCRUMB HEADER ================= */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono uppercase tracking-wider">
-            <Link to="/admin/events" className="hover:text-purple-400 transition-colors">Events App</Link>
-            <span>/</span>
-            <span className="text-zinc-400 select-all">Console Node: ev_{event.id}</span>
+        <div className="flex items-center gap-4">
+          {event.imageUrl && (
+            <img
+              src={event.imageUrl}
+              alt={event.title}
+              className="w-14 h-14 rounded-lg object-cover border border-zinc-800 shrink-0"
+            />
+          )}
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono uppercase tracking-wider">
+              <Link to="/admin/events" className="hover:text-purple-400 transition-colors">Events App</Link>
+              <span>/</span>
+              <span className="text-zinc-400 select-all">Console Node: ev_{event.id}</span>
+            </div>
+            <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+              <Sliders className="w-5 h-5 text-purple-400 shrink-0" />
+              <span className="truncate">Manage: {event.title}</span>
+            </h1>
           </div>
-          <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-            <Sliders className="w-5 h-5 text-purple-400" />
-            <span>Manage: {event.title}</span>
-          </h1>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -282,26 +335,48 @@ function ManageEventConsole() {
         </div>
       </div>
 
-      {/* ================= LIVE STREAM ACTION NOTIFICATION ROW ================= */}
+      {/* ================= LIVE STREAM / RESULTS ACTION NOTIFICATION ROW ================= */}
       <div className="bg-gradient-to-r from-purple-950/20 via-[#0a192a]/50 to-[#0a192a]/50 rounded-xl border border-zinc-800 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0 mt-0.5">
             <BarChart3 className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-white">Public Real-time Vote Turnout Stream</h4>
+            <h4 className="text-sm font-bold text-white">Results &amp; Live Turnout Stream</h4>
             <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
-              Open the live listening websocket telemetry canvas to track candidate vote additions across channels (USSD and WEB) dynamically as they arrive.
+              Print certified category results, export the full tally and transaction ledger to Excel, or open the live telemetry canvas as votes arrive.
             </p>
           </div>
         </div>
-        <Link
-          to="/admin/events/$eventId/feed"
-          params={{ eventId: String(event.id) }}
-          className="w-full sm:w-auto text-center px-4 py-2 bg-purple-600 hover:bg-purple-500 text-xs font-semibold text-white rounded-lg transition-all shadow-md shrink-0"
-        >
-          Open Live Telemetry Feed
-        </Link>
+
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <button
+            onClick={() => navigate({ to: `/admin/events/${event?.id}/results` })}
+            className="w-full sm:w-auto flex items-center justify-center gap-1 text-center px-4 py-2 bg-green-600 hover:bg-purple-500 text-xs font-semibold text-white rounded-lg transition-all shadow-sm shrink-0"
+          >
+            <Activity className="h-4 animate-pulse" />
+            <span>Print Results</span>
+          </button>
+          <button
+            onClick={handleExportResults}
+            disabled={isExportingResults}
+            className="w-full sm:w-auto flex items-center justify-center gap-1 text-center px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-purple-500 text-xs font-semibold text-white rounded-lg transition-all shadow-sm shrink-0"
+          >
+            {isExportingResults ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4" />
+            )}
+            <span>Export Results</span>
+          </button>
+          <Link
+            to="/admin/events/$eventId/feed"
+            params={{ eventId: String(event.id) }}
+            className="w-full sm:w-auto text-center px-4 py-2 bg-purple-600 hover:bg-purple-500 text-xs font-semibold text-white rounded-lg transition-all shadow-md shrink-0"
+          >
+            Open Live Telemetry Feed
+          </Link>
+        </div>
       </div>
 
     </div>
