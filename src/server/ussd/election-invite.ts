@@ -1,7 +1,7 @@
 import { and, eq, or, sql } from 'drizzle-orm';
 import { db } from '../../db';
 import { elections, voters } from '../../db/schema';
-import { addCountryCode, stripCountryCode } from '../../lib/utils';
+import { addCountryCode, addZeroPrefix, stripCountryCode } from '../../lib/utils';
 import type { ElectionInviteState } from './session-store';
 
 export type UssdStepResult = {
@@ -42,6 +42,7 @@ export async function handleElectionInviteStep(params: {
   const cleanUsername = username.toLowerCase().replace(/\s+/g, '');
   const phoneWithCode = addCountryCode(phoneNumber);
   const phoneWithoutCode = stripCountryCode(phoneNumber);
+  const phoneWithZero = addZeroPrefix(phoneNumber);
 
   const matches = await db
     .select({ voter: voters, election: elections })
@@ -50,11 +51,11 @@ export async function handleElectionInviteStep(params: {
     .where(
       and(
         eq(sql`LOWER(REPLACE(${voters.username}, ' ', ''))`, cleanUsername),
-        or(eq(voters.phoneNumber, phoneWithCode), eq(voters.phoneNumber, phoneWithoutCode)),
+        or(eq(voters.phoneNumber, phoneWithCode), eq(voters.phoneNumber, phoneWithoutCode), eq(voters.phoneNumber, phoneWithZero)),
       ),
     );
   console.log("username: ", cleanUsername);
-  console.log("phone numbers: ", phoneWithCode, phoneWithoutCode);
+  console.log("phone numbers: ", phoneWithCode, phoneWithoutCode, phoneWithZero);
   console.log("match: ", matches);
 
 

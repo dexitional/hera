@@ -82,6 +82,8 @@ export function convertToFormData(state: Record<string, any>): FormData {
 
 
 export const stripCountryCode = (num: any) => num?.toString()?.startsWith('233') ? num?.toString()?.slice(3) : num?.toString()?.startsWith('00233') ? num?.toString()?.slice(5) : num?.toString()?.startsWith('+233') ? num?.toString()?.slice(4) : num?.toString();
+export const addZeroPrefix = (num: any) => num?.toString()?.startsWith('233') && num?.toString()?.length == 12  ? "0"+num?.toString()?.slice(3) :  num?.toString()?.startsWith('233') && num?.toString()?.length == 13 ? num?.toString()?.slice(3) : num?.toString()?.startsWith('00233') && num?.toString()?.length == 14 ? "0"+num?.toString()?.slice(5) : num?.toString()?.startsWith('00233') && num?.toString()?.length == 15 ? num?.toString()?.slice(5) : num?.toString()?.startsWith('+233') && num?.toString()?.length == 13 ? "0"+num?.toString()?.slice(4) : num?.toString()?.startsWith('+233') && num?.toString()?.length == 14 ? num?.toString()?.slice(4) : num?.toString();
+
 
 export const addCountryCode = (phone: any) => {
   let rawPhone = String(phone || '').trim();
@@ -97,6 +99,8 @@ export const addCountryCode = (phone: any) => {
   }
   return cleanPhone
 }
+
+
 
 
 export const generateSixDigitCode = () => {
