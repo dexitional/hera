@@ -53,6 +53,10 @@ export async function handleElectionInviteStep(params: {
         or(eq(voters.phoneNumber, phoneWithCode), eq(voters.phoneNumber, phoneWithoutCode)),
       ),
     );
+  console.log("username: ", cleanUsername);
+  console.log("phone numbers: ", phoneWithCode, phoneWithoutCode);
+  console.log("match: ", matches);
+
 
   if (matches.length === 0) {
     return {
