@@ -10,7 +10,7 @@ export default defineConfig({
     // Lets Arkesel's USSD simulator reach the local dev server through an ngrok
     // tunnel. Leading-dot matches any subdomain, so this survives ngrok issuing
     // a new random subdomain on every tunnel restart (free tier).
-    allowedHosts: ['.ngrok-free.app','heravote.com'],
+    allowedHosts: ['.ngrok-free.app'],
   },
   optimizeDeps: {
     exclude: ['onnxruntime-web', '@imgly/background-removal'],
