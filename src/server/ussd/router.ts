@@ -3,7 +3,7 @@ import { handleEventsVotingStep } from './events-voting';
 import { clearUssdSession, getUssdSession, setUssdSession, type UssdSessionState } from './session-store';
 
 const MAIN_MENU_MESSAGE =
-  'Welcome to Heravote Platform.\n Choose a service:\n\n' +
+  'Welcome to Heravote Platform. Choose a service:\n\n' +
   '1. Event voting - vote in an event.\n' +
   '2. Online Elections - Retrieve your Invite code.\n' +
   '3. Event Ticket - Buy an event ticket\n' +
