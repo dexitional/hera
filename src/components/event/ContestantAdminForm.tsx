@@ -50,8 +50,8 @@ export default function ContestantAdminForm({ data: { data, categories, eventId 
       setUploadError("Invalid file type. Please upload an image asset.");
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      setUploadError("File is too large. Image profile maximum size is 2MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError("File is too large. Image profile maximum size is 10MB.");
       return;
     }
 
