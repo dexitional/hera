@@ -72,9 +72,16 @@ export const auth = betterAuth({
   },
   advanced: {
     cookieOptions: {
-      sameSite: "none", 
+      sameSite: "none",
       secure: true,
-    }
+    },
+    // Shares the session cookie across heravote.com and www.heravote.com --
+    // cookieOptions has no `domain` field; better-auth only adds the Domain
+    // attribute via this dedicated option.
+    crossSubDomainCookies: {
+      enabled: true,
+      domain: ".heravote.com",
+    },
   },
   plugins: [
     admin({
