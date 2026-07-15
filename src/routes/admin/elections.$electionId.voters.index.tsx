@@ -20,7 +20,7 @@ import {
   getSmsProgressFn
 } from "#/server/tenant-elections";
 import * as XLSX from 'xlsx';
-import { generateSixDigitCode, stripCountryCode } from "#/lib/utils";
+import { addZeroPrefix, generateSixDigitCode, stripCountryCode } from "#/lib/utils";
 
 const VOTERS_PAGE_SIZE = 15;
 
@@ -250,7 +250,7 @@ function VotersDirectory() {
         const sanitizedJson = rawJson.map((row) => {
           const username = String(row.username ?? "").replace(/\s+/g, "").trim();
           // const cleanPhone = addCountryCode(row.phone);
-          const cleanPhone = stripCountryCode(row.phone);
+          const cleanPhone = addZeroPrefix(row.phone);
 
           return {
             username,
@@ -290,16 +290,6 @@ function VotersDirectory() {
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Back to Management Console
           </Link>
-
-          {/* New Bulk Invite Progress Bar */}
-          {/* <div className="bg-[#0a192a]/50 p-4 rounded-xl border border-zinc-800">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-400">Progress: {progressPercentage}%</span>
-              <div className="flex-1 h-2 bg-zinc-900 rounded-full">
-                <div className="h-full bg-purple-500 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
-              </div>
-            </div>
-          </div> */}
 
           {/* Dynamic Progress Panel Display Node */}
           {(isTrackingSms || invitesMutation.isPending || (queueProgress && (queueProgress.isProcessing || queueProgress.total > 0))) && (
