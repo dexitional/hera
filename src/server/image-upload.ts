@@ -2,12 +2,12 @@ import sharp from 'sharp';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { BUCKET_NAME, s3Client } from '#/lib/s3';
 
-// 5MB is generous for a portrait/logo photo while still capping the worst case --
+// 10MB caps the worst case while still allowing high-res portrait/logo photos --
 // previously there was NO size limit at all: an upload of any size got fully
 // buffered into memory (arrayBuffer()) before sharp ever got a chance to reject
 // it, on server functions that (before a separate fix) didn't even require
 // authentication. Checking file.size here happens before any bytes are read.
-const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 export type ImageUploadOptions = {
   folder: string; // e.g. 'contestants', 'events', 'candidates', 'logos'
