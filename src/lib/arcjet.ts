@@ -19,12 +19,16 @@ export const aj = arcjet({
         block: ["AUTOMATED"],
         allow: ["CATEGORY:SEARCH_ENGINE", "CATEGORY:PREVIEW"]
     } as any),
-     // Enforce a rate limit of 10 requests per minute
+     // Enforce a rate limit of 60 requests per minute. arcjetMiddleware wraps
+    // almost every createServerFn call in the app (loaders and mutations,
+    // admin and public), all sharing this one IP-keyed bucket, so it needs
+    // enough headroom for a normal admin session (a single page nav can fire
+    // several server calls) rather than being tuned for a single public form.
     tokenBucket({
       mode,
-      refillRate: 10,
+      refillRate: 60,
       interval: 60,
-      capacity: 10,
+      capacity: 60,
     }),
   ],
 } as any);
