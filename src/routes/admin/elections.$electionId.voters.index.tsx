@@ -101,7 +101,10 @@ function VotersDirectory() {
     queryFn: () => getSmsProgressFn({ data: electionId } as any),
     refetchInterval: (query) => {
       const data = query.state.data;
-      return data?.isProcessing || isTrackingSms ? 2000 : false;
+      // Arcjet's shared rate limit refills ~1 request per 6s; polling faster
+      // than that (this was 2s) guarantees a "Too Many Requests" error on
+      // every bulk send once the bucket drains.
+      return data?.isProcessing || isTrackingSms ? 8000 : false;
     },
     placeholderData: { isProcessing: false, total: 0, processed: 0, successful: 0, failed: 0 }
   });

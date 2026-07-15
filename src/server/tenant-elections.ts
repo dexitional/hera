@@ -2220,7 +2220,7 @@ async function processSmsQueueInBackground(rec: any[], electionId: string) {
 
 // Fixed Server Function
 export const inviteVotersFn = createServerFn({ method: 'POST' })
-  .middleware([arcjetMiddleware])
+  .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ data: electionId }: any) => {
     try {
       const currentJob = smsQueueTracker.get(electionId);
@@ -2259,7 +2259,7 @@ export const inviteVotersFn = createServerFn({ method: 'POST' })
 
   // Polling Metrics Collector Function
   export const getSmsProgressFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware])
+  .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ data: electionId }: any) => {
     return smsQueueTracker.get(electionId) || { isProcessing: false, total: 0, processed: 0, successful: 0, failed: 0 };
  });
