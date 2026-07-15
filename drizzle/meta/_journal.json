@@ -78,6 +78,27 @@
       "when": 1783878926623,
       "tag": "0010_empty_dragon_lord",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1784023216949,
+      "tag": "0011_uuid7_conversion",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1784023219012,
+      "tag": "0012_event_transactions_pay_ref_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1784124834346,
+      "tag": "0013_user_profile_and_type_fixes",
+      "breakpoints": true
     }
   ]
 }
