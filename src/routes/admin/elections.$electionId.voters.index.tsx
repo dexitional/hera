@@ -250,7 +250,7 @@ function VotersDirectory() {
         const sanitizedJson = rawJson.map((row) => {
           const username = String(row.username ?? "").replace(/\s+/g, "").trim();
           // const cleanPhone = addCountryCode(row.phone);
-          const cleanPhone = addZeroPrefix(row.phone);
+          const cleanPhone = addZeroPrefix(row.phone); 
 
           return {
             username,
