@@ -14,7 +14,7 @@ export const aj = arcjet({
     } as any),
      // Enforce a rate limit of 10 requests per minute
     tokenBucket({
-      mode: "DRY_RUN",
+      mode: "LIVE",
       refillRate: 10,
       interval: 60,
       capacity: 10,

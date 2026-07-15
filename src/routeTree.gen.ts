@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as TicketsRouteImport } from './routes/tickets'
 import { Route as StoreRouteImport } from './routes/store'
 import { Route as ElectionsRouteImport } from './routes/elections'
@@ -77,6 +78,11 @@ import { Route as AdminElectionsElectionIdVotersVoterIdEditRouteImport } from '.
 import { Route as AdminElectionsElectionIdPositionsPositionIdEditRouteImport } from './routes/admin/elections.$electionId.positions.$positionId.edit'
 import { Route as AdminElectionsElectionIdCandidatesCandidateIdEditRouteImport } from './routes/admin/elections.$electionId.candidates.$candidateId.edit'
 
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TicketsRoute = TicketsRouteImport.update({
   id: '/tickets',
   path: '/tickets',
@@ -453,6 +459,7 @@ export interface FileRoutesByFullPath {
   '/elections': typeof ElectionsRoute
   '/store': typeof StoreRoute
   '/tickets': typeof TicketsRoute
+  '/welcome': typeof WelcomeRoute
   '/admin/public': typeof AdminPublicRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/error': typeof AuthErrorRoute
@@ -521,6 +528,7 @@ export interface FileRoutesByTo {
   '/elections': typeof ElectionsRoute
   '/store': typeof StoreRoute
   '/tickets': typeof TicketsRoute
+  '/welcome': typeof WelcomeRoute
   '/admin/public': typeof AdminPublicRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/error': typeof AuthErrorRoute
@@ -591,6 +599,7 @@ export interface FileRoutesById {
   '/elections': typeof ElectionsRoute
   '/store': typeof StoreRoute
   '/tickets': typeof TicketsRoute
+  '/welcome': typeof WelcomeRoute
   '/admin/public': typeof AdminPublicRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/error': typeof AuthErrorRoute
@@ -662,6 +671,7 @@ export interface FileRouteTypes {
     | '/elections'
     | '/store'
     | '/tickets'
+    | '/welcome'
     | '/admin/public'
     | '/admin/settings'
     | '/auth/error'
@@ -730,6 +740,7 @@ export interface FileRouteTypes {
     | '/elections'
     | '/store'
     | '/tickets'
+    | '/welcome'
     | '/admin/public'
     | '/admin/settings'
     | '/auth/error'
@@ -799,6 +810,7 @@ export interface FileRouteTypes {
     | '/elections'
     | '/store'
     | '/tickets'
+    | '/welcome'
     | '/admin/public'
     | '/admin/settings'
     | '/auth/error'
@@ -869,6 +881,7 @@ export interface RootRouteChildren {
   ElectionsRoute: typeof ElectionsRoute
   StoreRoute: typeof StoreRoute
   TicketsRoute: typeof TicketsRoute
+  WelcomeRoute: typeof WelcomeRoute
   AuthErrorRoute: typeof AuthErrorRoute
   AuthSigninRoute: typeof AuthSigninRoute
   AuthSignupRoute: typeof AuthSignupRoute
@@ -886,6 +899,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tickets': {
       id: '/tickets'
       path: '/tickets'
@@ -1499,6 +1519,7 @@ const rootRouteChildren: RootRouteChildren = {
   ElectionsRoute: ElectionsRoute,
   StoreRoute: StoreRoute,
   TicketsRoute: TicketsRoute,
+  WelcomeRoute: WelcomeRoute,
   AuthErrorRoute: AuthErrorRoute,
   AuthSigninRoute: AuthSigninRoute,
   AuthSignupRoute: AuthSignupRoute,

@@ -36,6 +36,7 @@
     "@tanstack/react-store": "^0.11.0",
     "@tanstack/router-plugin": "^1.168.11",
     "@tanstack/store": "^0.11.0",
+    "@types/nodemailer": "^8.0.1",
     "better-auth": "^1.6.11",
     "clsx": "^2.1.1",
     "drizzle-kit": "^0.31.10",
@@ -45,6 +46,7 @@
     "lucide-react": "^0.545.0",
     "moment": "^2.30.1",
     "nitro": "3.0.260522-beta",
+    "nodemailer": "^9.0.3",
     "pg": "^8.21.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
@@ -75,14 +77,15 @@
     "vite": "^8.0.14",
     "vitest": "^4.1.7"
   },
-
   "pnpm": {
     "overrides": {
       "kysely": "0.28.17"
     }
   },
-
   "overrides": {
+    "kysely": "0.28.17"
+  },
+  "resolutions": {
     "kysely": "0.28.17"
   }
 }

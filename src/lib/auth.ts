@@ -4,17 +4,39 @@ import { adminAc, userAc } from "better-auth/plugins/admin/access";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { db } from "../db"; // Your optimized Drizzle instance
+import { sendEmail, verificationEmailHtml } from "../server/email";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
   }),
+  // Restricts which origins may complete auth flows / send credentialed
+  // requests -- keep in sync with the CORS allowlist in
+  // src/routes/api/auth.$.ts.
+  trustedOrigins: [process.env.BETTER_AUTH_URL, process.env.VITE_BASE_URL].filter(
+    (v): v is string => !!v,
+  ),
   user: {
     fields: {
       role: "role",
     },
     additionalFields: {
       phone: {
+        type: "string",
+        required: false,
+        input: true,
+      },
+      organization: {
+        type: "string",
+        required: false,
+        input: true,
+      },
+      jobTitle: {
+        type: "string",
+        required: false,
+        input: true,
+      },
+      address: {
         type: "string",
         required: false,
         input: true,
@@ -30,6 +52,24 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
+  },
+  // Sends a verification link on signup and whenever a caller explicitly
+  // requests one. Deliberately NOT pairing this with
+  // emailAndPassword.requireEmailVerification -- the app immediately routes a
+  // brand-new signup to /welcome to collect onboarding details using the
+  // session that autoSignIn just created, so sign-in must not be blocked on
+  // verification completing first. emailVerified is tracked (and shown/used
+  // elsewhere) independently of whether the user can already sign in.
+  emailVerification: {
+    sendVerificationEmail: async ({ user, url }: any) => {
+      await sendEmail({
+        to: user.email,
+        subject: "Verify your Heravote account",
+        html: verificationEmailHtml({ name: user.name, url }),
+      });
+    },
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
   },
   advanced: {
     cookieOptions: {

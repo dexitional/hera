@@ -49,12 +49,15 @@ function RouteComponent() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-    });
+        phone: formData.phone,
+    } as any);
 
     if (error) {
       console.error("Sign up failed:", error.message);
     } else {
-      window.location.href = '/admin';
+      // autoSignIn is on, so there's already a session -- collect the rest
+      // of the onboarding details before landing in the dashboard.
+      window.location.href = '/welcome';
     }
 
   };

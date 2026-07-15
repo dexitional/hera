@@ -1,15 +1,13 @@
 import { authMiddleware } from '#/middleware/authMiddleware';
-import { BUCKET_NAME, s3Client } from '#/lib/s3';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { createServerFn } from '@tanstack/react-start';
 import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm';
-import sharp from 'sharp';
 import XLSX from 'xlsx-js-style';
 import { db } from '../db';
 import { categories, contestants, events, eventTransactions } from '../db/schema';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
 import { generateContestantCode } from '#/lib/utils';
 import { creditCardVote } from './paystack-credit';
+import { processImageUpload } from './image-upload';
 
 // ==========================================
 // EVENTS FUNCTIONS
@@ -192,29 +190,13 @@ export const createEventFn = createServerFn({ method: 'POST' })
   .handler(async ({ context, data }: any) => {
     const admin: any = context?.user;
 
-    let imageUrl: string | undefined;
-    const file = data.get("image") as File | null;
-    if (file && file.size > 0) {
-      const arrayBuffer = await file.arrayBuffer();
-      const rawBuffer = Buffer.from(arrayBuffer);
-      const optimizedBuffer = await sharp(rawBuffer)
-        .resize(1200, 675, { fit: "cover" })
-        .webp({ quality: 80 })
-        .toBuffer();
-      const uniqueFileName = `events/${crypto.randomUUID()}.webp`;
-
-      await s3Client.send(
-        new PutObjectCommand({
-          Bucket: BUCKET_NAME,
-          Key: uniqueFileName,
-          Body: optimizedBuffer,
-          ContentType: "image/webp",
-          CacheControl: "public, max-age=31536000, immutable",
-        })
-      );
-
-      imageUrl = `${process.env.R2_PUBLIC_DOMAIN}/${uniqueFileName}`;
-    }
+    const imageUrl = await processImageUpload(data.get("image") as File | null, {
+      folder: 'events',
+      maxWidth: 1200,
+      maxHeight: 675,
+      fit: 'cover',
+      quality: 80,
+    });
 
     const [created] = await db.insert(events).values({
       title: data.get("title") as string,
@@ -234,29 +216,13 @@ export const updateEventFn = createServerFn({ method: 'POST' })
   .handler(async ({ context, data }: any) => {
     const admin: any = context?.user;
 
-    let imageUrl: string | undefined;
-    const file = data.get("image") as File | null;
-    if (file && file.size > 0) {
-      const arrayBuffer = await file.arrayBuffer();
-      const rawBuffer = Buffer.from(arrayBuffer);
-      const optimizedBuffer = await sharp(rawBuffer)
-        .resize(1200, 675, { fit: "cover" })
-        .webp({ quality: 80 })
-        .toBuffer();
-      const uniqueFileName = `events/${crypto.randomUUID()}.webp`;
-
-      await s3Client.send(
-        new PutObjectCommand({
-          Bucket: BUCKET_NAME,
-          Key: uniqueFileName,
-          Body: optimizedBuffer,
-          ContentType: "image/webp",
-          CacheControl: "public, max-age=31536000, immutable",
-        })
-      );
-
-      imageUrl = `${process.env.R2_PUBLIC_DOMAIN}/${uniqueFileName}`;
-    }
+    const imageUrl = await processImageUpload(data.get("image") as File | null, {
+      folder: 'events',
+      maxWidth: 1200,
+      maxHeight: 675,
+      fit: 'cover',
+      quality: 80,
+    });
 
     const [updated] = await db
       .update(events)
@@ -427,9 +393,19 @@ export const getCategoryFn = createServerFn({ method: 'GET' }).middleware([arcje
   }
 );
 
-export const createCategoryFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
+export const createCategoryFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
     try {
+      const [ownedEvent] = await db
+        .select({ id: events.id })
+        .from(events)
+        .where(and(eq<any>(events.id, data.eventId), eq<any>(events.adminId, admin.id)));
+      if (!ownedEvent) {
+        throw new Error('Event not found.');
+      }
+
       return await db.insert(categories).values({
         eventId: data.eventId,
         name: data.name,
@@ -442,35 +418,55 @@ export const createCategoryFn = createServerFn({ method: 'POST' }).middleware([a
       }
       throw error;
     }
-  }
-);
+  });
 
-export const updateCategoryFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
+export const updateCategoryFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
     try {
-      return await db
+      const updated = await db
         .update(categories)
         .set({
           name: data.name,
           description: data.description,
           code: data.code,
         })
-        .where(eq<any>(categories.id, data.id))
-        .returning();
+        .from(events)
+        .where(
+          and(
+            eq<any>(categories.id, data.id),
+            eq(categories.eventId, events.id),
+            eq<any>(events.adminId, admin.id),
+          ),
+        )
+        .returning({ id: categories.id, name: categories.name, description: categories.description, code: categories.code, eventId: categories.eventId, createdAt: categories.createdAt });
+      if (updated.length === 0) {
+        throw new Error('Category not found.');
+      }
+      return updated;
     } catch (error: any) {
       if (error?.code === '23505') {
         throw new Error('That category code is already in use for this event.');
       }
       throw error;
     }
-  }
-);
+  });
 
-export const deleteCategoryFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: categoryId }: any) => {
+export const deleteCategoryFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data: categoryId }: any) => {
+    const admin: any = context?.user;
+    const [ownedCategory] = await db
+      .select({ id: categories.id })
+      .from(categories)
+      .innerJoin(events, eq(categories.eventId, events.id))
+      .where(and(eq<any>(categories.id, categoryId), eq<any>(events.adminId, admin.id)));
+    if (!ownedCategory) {
+      throw new Error('Category not found.');
+    }
     return await db.delete(categories).where(eq<any>(categories.id, categoryId)).returning();
-  }
-);
+  });
 
 
 // ==========================================
@@ -538,34 +534,26 @@ export const getContestantFn = createServerFn({ method: 'GET' }).middleware([arc
   }
 );
 
-export const createContestantFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
+export const createContestantFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
     try {
-      let finalAvatarUrl: string | undefined = undefined;
-      const file = data.get("image") as File | null;
-
-      if (file && file.size > 0) {
-        const arrayBuffer = await file.arrayBuffer();
-        const rawBuffer = Buffer.from(arrayBuffer);
-        const optimizedBuffer = await sharp(rawBuffer)
-          .resize(800, 800, { fit: "inside", withoutEnlargement: true })
-          .webp({ quality: 75 })
-          .toBuffer();
-        const uniqueFileName = `contestants/${crypto.randomUUID()}.webp`;
-
-        await s3Client.send(
-          new PutObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: uniqueFileName,
-            Body: optimizedBuffer,
-            ContentType: "image/webp",
-            CacheControl: "public, max-age=31536000, immutable",
-          })
-        );
-
-        const publicDomain = process.env.R2_PUBLIC_DOMAIN;
-        finalAvatarUrl = `${publicDomain}/${uniqueFileName}`;
+      const [ownedCategory] = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .innerJoin(events, eq(categories.eventId, events.id))
+        .where(and(eq<any>(categories.id, data.get("categoryId")), eq<any>(events.adminId, admin.id)));
+      if (!ownedCategory) {
+        throw new Error('Category not found.');
       }
+
+      const finalAvatarUrl = await processImageUpload(data.get("image") as File | null, {
+        folder: 'contestants',
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 75,
+      });
 
       // The interaction code is system-generated (5 chars, globally unique) --
       // retry on the rare collision rather than trusting client input.
@@ -598,34 +586,27 @@ export const createContestantFn = createServerFn({ method: 'POST' }).middleware(
   }
 );
 
-export const updateContestantFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
+export const updateContestantFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
     try {
-      let finalAvatarUrl: string | undefined = undefined;
-      const file = data.get("image") as File | null;
-
-      if (file && file.size > 0) {
-        const arrayBuffer = await file.arrayBuffer();
-        const rawBuffer = Buffer.from(arrayBuffer);
-        const optimizedBuffer = await sharp(rawBuffer)
-          .resize(800, 800, { fit: "inside", withoutEnlargement: true })
-          .webp({ quality: 75 })
-          .toBuffer();
-        const uniqueFileName = `contestants/${crypto.randomUUID()}.webp`;
-
-        await s3Client.send(
-          new PutObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: uniqueFileName,
-            Body: optimizedBuffer,
-            ContentType: "image/webp",
-            CacheControl: "public, max-age=31536000, immutable",
-          })
-        );
-
-        const publicDomain = process.env.R2_PUBLIC_DOMAIN;
-        finalAvatarUrl = `${publicDomain}/${uniqueFileName}`;
+      const [ownedContestant] = await db
+        .select({ id: contestants.id })
+        .from(contestants)
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .innerJoin(events, eq(categories.eventId, events.id))
+        .where(and(eq<any>(contestants.id, data.get("id")), eq<any>(events.adminId, admin.id)));
+      if (!ownedContestant) {
+        throw new Error('Contestant not found.');
       }
+
+      const finalAvatarUrl = await processImageUpload(data.get("image") as File | null, {
+        folder: 'contestants',
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 75,
+      });
 
       return await db
         .update(contestants)
@@ -645,14 +626,23 @@ export const updateContestantFn = createServerFn({ method: 'POST' }).middleware(
       }
       throw error;
     }
-  }
-);
+  });
 
-export const deleteContestantFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: contestantId }: any) => {
+export const deleteContestantFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data: contestantId }: any) => {
+    const admin: any = context?.user;
+    const [ownedContestant] = await db
+      .select({ id: contestants.id })
+      .from(contestants)
+      .innerJoin(categories, eq(contestants.categoryId, categories.id))
+      .innerJoin(events, eq(categories.eventId, events.id))
+      .where(and(eq<any>(contestants.id, contestantId), eq<any>(events.adminId, admin.id)));
+    if (!ownedContestant) {
+      throw new Error('Contestant not found.');
+    }
     return await db.delete(contestants).where(eq<any>(contestants.id, contestantId)).returning();
-  }
-);
+  });
 
 
 // ==========================================
@@ -723,14 +713,34 @@ export const getEventTransactionsFn = createServerFn({ method: 'GET' })
     };
   });
 
-export const getEventTransactionFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: transactionId }: any) => {
-    return await db.select().from(eventTransactions).where(eq<any>(eventTransactions.id, transactionId));
-  }
-);
+export const getEventTransactionFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data: transactionId }: any) => {
+    const admin: any = context?.user;
+    return await db
+      .select({ eventTransactions })
+      .from(eventTransactions)
+      .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+      .innerJoin(categories, eq(contestants.categoryId, categories.id))
+      .innerJoin(events, eq(categories.eventId, events.id))
+      .where(and(eq<any>(eventTransactions.id, transactionId), eq<any>(events.adminId, admin.id)))
+      .then((rows) => rows.map((r) => r.eventTransactions));
+  });
 
-export const createEventTransactionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
+export const createEventTransactionFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const [ownedContestant] = await db
+      .select({ id: contestants.id })
+      .from(contestants)
+      .innerJoin(categories, eq(contestants.categoryId, categories.id))
+      .innerJoin(events, eq(categories.eventId, events.id))
+      .where(and(eq<any>(contestants.id, data.contestantId), eq<any>(events.adminId, admin.id)));
+    if (!ownedContestant) {
+      throw new Error('Contestant not found.');
+    }
+
     return await db.insert(eventTransactions).values({
       contestantId: data.contestantId,
       payAmount: data.payAmount != null && data.payAmount !== '' ? Number(data.payAmount) : null,
@@ -741,11 +751,23 @@ export const createEventTransactionFn = createServerFn({ method: 'POST' }).middl
       votes: data.votes != null && data.votes !== '' ? Number(data.votes) : 0,
       channel: data.channel,
     }).returning();
-  }
-);
+  });
 
-export const updateEventTransactionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
+export const updateEventTransactionFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const [ownedTransaction] = await db
+      .select({ id: eventTransactions.id })
+      .from(eventTransactions)
+      .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+      .innerJoin(categories, eq(contestants.categoryId, categories.id))
+      .innerJoin(events, eq(categories.eventId, events.id))
+      .where(and(eq<any>(eventTransactions.id, data.id), eq<any>(events.adminId, admin.id)));
+    if (!ownedTransaction) {
+      throw new Error('Transaction not found.');
+    }
+
     return await db
       .update(eventTransactions)
       .set({
@@ -760,14 +782,24 @@ export const updateEventTransactionFn = createServerFn({ method: 'POST' }).middl
       })
       .where(eq<any>(eventTransactions.id, data.id))
       .returning();
-  }
-);
+  });
 
-export const deleteEventTransactionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: transactionId }: any) => {
+export const deleteEventTransactionFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data: transactionId }: any) => {
+    const admin: any = context?.user;
+    const [ownedTransaction] = await db
+      .select({ id: eventTransactions.id })
+      .from(eventTransactions)
+      .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+      .innerJoin(categories, eq(contestants.categoryId, categories.id))
+      .innerJoin(events, eq(categories.eventId, events.id))
+      .where(and(eq<any>(eventTransactions.id, transactionId), eq<any>(events.adminId, admin.id)));
+    if (!ownedTransaction) {
+      throw new Error('Transaction not found.');
+    }
     return await db.delete(eventTransactions).where(eq<any>(eventTransactions.id, transactionId)).returning();
-  }
-);
+  });
 
 
 // ==========================================

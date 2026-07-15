@@ -187,9 +187,39 @@ function RouteComponent() {
                 );
               })
             ) : (
-              <div className="col-span-full text-center py-16 text-zinc-500 text-sm border border-dashed border-slate-700 rounded-3xl">
-                No public voting events found matching your filters.
+              // <div className="col-span-full text-center py-16 text-zinc-500 text-sm border border-dashed border-slate-700 rounded-3xl">
+              //   No public voting events found matching your filters.
+              // </div>
+
+              <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" style={{ opacity: 1, transform: 'none' }}>
+                <div className="col-span-full flex flex-col items-center justify-center py-16 px-4 text-center" style={{ opacity: 1, transform: 'none' }}>
+                  <div className="w-20 h-20 bg-slate-600/10 rounded-3xl flex items-center justify-center mb-6 border border-slate-600/20">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="tabler-icon tabler-icon-ticket w-10 h-10 text-slate-400"
+                    >
+                      <path d="M15 5l0 2"></path>
+                      <path d="M15 11l0 2"></path>
+                      <path d="M15 17l0 2"></path>
+                      <path d="M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-3a2 2 0 0 0 0 -4v-3a2 2 0 0 1 2 -2"></path>
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-extrabold text-white mb-2">No Events Found</h3>
+                  <p className="text-zinc-300 max-w-md">
+                    There are no events available at the moment. Check back later for new events.
+                  </p>
+                </div>
               </div>
+            </section>
             )}
           </div>
         </section>

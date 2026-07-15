@@ -1,12 +1,10 @@
 import { authMiddleware } from '#/middleware/authMiddleware';
-import { BUCKET_NAME, s3Client } from '#/lib/s3';
 import { addCountryCode, chunkArray, fetchWithRetry, maskPhoneNumber, prepareVotersForBulkImport, stripCountryCode, wait } from '#/lib/utils';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { createServerFn } from '@tanstack/react-start';
 import { and, asc, desc, eq, inArray, or, sql, ilike, count } from 'drizzle-orm';
-import sharp from 'sharp';
 import { db } from '../db';
 import { candidates, elections, electionVotes, positions, voters, user } from '../db/schema';
+import { processImageUpload } from './image-upload';
 // import * as XLSX from 'xlsx';
 import XLSX from 'xlsx-js-style';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
@@ -93,34 +91,12 @@ export const createElectionFn = createServerFn({ method: 'POST' })
   .handler(async ({ context, data }: any) => {
     try {
 
-      let finalAvatarUrl: string | undefined = undefined;
-      const file = data.get("image") as File | null;
-
-      if (file && file.size > 0) {
-        const arrayBuffer = await file.arrayBuffer();
-        const rawBuffer = Buffer.from(arrayBuffer);
-        const optimizedBuffer = await sharp(rawBuffer)
-          .resize(512, 512, { fit: "inside", withoutEnlargement: true }) // Caps size at 800px max width/height
-          .webp({ quality: 75 }) // Converts to modern WebP format at 75% quality optimization
-          .toBuffer();
-        // Enforce the new optimal webp file path structure
-        const uniqueFileName = `logos/${crypto.randomUUID()}.webp`;
-
-        // Upload to S3/R2
-        await s3Client.send(
-          new PutObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: uniqueFileName,
-            Body: optimizedBuffer,
-            ContentType: "image/webp",
-            CacheControl: "public, max-age=31536000, immutable",
-          })
-        );
-
-        // ## R2 CLOUD
-        const publicDomain = process.env.R2_PUBLIC_DOMAIN;
-        finalAvatarUrl = `${publicDomain}/${uniqueFileName}`;
-      }
+      const finalAvatarUrl = await processImageUpload(data.get("image") as File | null, {
+        folder: 'logos',
+        maxWidth: 512,
+        maxHeight: 512,
+        quality: 75,
+      });
 
       const resp = await db.insert(elections).values({
         title: data.get("title") as string,
@@ -147,39 +123,26 @@ export const createElectionFn = createServerFn({ method: 'POST' })
     }
   });
 
-export const updateElectionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
+export const updateElectionFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const [ownedElection] = await db
+      .select({ id: elections.id })
+      .from(elections)
+      .where(and(eq<any>(elections.id, data.get("id")), eq<any>(elections.adminId, admin.id)));
+    if (!ownedElection) {
+      throw new Error('Election not found.');
+    }
 
     try {
 
-      let finalAvatarUrl: string | undefined = undefined;
-      const file = data.get("image") as File | null;
-
-      if (file && file.size > 0) {
-        const arrayBuffer = await file.arrayBuffer();
-        const rawBuffer = Buffer.from(arrayBuffer);
-        const optimizedBuffer = await sharp(rawBuffer)
-          .resize(512, 512, { fit: "inside", withoutEnlargement: true }) // Caps size at 800px max width/height
-          .webp({ quality: 75 }) // Converts to modern WebP format at 75% quality optimization
-          .toBuffer();
-        // Enforce the new optimal webp file path structure
-        const uniqueFileName = `logos/${crypto.randomUUID()}.webp`;
-
-        // Upload to S3/R2
-        await s3Client.send(
-          new PutObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: uniqueFileName,
-            Body: optimizedBuffer,
-            ContentType: "image/webp",
-            CacheControl: "public, max-age=31536000, immutable",
-          })
-        );
-
-        // ## R2 CLOUD
-        const publicDomain = process.env.R2_PUBLIC_DOMAIN;
-        finalAvatarUrl = `${publicDomain}/${uniqueFileName}`;
-      }
+      const finalAvatarUrl = await processImageUpload(data.get("image") as File | null, {
+        folder: 'logos',
+        maxWidth: 512,
+        maxHeight: 512,
+        quality: 75,
+      });
       console.log("finalAvatarUrl", finalAvatarUrl);
       console.log("data form: ", data)
       const resp = await db
@@ -211,25 +174,33 @@ export const updateElectionFn = createServerFn({ method: 'POST' }).middleware([a
 
 export const updateElectionStatusFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ data }: any) => {
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
     const { electionId, status } = data;
     const [updated] = await db
       .update(elections)
       .set({ status })
-      .where(eq<any>(elections.id, electionId))
+      .where(and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id)))
       .returning();
+    if (!updated) {
+      throw new Error('Election not found.');
+    }
     return updated;
   });
 
 export const updateElectionPublicStateFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ data }: any) => {
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
     const { electionId, makePublic } = data;
     const [updated] = await db
       .update(elections)
       .set({ makePublic })
-      .where(eq<any>(elections.id, electionId))
+      .where(and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id)))
       .returning();
+    if (!updated) {
+      throw new Error('Election not found.');
+    }
     return updated;
   });
 
@@ -296,11 +267,15 @@ export const extendElectionEndTimeFn = createServerFn({ method: 'POST' })
     return updated;
   });
 
-export const deleteElectionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: electionId }: any) => {
-    return await db.delete(elections).where(eq<any>(elections.id, electionId)).returning();
-  }
-);
+export const deleteElectionFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data: electionId }: any) => {
+    const admin: any = context?.user;
+    return await db
+      .delete(elections)
+      .where(and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id)))
+      .returning();
+  });
 
 
 
@@ -393,15 +368,16 @@ export const getElectionOverview = createServerFn({
   export const syncElectionData = createServerFn({
     method: "GET",
   })
-  .middleware([arcjetMiddleware])
-  .handler(async ({ data: electionId }): Promise<any> => {
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data: electionId }: any): Promise<any> => {
+    const admin: any = context?.user;
 
     const [
       [electionRecord],
       [votersCountResult],
       rawPositions,
     ] = await Promise.all([
-      db.select().from(elections).where(eq<any>(elections.id, electionId)),
+      db.select().from(elections).where(and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id))),
       db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq<any>(voters.electionId, electionId)),
       db.select().from(positions).where(eq<any>(positions.electionId, electionId)),
     ]);
@@ -597,8 +573,9 @@ export const getUnifiedElectionTelemetry = createServerFn({
 export const getUnifiedElectionAdminStats = createServerFn({
   method: "GET",
 })
- .middleware([arcjetMiddleware])
- .handler(async ({ data: electionId }): Promise<any> => {
+ .middleware([arcjetMiddleware, authMiddleware])
+ .handler(async ({ context, data: electionId }: any): Promise<any> => {
+  const admin: any = context?.user;
 
   // Concurrently fetch telemetry data from your database layers
   const [
@@ -608,7 +585,7 @@ export const getUnifiedElectionAdminStats = createServerFn({
     rawCandidateTallies,
     rawRecentVotes
   ] = await Promise.all([
-    db.select().from(elections).where(eq<any>(elections.id, electionId)),
+    db.select().from(elections).where(and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id))),
     db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq<any>(voters.electionId, electionId)),
     db.select().from(positions).where(eq<any>(positions.electionId, electionId)),
     db
@@ -1333,19 +1310,37 @@ export const getPositionFn = createServerFn({ method: 'GET' }).middleware([arcje
   }
 );
 
-export const createPositionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
+export const createPositionFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const [ownedElection] = await db
+      .select({ id: elections.id })
+      .from(elections)
+      .where(and(eq<any>(elections.id, data.electionId), eq<any>(elections.adminId, admin.id)));
+    if (!ownedElection) {
+      throw new Error('Election not found.');
+    }
     return await db.insert(positions).values({
       electionId: data.electionId,
       order: data.order,
       title: data.title,
       slots: data.slots,
     }).returning();
-  }
-);
+  });
 
-export const updatePositionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
+export const updatePositionFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const [ownedPosition] = await db
+      .select({ id: positions.id })
+      .from(positions)
+      .innerJoin(elections, eq(positions.electionId, elections.id))
+      .where(and(eq<any>(positions.id, data.id), eq<any>(elections.adminId, admin.id)));
+    if (!ownedPosition) {
+      throw new Error('Position not found.');
+    }
     return await db
       .update(positions)
       .set({
@@ -1358,11 +1353,20 @@ export const updatePositionFn = createServerFn({ method: 'POST' }).middleware([a
   });
 
 
-export const deletePositionFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: positionId }: any) => {
+export const deletePositionFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data: positionId }: any) => {
+    const admin: any = context?.user;
+    const [ownedPosition] = await db
+      .select({ id: positions.id })
+      .from(positions)
+      .innerJoin(elections, eq(positions.electionId, elections.id))
+      .where(and(eq<any>(positions.id, positionId), eq<any>(elections.adminId, admin.id)));
+    if (!ownedPosition) {
+      throw new Error('Position not found.');
+    }
     return await db.delete(positions).where(eq<any>(positions.id, positionId)).returning();
-  }
-);
+  });
 
 
 // CANDIDATES FUNCTIONS
@@ -1428,39 +1432,27 @@ export const getCandidateFn = createServerFn({ method: 'GET' }).middleware([arcj
   }
 );
 
-export const createCandidateFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
+export const createCandidateFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const [ownedPosition] = await db
+      .select({ id: positions.id })
+      .from(positions)
+      .innerJoin(elections, eq(positions.electionId, elections.id))
+      .where(and(eq<any>(positions.id, data.get("positionId")), eq<any>(elections.adminId, admin.id)));
+    if (!ownedPosition) {
+      throw new Error('Position not found.');
+    }
 
     try {
 
-      let finalAvatarUrl: string | undefined = undefined;
-      const file = data.get("image") as File | null;
-
-      if (file && file.size > 0) {
-        const arrayBuffer = await file.arrayBuffer();
-        const rawBuffer = Buffer.from(arrayBuffer);
-        const optimizedBuffer = await sharp(rawBuffer)
-          .resize(800, 800, { fit: "inside", withoutEnlargement: true }) // Caps size at 800px max width/height
-          .webp({ quality: 75 }) // Converts to modern WebP format at 75% quality optimization
-          .toBuffer();
-        // Enforce the new optimal webp file path structure
-        const uniqueFileName = `candidates/${crypto.randomUUID()}.webp`;
-
-        // Upload to S3/R2
-        await s3Client.send(
-          new PutObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: uniqueFileName,
-            Body: optimizedBuffer,
-            ContentType: "image/webp",
-            CacheControl: "public, max-age=31536000, immutable",
-          })
-        );
-
-        // ## R2 CLOUD
-        const publicDomain = process.env.R2_PUBLIC_DOMAIN;
-        finalAvatarUrl = `${publicDomain}/${uniqueFileName}`;
-      }
+      const finalAvatarUrl = await processImageUpload(data.get("image") as File | null, {
+        folder: 'candidates',
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 75,
+      });
 
       // Return Response
       return await db.insert(candidates).values({
@@ -1478,45 +1470,28 @@ export const createCandidateFn = createServerFn({ method: 'POST' }).middleware([
 
   });
 
-export const updateCandidateFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
+export const updateCandidateFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const [ownedCandidate] = await db
+      .select({ id: candidates.id })
+      .from(candidates)
+      .innerJoin(positions, eq(candidates.positionId, positions.id))
+      .innerJoin(elections, eq(positions.electionId, elections.id))
+      .where(and(eq<any>(candidates.id, data.get("id")), eq<any>(elections.adminId, admin.id)));
+    if (!ownedCandidate) {
+      throw new Error('Candidate not found.');
+    }
 
     try {
 
-      let finalAvatarUrl: string | undefined = undefined;
-      const file = data.get("image") as File | null;
-      if (file && file.size > 0) {
-        // const fileExtension = file.name.split(".").pop();
-        // const uniqueFileName = `candidates/${crypto.randomUUID()}.${fileExtension}`;
-        const arrayBuffer = await file.arrayBuffer();
-        const rawBuffer = Buffer.from(arrayBuffer);
-        const optimizedBuffer = await sharp(rawBuffer)
-          .resize(800, 800, { fit: "inside", withoutEnlargement: true }) // Caps size at 800px max width/height
-          .webp({ quality: 75 }) // Converts to modern WebP format at 75% quality optimization
-          .toBuffer();
-        // Enforce the new optimal webp file path structure
-        const uniqueFileName = `candidates/${crypto.randomUUID()}.webp`;
-
-        // Upload to IDrive e2
-        await s3Client.send(
-          new PutObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: uniqueFileName,
-            Body: optimizedBuffer,
-            ContentType: "image/webp",
-            // ContentType: file.type,
-            CacheControl: "public, max-age=31536000, immutable",
-          })
-        );
-
-        // ## IDRIVE
-        // const endpointHost = process.env.IDRIVE_ENDPOINT!.replace("https://", "");
-        // finalAvatarUrl = `https://${BUCKET_NAME}.${endpointHost}/${uniqueFileName}`;
-
-        // ## R2 CLOUD
-        const publicDomain = process.env.R2_PUBLIC_DOMAIN;
-        finalAvatarUrl = `${publicDomain}/${uniqueFileName}`;
-      }
+      const finalAvatarUrl = await processImageUpload(data.get("image") as File | null, {
+        folder: 'candidates',
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 75,
+      });
 
       // Return Response
       return await db
@@ -1537,11 +1512,21 @@ export const updateCandidateFn = createServerFn({ method: 'POST' }).middleware([
   });
 
 
-export const deleteCandidateFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: candidateId }: any) => {
+export const deleteCandidateFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data: candidateId }: any) => {
+    const admin: any = context?.user;
+    const [ownedCandidate] = await db
+      .select({ id: candidates.id })
+      .from(candidates)
+      .innerJoin(positions, eq(candidates.positionId, positions.id))
+      .innerJoin(elections, eq(positions.electionId, elections.id))
+      .where(and(eq<any>(candidates.id, candidateId), eq<any>(elections.adminId, admin.id)));
+    if (!ownedCandidate) {
+      throw new Error('Candidate not found.');
+    }
     return await db.delete(candidates).where(eq<any>(candidates.id, candidateId)).returning();
-  }
-);
+  });
 
 
 // VOTERS FUNCTIONS
@@ -1651,11 +1636,17 @@ export const getVotersByElectionFn = createServerFn({ method: 'GET' })
 
 
 
-export const getVoterFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: voterId }: any) => {
-    return await db.select().from(voters).where(eq<any>(voters.id, voterId));
-  }
-);
+export const getVoterFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data: voterId }: any) => {
+    const admin: any = context?.user;
+    return await db
+      .select({ voters })
+      .from(voters)
+      .innerJoin(elections, eq(voters.electionId, elections.id))
+      .where(and(eq<any>(voters.id, voterId), eq<any>(elections.adminId, admin.id)))
+      .then((rows) => rows.map((r) => r.voters));
+  });
 
 export const getElectionByTagFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
   async ({ data: tag }: any) => {
@@ -1665,8 +1656,17 @@ export const getElectionByTagFn = createServerFn({ method: 'GET' }).middleware([
 
 
 
-export const createVoterFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
+export const createVoterFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const [ownedElection] = await db
+      .select({ id: elections.id })
+      .from(elections)
+      .where(and(eq<any>(elections.id, data.electionId), eq<any>(elections.adminId, admin.id)));
+    if (!ownedElection) {
+      throw new Error('Election not found.');
+    }
     return await db.insert(voters).values({
       electionId: data.electionId,
       name: data.name,
@@ -1676,11 +1676,20 @@ export const createVoterFn = createServerFn({ method: 'POST' }).middleware([arcj
       inviteToken: data.inviteToken,
       isVerified: data.isVerified,
     } as any).returning();
-  }
-);
+  });
 
-export const updateVoterFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
+export const updateVoterFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const [ownedVoter] = await db
+      .select({ id: voters.id })
+      .from(voters)
+      .innerJoin(elections, eq(voters.electionId, elections.id))
+      .where(and(eq<any>(voters.id, data.id), eq<any>(elections.adminId, admin.id)));
+    if (!ownedVoter) {
+      throw new Error('Voter not found.');
+    }
     return await db
       .update(voters)
       .set({
@@ -1698,7 +1707,6 @@ export const updateVoterFn = createServerFn({ method: 'POST' }).middleware([arcj
 
   export const verifyVoterFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
     async ({ data }: any) => {
-      console.log("data: ", data)
       try {
         const phoneNumberCode = addCountryCode(data?.phone);
         const phoneNumberNoCode = stripCountryCode(data?.phone);
@@ -1799,7 +1807,6 @@ export const updateVoterFn = createServerFn({ method: 'POST' }).middleware([arcj
 
   export const verifyVoterOtpFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
     async ({ data }: any) => {
-      console.log("data: ", data)
       try {
        
         let [voter] = await db
@@ -1940,8 +1947,6 @@ export const inviteVoterFn = createServerFn({ method: 'GET' }).middleware([arcje
         };
       }
       
-      console.log("Single Invite: ", smsPayload)
-      
       if (!phone.length) {
         throw new Error(`Phone number is Invalid, ${phone}`);
       }
@@ -2072,8 +2077,6 @@ export const inviteVoters1Fn = createServerFn({ method: 'GET' }).middleware([arc
             message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken} . Try and Visit ${electionUrl} to vote!`,
             recipients: [phone],
           };
-
-          console.log("Bulk Invite: ", smsPayload)
 
           if (!phone?.length || phone?.length < 9) {
             console.log(`Phone number is Invalid, ${phone}`);
@@ -2339,9 +2342,18 @@ export const exportVotersToExcelFn = createServerFn({ method: 'GET' })
 
 
 export const deleteVoterFn = createServerFn({ method: 'POST' })
- .middleware([arcjetMiddleware])
+ .middleware([arcjetMiddleware, authMiddleware])
  .handler(
-  async ({ data: voterId }: any) => {
+  async ({ context, data: voterId }: any) => {
+    const admin: any = context?.user;
+    const [ownedVoter] = await db
+      .select({ id: voters.id })
+      .from(voters)
+      .innerJoin(elections, eq(voters.electionId, elections.id))
+      .where(and(eq<any>(voters.id, voterId), eq<any>(elections.adminId, admin.id)));
+    if (!ownedVoter) {
+      throw new Error('Voter not found.');
+    }
     return await db.delete(voters).where(eq<any>(voters.id, voterId)).returning();
   }
 );

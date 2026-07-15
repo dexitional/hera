@@ -77,9 +77,6 @@ export default function AuthElection({ data }: any) {
         // Stage OTP after Authentication  
         if(data?.authMode == 'otp'){
             useAuthStore.getState().loadOtp(dbOtp, maskPhone);
-            console.log("state: ",otp,maskPhone)
-            console.log("state: ",dbOtp,maskPhone)
-  
         } else {
           
           const token = generateTokenCode()
@@ -189,7 +186,6 @@ export default function AuthElection({ data }: any) {
       try {
         const resp: any = await fetchGoogleProfileFromServer({ data: { accessToken } } as any);
         const dt = resp?.data;
-        console.log("result: ", resp)
         if(dt){
           // Initialize Store
           const user:any = {
@@ -209,8 +205,6 @@ export default function AuthElection({ data }: any) {
             inviteToken: dt?.voters?.inviteToken,
           }
 
-          console.log("user:", user)
-
           if(user.hasVoted){
             setMsg(`Voter securely submitted a ballot!`);
             setTimeout(() => setMsg(null),5000);
@@ -229,7 +223,6 @@ export default function AuthElection({ data }: any) {
           const token = generateTokenCode();
           // authActions.login(user,token);
           useAuthStore.getState().login(user, token);
-          console.log(user, token)
           navigate({ to: `/vote/cast`});
           
           queryClient.invalidateQueries({ queryKey: ['voter-page'] });

@@ -19,7 +19,9 @@ const usersQueryOptions = (params: { page: number; pageSize: number; searchQuery
 function generateTempPassword() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
   let result = "";
-  for (let i = 0; i < 12; i++) result += chars[Math.floor(Math.random() * chars.length)];
+  const randomValues = new Uint32Array(12);
+  globalThis.crypto.getRandomValues(randomValues);
+  for (let i = 0; i < 12; i++) result += chars[randomValues[i] % chars.length];
   return result;
 }
 

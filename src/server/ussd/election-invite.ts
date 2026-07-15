@@ -54,10 +54,6 @@ export async function handleElectionInviteStep(params: {
         or(eq(voters.phoneNumber, phoneWithCode), eq(voters.phoneNumber, phoneWithoutCode), eq(voters.phoneNumber, phoneWithZero)),
       ),
     );
-  console.log("username: ", cleanUsername);
-  console.log("phone numbers: ", phoneWithCode, phoneWithoutCode, phoneWithZero);
-  console.log("match: ", matches);
-
 
   if (matches.length === 0) {
     return {
@@ -70,6 +66,22 @@ export async function handleElectionInviteStep(params: {
   if (!activePaid) {
     return {
       message: 'Your election is not currently active. Please contact your election administrator.',
+      continueSession: false,
+    };
+  }
+
+  const isClosed = matches.find((m:any) =>  new Date() > new Date(m?.election?.endAt));
+  if (isClosed) {
+    return {
+      message: 'Your election is currently ended. Please contact your election administrator.',
+      continueSession: false,
+    };
+  }
+
+  const isVoted = matches.find((m) => m.voter.hasVoted );
+  if (isVoted) {
+    return {
+      message: 'Your vote is already registered. Please contact your election administrator.',
       continueSession: false,
     };
   }
