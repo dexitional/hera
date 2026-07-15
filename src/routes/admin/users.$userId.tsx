@@ -2,10 +2,10 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   ArrowLeft, Loader2, ShieldCheck, Ban, ToggleLeft, ToggleRight,
-  Save, Calendar, Mail, User as UserIcon, ArrowUpRight
+  Save, Calendar, Mail, User as UserIcon, ArrowUpRight, Plus
 } from "lucide-react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { getUserByIdFn, getUserElectionsFn, updateElectionAdminSettingsFn } from "#/server/tenant-admin-users";
+import { getUserByIdFn, getUserElectionsFn, getUserEventsFn, updateElectionAdminSettingsFn } from "#/server/tenant-admin-users";
 import moment from "moment";
 
 const userQueryOptions = (userId: string) => ({
@@ -16,6 +16,11 @@ const userQueryOptions = (userId: string) => ({
 const userElectionsQueryOptions = (userId: string) => ({
   queryKey: ['super-admin-user-elections', userId],
   queryFn: () => getUserElectionsFn({ data: userId } as any),
+});
+
+const userEventsQueryOptions = (userId: string) => ({
+  queryKey: ['super-admin-user-events', userId],
+  queryFn: () => getUserEventsFn({ data: userId } as any),
 });
 
 export const Route = createFileRoute("/admin/users/$userId")({
@@ -30,6 +35,7 @@ export const Route = createFileRoute("/admin/users/$userId")({
     await Promise.all([
       context.queryClient.ensureQueryData(userQueryOptions(userId)),
       context.queryClient.ensureQueryData(userElectionsQueryOptions(userId)),
+      context.queryClient.ensureQueryData(userEventsQueryOptions(userId)),
     ]);
   },
   pendingComponent: () => (
@@ -147,10 +153,46 @@ function ElectionBillingRow({ election, userId }: { election: any; userId: strin
   );
 }
 
+function EventRow({ event }: { event: any }) {
+  return (
+    <tr className="hover:bg-zinc-900/20 transition-colors group">
+      <td className="px-6 py-4">
+        <span className="font-semibold text-white tracking-wide">{event.title}</span>
+      </td>
+      <td className="px-6 py-4 align-middle">
+        {event.endAt && (
+          <span className="text-[11px] text-zinc-500 font-mono flex items-center gap-1">
+            <Calendar className="w-3 h-3 text-zinc-600" /> Ends {moment(event.endAt).format("MMM D, YYYY")}
+          </span>
+        )}
+      </td>
+      <td className="px-6 py-4 align-middle text-center">
+        <span
+          className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-full border ${event.isActive ? 'text-emerald-400 bg-emerald-950/20 border-emerald-900/30' : 'text-zinc-400 bg-zinc-900 border-zinc-800'}`}
+        >
+          {event.isActive ? "Active" : "Inactive"}
+        </span>
+      </td>
+      <td className="px-6 py-4 align-middle text-right">
+        <Link
+          to="/admin/events/$eventId/manage"
+          params={{ eventId: String(event.id) }}
+          title="Open event console"
+          className="inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 transition-all shadow-sm"
+        >
+          <span>Console</span>
+          <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+        </Link>
+      </td>
+    </tr>
+  );
+}
+
 function UserWorkspacePage() {
   const { userId } = Route.useParams();
   const { data: user }: any = useSuspenseQuery(userQueryOptions(userId));
   const { data: elections }: any = useSuspenseQuery(userElectionsQueryOptions(userId));
+  const { data: events }: any = useSuspenseQuery(userEventsQueryOptions(userId));
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -194,9 +236,18 @@ function UserWorkspacePage() {
 
       {/* ================= ELECTION WORKSPACE TABLE ================= */}
       <div className="space-y-4">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-          Election Workspace <span className="text-zinc-600 font-normal">({elections.length})</span>
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+            Election Workspace <span className="text-zinc-600 font-normal">({elections.length})</span>
+          </h2>
+          <Link
+            to="/admin/elections/new"
+            search={{ forUserId: userId, forUserName: user.name }}
+            className="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" /> Create Election
+          </Link>
+        </div>
 
         <div className="bg-[#0a192a]/50 rounded-xl border border-zinc-800 overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
@@ -220,6 +271,50 @@ function UserWorkspacePage() {
                   <tr>
                     <td colSpan={6} className="text-center py-12 border border-dashed border-zinc-900 rounded-b-xl text-zinc-500 text-xs">
                       This account has not created any elections yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* ================= EVENT WORKSPACE TABLE ================= */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+            Event Workspace <span className="text-zinc-600 font-normal">({events.length})</span>
+          </h2>
+          <Link
+            to="/admin/events/new"
+            search={{ forUserId: userId, forUserName: user.name }}
+            className="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" /> Create Event
+          </Link>
+        </div>
+
+        <div className="bg-[#0a192a]/50 rounded-xl border border-zinc-800 overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-zinc-800/60 bg-zinc-900/20 text-zinc-400 text-[11px] font-bold uppercase tracking-wider select-none">
+                  <th className="px-6 py-4">Event</th>
+                  <th className="px-6 py-4">Timeline</th>
+                  <th className="px-6 py-4 text-center">State</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-900 text-sm">
+                {events.length > 0 ? (
+                  events.map((event: any) => (
+                    <EventRow key={event.id} event={event} />
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="text-center py-12 border border-dashed border-zinc-900 rounded-b-xl text-zinc-500 text-xs">
+                      This account has not created any events yet.
                     </td>
                   </tr>
                 )}

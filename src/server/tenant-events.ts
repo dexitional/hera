@@ -189,6 +189,11 @@ export const createEventFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data }: any) => {
     const admin: any = context?.user;
+    // Super admins can stage an event inside another tenant admin's workspace
+    // by passing adminId; everyone else always creates in their own.
+    const targetAdminId = admin.role === 'super' && data.get("adminId")
+      ? String(data.get("adminId"))
+      : admin.id;
 
     const imageUrl = await processImageUpload(data.get("image") as File | null, {
       folder: 'events',
@@ -205,7 +210,7 @@ export const createEventFn = createServerFn({ method: 'POST' })
       endAt: data.get("endAt") ? new Date(data.get("endAt") as string) : null,
       unitPrice: data.get("unitPrice") ? Number(data.get("unitPrice")) : null,
       isActive: data.get("isActive") === "true",
-      adminId: admin.id,
+      adminId: targetAdminId,
       ...(imageUrl && { imageUrl }),
     }).returning();
     return created;
@@ -215,6 +220,10 @@ export const updateEventFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data }: any) => {
     const admin: any = context?.user;
+    // Super admins can edit any tenant's event; regular admins only their own.
+    const ownershipFilter = admin.role === 'super'
+      ? eq<any>(events.id, data.get("id") as any)
+      : and(eq<any>(events.id, data.get("id") as any), eq<any>(events.adminId, admin.id));
 
     const imageUrl = await processImageUpload(data.get("image") as File | null, {
       folder: 'events',
@@ -235,7 +244,7 @@ export const updateEventFn = createServerFn({ method: 'POST' })
         isActive: data.get("isActive") === "true",
         ...(imageUrl && { imageUrl }),
       })
-      .where(and(eq<any>(events.id, data.get("id") as any), eq<any>(events.adminId, admin.id)))
+      .where(ownershipFilter)
       .returning();
 
     return updated;
@@ -250,7 +259,11 @@ export const updateEventActiveStateFn = createServerFn({ method: 'POST' })
     const [updated] = await db
       .update(events)
       .set({ isActive: !!isActive })
-      .where(and(eq<any>(events.id, eventId), eq<any>(events.adminId, admin.id)))
+      .where(
+        admin.role === 'super'
+          ? eq<any>(events.id, eventId)
+          : and(eq<any>(events.id, eventId), eq<any>(events.adminId, admin.id))
+      )
       .returning();
 
     return updated;
@@ -401,7 +414,11 @@ export const createCategoryFn = createServerFn({ method: 'POST' })
       const [ownedEvent] = await db
         .select({ id: events.id })
         .from(events)
-        .where(and(eq<any>(events.id, data.eventId), eq<any>(events.adminId, admin.id)));
+        .where(
+          admin.role === 'super'
+            ? eq<any>(events.id, data.eventId)
+            : and(eq<any>(events.id, data.eventId), eq<any>(events.adminId, admin.id))
+        );
       if (!ownedEvent) {
         throw new Error('Event not found.');
       }
@@ -437,7 +454,7 @@ export const updateCategoryFn = createServerFn({ method: 'POST' })
           and(
             eq<any>(categories.id, data.id),
             eq(categories.eventId, events.id),
-            eq<any>(events.adminId, admin.id),
+            ...(admin.role === 'super' ? [] : [eq<any>(events.adminId, admin.id)]),
           ),
         )
         .returning({ id: categories.id, name: categories.name, description: categories.description, code: categories.code, eventId: categories.eventId, createdAt: categories.createdAt });
@@ -543,7 +560,11 @@ export const createContestantFn = createServerFn({ method: 'POST' })
         .select({ id: categories.id })
         .from(categories)
         .innerJoin(events, eq(categories.eventId, events.id))
-        .where(and(eq<any>(categories.id, data.get("categoryId")), eq<any>(events.adminId, admin.id)));
+        .where(
+          admin.role === 'super'
+            ? eq<any>(categories.id, data.get("categoryId"))
+            : and(eq<any>(categories.id, data.get("categoryId")), eq<any>(events.adminId, admin.id))
+        );
       if (!ownedCategory) {
         throw new Error('Category not found.');
       }
@@ -596,7 +617,11 @@ export const updateContestantFn = createServerFn({ method: 'POST' })
         .from(contestants)
         .innerJoin(categories, eq(contestants.categoryId, categories.id))
         .innerJoin(events, eq(categories.eventId, events.id))
-        .where(and(eq<any>(contestants.id, data.get("id")), eq<any>(events.adminId, admin.id)));
+        .where(
+          admin.role === 'super'
+            ? eq<any>(contestants.id, data.get("id"))
+            : and(eq<any>(contestants.id, data.get("id")), eq<any>(events.adminId, admin.id))
+        );
       if (!ownedContestant) {
         throw new Error('Contestant not found.');
       }
@@ -736,7 +761,11 @@ export const createEventTransactionFn = createServerFn({ method: 'POST' })
       .from(contestants)
       .innerJoin(categories, eq(contestants.categoryId, categories.id))
       .innerJoin(events, eq(categories.eventId, events.id))
-      .where(and(eq<any>(contestants.id, data.contestantId), eq<any>(events.adminId, admin.id)));
+      .where(
+        admin.role === 'super'
+          ? eq<any>(contestants.id, data.contestantId)
+          : and(eq<any>(contestants.id, data.contestantId), eq<any>(events.adminId, admin.id))
+      );
     if (!ownedContestant) {
       throw new Error('Contestant not found.');
     }
@@ -763,7 +792,11 @@ export const updateEventTransactionFn = createServerFn({ method: 'POST' })
       .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
       .innerJoin(categories, eq(contestants.categoryId, categories.id))
       .innerJoin(events, eq(categories.eventId, events.id))
-      .where(and(eq<any>(eventTransactions.id, data.id), eq<any>(events.adminId, admin.id)));
+      .where(
+        admin.role === 'super'
+          ? eq<any>(eventTransactions.id, data.id)
+          : and(eq<any>(eventTransactions.id, data.id), eq<any>(events.adminId, admin.id))
+      );
     if (!ownedTransaction) {
       throw new Error('Transaction not found.');
     }

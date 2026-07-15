@@ -1,12 +1,12 @@
 import React, { useRef, useState } from "react";
-import { CheckCircle2, Coins, ToggleLeft, Calendar, UploadCloud, FileImage, X, AlertCircle } from "lucide-react";
+import { CheckCircle2, Coins, ToggleLeft, Calendar, UploadCloud, FileImage, X, AlertCircle, ShieldCheck } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createEventFn, updateEventFn } from "#/server/tenant-events";
 import { useNavigate } from "@tanstack/react-router";
 import { convertToFormData } from "#/lib/utils";
 import moment from "moment";
 
-export default function EventAdminForm({ data }: any) {
+export default function EventAdminForm({ data, forUserId, forUserName }: any) {
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -72,14 +72,25 @@ export default function EventAdminForm({ data }: any) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const newFormData = convertToFormData(formData);
+      const newFormData = convertToFormData({
+        ...formData,
+        // Only meaningful on create -- a super admin staging this event
+        // inside another tenant's workspace.
+        ...(!isEditMode && forUserId ? { adminId: forUserId } : {}),
+      });
       if (isEditMode) {
         editMutation.mutate({ data: newFormData } as any);
       } else {
         createMutation.mutate({ data: newFormData } as any);
       }
       setSubmitSuccess(true);
-      setTimeout(() => navigate({ to: '/admin/events' }), 2000);
+      setTimeout(() => {
+        if (!isEditMode && forUserId) {
+          navigate({ to: '/admin/users/$userId', params: { userId: forUserId } });
+        } else {
+          navigate({ to: '/admin/events' });
+        }
+      }, 2000);
     } catch (err) {
       console.error(err);
     } finally {
@@ -107,6 +118,12 @@ export default function EventAdminForm({ data }: any) {
             <section className="relative mx-auto my-10 max-w-2xl w-full px-4">
               <form id="new-event-form" onSubmit={handleSubmit}>
                 <div className="relative">
+                  {!isEditMode && forUserId && (
+                    <div className="mb-4 flex items-center gap-2 rounded-lg border border-purple-900/30 bg-purple-950/20 px-4 py-2.5 text-xs text-purple-300">
+                      <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                      Creating this event in <span className="font-semibold text-white">{forUserName || forUserId}</span>'s workspace.
+                    </div>
+                  )}
                   <div className="bg-zinc-900 rounded-xl border border-zinc-800 shadow-xl mb-4 md:mb-8 overflow-hidden">
 
                     {/* Form Layout Header */}

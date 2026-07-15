@@ -135,6 +135,27 @@ export const getUserElectionsFn = createServerFn({ method: 'GET' })
       .orderBy(asc(elections.title));
   });
 
+// Every event owned by a given tenant admin -- the "event workspace" for that user.
+export const getUserEventsFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data: userId }: any) => {
+    assertSuperAdmin(context);
+
+    return await db
+      .select({
+        id: events.id,
+        title: events.title,
+        isActive: events.isActive,
+        unitPrice: events.unitPrice,
+        startAt: events.startAt,
+        endAt: events.endAt,
+        createdAt: events.createdAt,
+      })
+      .from(events)
+      .where(eq(events.adminId, userId))
+      .orderBy(asc(events.title));
+  });
+
 // Super-admin override of an election's billing/enablement fields -- no ownership check,
 // since the whole point is managing elections inside another tenant admin's workspace.
 export const updateElectionAdminSettingsFn = createServerFn({ method: 'POST' })

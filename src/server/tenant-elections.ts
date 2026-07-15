@@ -90,6 +90,12 @@ export const createElectionFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware,authMiddleware])
   .handler(async ({ context, data }: any) => {
     try {
+      const admin: any = context?.user;
+      // Super admins can stage an election inside another tenant admin's
+      // workspace by passing adminId; everyone else always creates in their own.
+      const targetAdminId = admin.role === 'super' && data.get("adminId")
+        ? String(data.get("adminId"))
+        : admin.id;
 
       const finalAvatarUrl = await processImageUpload(data.get("image") as File | null, {
         folder: 'logos',
@@ -100,7 +106,7 @@ export const createElectionFn = createServerFn({ method: 'POST' })
 
       const resp = await db.insert(elections).values({
         title: data.get("title") as string,
-        adminId: context?.user?.id,
+        adminId: targetAdminId,
         tag: data.get("tag") as string,
         billVoters: data.get("billVoters") as number,
         authMode: data.get("authMode") as string,
@@ -127,10 +133,14 @@ export const updateElectionFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data }: any) => {
     const admin: any = context?.user;
+    // Super admins can edit any tenant's election; regular admins only their own.
+    const ownershipFilter = admin.role === 'super'
+      ? eq<any>(elections.id, data.get("id"))
+      : and(eq<any>(elections.id, data.get("id")), eq<any>(elections.adminId, admin.id));
     const [ownedElection] = await db
       .select({ id: elections.id })
       .from(elections)
-      .where(and(eq<any>(elections.id, data.get("id")), eq<any>(elections.adminId, admin.id)));
+      .where(ownershipFilter);
     if (!ownedElection) {
       throw new Error('Election not found.');
     }
@@ -180,7 +190,11 @@ export const updateElectionStatusFn = createServerFn({ method: 'POST' })
     const [updated] = await db
       .update(elections)
       .set({ status })
-      .where(and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id)))
+      .where(
+        admin.role === 'super'
+          ? eq<any>(elections.id, electionId)
+          : and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id))
+      )
       .returning();
     if (!updated) {
       throw new Error('Election not found.');
@@ -196,7 +210,11 @@ export const updateElectionPublicStateFn = createServerFn({ method: 'POST' })
     const [updated] = await db
       .update(elections)
       .set({ makePublic })
-      .where(and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id)))
+      .where(
+        admin.role === 'super'
+          ? eq<any>(elections.id, electionId)
+          : and(eq<any>(elections.id, electionId), eq<any>(elections.adminId, admin.id))
+      )
       .returning();
     if (!updated) {
       throw new Error('Election not found.');
@@ -1317,7 +1335,11 @@ export const createPositionFn = createServerFn({ method: 'POST' })
     const [ownedElection] = await db
       .select({ id: elections.id })
       .from(elections)
-      .where(and(eq<any>(elections.id, data.electionId), eq<any>(elections.adminId, admin.id)));
+      .where(
+        admin.role === 'super'
+          ? eq<any>(elections.id, data.electionId)
+          : and(eq<any>(elections.id, data.electionId), eq<any>(elections.adminId, admin.id))
+      );
     if (!ownedElection) {
       throw new Error('Election not found.');
     }
@@ -1337,7 +1359,11 @@ export const updatePositionFn = createServerFn({ method: 'POST' })
       .select({ id: positions.id })
       .from(positions)
       .innerJoin(elections, eq(positions.electionId, elections.id))
-      .where(and(eq<any>(positions.id, data.id), eq<any>(elections.adminId, admin.id)));
+      .where(
+        admin.role === 'super'
+          ? eq<any>(positions.id, data.id)
+          : and(eq<any>(positions.id, data.id), eq<any>(elections.adminId, admin.id))
+      );
     if (!ownedPosition) {
       throw new Error('Position not found.');
     }
@@ -1440,7 +1466,11 @@ export const createCandidateFn = createServerFn({ method: 'POST' })
       .select({ id: positions.id })
       .from(positions)
       .innerJoin(elections, eq(positions.electionId, elections.id))
-      .where(and(eq<any>(positions.id, data.get("positionId")), eq<any>(elections.adminId, admin.id)));
+      .where(
+        admin.role === 'super'
+          ? eq<any>(positions.id, data.get("positionId"))
+          : and(eq<any>(positions.id, data.get("positionId")), eq<any>(elections.adminId, admin.id))
+      );
     if (!ownedPosition) {
       throw new Error('Position not found.');
     }
@@ -1479,7 +1509,11 @@ export const updateCandidateFn = createServerFn({ method: 'POST' })
       .from(candidates)
       .innerJoin(positions, eq(candidates.positionId, positions.id))
       .innerJoin(elections, eq(positions.electionId, elections.id))
-      .where(and(eq<any>(candidates.id, data.get("id")), eq<any>(elections.adminId, admin.id)));
+      .where(
+        admin.role === 'super'
+          ? eq<any>(candidates.id, data.get("id"))
+          : and(eq<any>(candidates.id, data.get("id")), eq<any>(elections.adminId, admin.id))
+      );
     if (!ownedCandidate) {
       throw new Error('Candidate not found.');
     }
@@ -1663,7 +1697,11 @@ export const createVoterFn = createServerFn({ method: 'POST' })
     const [ownedElection] = await db
       .select({ id: elections.id })
       .from(elections)
-      .where(and(eq<any>(elections.id, data.electionId), eq<any>(elections.adminId, admin.id)));
+      .where(
+        admin.role === 'super'
+          ? eq<any>(elections.id, data.electionId)
+          : and(eq<any>(elections.id, data.electionId), eq<any>(elections.adminId, admin.id))
+      );
     if (!ownedElection) {
       throw new Error('Election not found.');
     }
@@ -1686,7 +1724,11 @@ export const updateVoterFn = createServerFn({ method: 'POST' })
       .select({ id: voters.id })
       .from(voters)
       .innerJoin(elections, eq(voters.electionId, elections.id))
-      .where(and(eq<any>(voters.id, data.id), eq<any>(elections.adminId, admin.id)));
+      .where(
+        admin.role === 'super'
+          ? eq<any>(voters.id, data.id)
+          : and(eq<any>(voters.id, data.id), eq<any>(elections.adminId, admin.id))
+      );
     if (!ownedVoter) {
       throw new Error('Voter not found.');
     }
