@@ -5,17 +5,16 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { db } from "../db"; // Your optimized Drizzle instance
 import { sendEmail, verificationEmailHtml } from "../server/email";
+import { trustedOrigins } from "./trusted-origins";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
   }),
   // Restricts which origins may complete auth flows / send credentialed
-  // requests -- keep in sync with the CORS allowlist in
-  // src/routes/api/auth.$.ts.
-  trustedOrigins: [process.env.BETTER_AUTH_URL, process.env.VITE_BASE_URL].filter(
-    (v): v is string => !!v,
-  ),
+  // requests -- shared with the CORS allowlist in src/routes/api/auth.$.ts
+  // via ./trusted-origins so both include the www and non-www forms.
+  trustedOrigins,
   user: {
     fields: {
       role: "role",
