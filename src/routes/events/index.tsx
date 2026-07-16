@@ -53,12 +53,12 @@ function RouteComponent() {
   });
 
   return (
-    <div className="min-h-screen bg-[#18181b] text-white antialiased font-sans">
+    <div className="min-h-screen bg-[#0a192a]/30 text-white antialiased font-sans">
       <main className="w-full">
         <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-16 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="text-left">
             <h1
-              className="text-4xl md:text-6xl font-extrabold tracking-tight text-white mb-4 leading-tight"
+              className="text-3xl md:text-5xl font-extrabold tracking-tight text-white mb-4 leading-tight"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
               Vote on Events
@@ -178,7 +178,7 @@ function RouteComponent() {
                       <Link
                         to="/events/$eventId/categories"
                         params={{ eventId: String(event.id) }}
-                        className="w-full px-6 py-3 bg-gradient-to-r from-[#6d28d9] to-purple-600 text-white rounded-2xl hover:from-[#6d28d9]/90 hover:to-purple-600/90 transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-bold shadow-lg"
+                        className="w-full px-6 py-3 bg-[#E3F09B] hover:bg-[#c0ff14] text-[#131313] rounded-lg shadow-[5px_5px_10px_rgba(0,0,0,0.116)] transition-all duration-500 active:scale-[0.97] flex items-center justify-center gap-2 group text-sm font-bold"
                       >
                         View Categories
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

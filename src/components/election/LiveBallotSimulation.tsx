@@ -133,7 +133,7 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
   }
 
   return (
-    <div className="w-full min-h-screen bg-[#18181b] text-zinc-200 font-sans p-4 md:p-6 overflow-x-hidden relative select-none">
+    <div className="w-full min-h-screen bg-[#0a192a]/30 text-zinc-200 font-sans p-4 md:p-6 overflow-x-hidden relative select-none">
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* ================= SECURE TERMINAL HEADER ================= */}

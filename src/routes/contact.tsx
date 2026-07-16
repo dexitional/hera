@@ -10,7 +10,7 @@ function RouteComponent() {
     <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <section className="w-full pt-6 sm:pt-12 lg:pt-24 pb-10">
         <div className="text-left" style={{ opacity: 1, transform: 'none' }}>
-          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-white mb-2 leading-tight">
+          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-white mb-2 leading-tight">
             Contact Us
           </h1>
           <p className="text-lg md:text-xl text-zinc-300 mb-8 max-w-3xl">

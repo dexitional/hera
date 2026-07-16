@@ -42,7 +42,7 @@ function RouteComponent() {
   );
 
   return (
-    <div className="min-h-screen bg-[#18181b] text-white antialiased font-sans">
+    <div className="min-h-screen bg-[#0a192a]/30 text-white antialiased font-sans">
       <main className="w-full">
         <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-8 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="flex flex-col gap-4">
@@ -148,7 +148,7 @@ function RouteComponent() {
                   <Link
                     to="/events/$eventId/categories/$categoryId"
                     params={{ eventId, categoryId: String(category.id) }}
-                    className="w-full px-4 py-3 bg-gradient-to-r from-[#6d28d9] to-purple-600 text-white rounded-2xl hover:from-[#6d28d9]/90 hover:to-purple-600/90 transition-all duration-300 flex items-center justify-center gap-2 group/button text-sm font-bold shadow-lg"
+                    className="w-full px-4 py-3 bg-[#E3F09B] hover:bg-[#c0ff14] text-[#131313] rounded-lg shadow-[5px_5px_10px_rgba(0,0,0,0.116)] transition-all duration-500 active:scale-[0.97] flex items-center justify-center gap-2 group/button text-sm font-bold"
                   >
                     View Nominees
                     <ArrowRight className="w-4 h-4 group-hover/button:translate-x-1 transition-transform" />

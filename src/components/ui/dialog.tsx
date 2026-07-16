@@ -15,7 +15,7 @@ export const DialogContent = React.forwardRef<
   <DialogPrimitive.Portal>
     <DialogPrimitive.Overlay
       className={cn(
-        "fixed inset-0 z-50 bg-black/60 backdrop-blur-sm",
+        "fixed inset-0 z-50 bg-[#0a192a]/80 backdrop-blur-sm",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
       )}
@@ -24,7 +24,7 @@ export const DialogContent = React.forwardRef<
       ref={forwardedRef}
       className={cn(
         `fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-${modalPage.state.size} -translate-x-1/2 -translate-y-1/2`,
-        "rounded-3xl border border-white/10 bg-[#18181b] p-6 text-white shadow-2xl",
+        "rounded-3xl border border-white/10 bg-[#0a192a]/30 p-6 text-white shadow-2xl",
         "focus:outline-none",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",

@@ -31,7 +31,7 @@ function RouteComponent() {
   const status = getEventStatus(event, rightNow);
 
   return (
-    <div className="min-h-screen bg-[#18181b] text-white antialiased font-sans">
+    <div className="min-h-screen bg-[#0a192a]/30 text-white antialiased font-sans">
       <main className="w-full">
         <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-8 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="mb-6">

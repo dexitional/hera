@@ -62,7 +62,7 @@ function RouteComponent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#18181b] text-white antialiased font-sans">
+    <div className="min-h-screen bg-[#0a192a]/30 text-white antialiased font-sans">
     <Dialog
       open={modal.open}
       onOpenChange={(open) => {
@@ -179,7 +179,7 @@ function RouteComponent() {
                       <DialogTrigger asChild>
                         <button
                           onClick={() => openVoteModal(contestant)}
-                          className="flex-1 px-4 py-3 bg-linear-to-r from-[#6d28d9] to-purple-600 text-white rounded-2xl hover:from-[#6d28d9]/90 hover:to-purple-600/90 transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-bold shadow-lg"
+                          className="flex-1 px-4 py-3 bg-[#E3F09B] hover:bg-[#c0ff14] text-[#131313] rounded-lg shadow-[5px_5px_10px_rgba(0,0,0,0.116)] transition-all duration-500 active:scale-[0.97] flex items-center justify-center gap-2 group text-sm font-bold"
                         >
                           Vote Now
                         </button>

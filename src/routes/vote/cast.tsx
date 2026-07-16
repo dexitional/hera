@@ -39,7 +39,7 @@ export const Route = createFileRoute('/vote/cast')({
 
 function LoadingShell() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#18181b]">
+    <div className="flex min-h-screen items-center justify-center bg-[#0a192a]/30">
       <Loader2 className="animate-spin text-purple-500" />
     </div>
   );
@@ -83,7 +83,7 @@ function RouteComponent() {
 
   if (isError) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#18181b] px-4 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#0a192a]/30 px-4 text-center">
         <p className="text-sm font-semibold text-red-400">Couldn't load your ballot.</p>
         <p className="max-w-sm text-xs text-zinc-500">
           {error instanceof Error ? error.message : "Please try signing in again."}

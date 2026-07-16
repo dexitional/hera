@@ -92,7 +92,7 @@ function RouteComponent() {
                     </Link>
                     <div className="hidden sm:block">
                       <h1
-                        className="text-2xl sm:text-3xl lg:text-4xl font-extrabold break-words text-left"
+                        className="text-xl sm:text-2xl lg:text-3xl font-extrabold break-words text-left"
                         style={{ fontFamily: "Inter, sans-serif" }}
                       >
                         {nominee.name}
@@ -101,7 +101,7 @@ function RouteComponent() {
                   </div>
                   <div className="flex-1 sm:hidden">
                     <h1
-                      className="text-2xl sm:text-3xl lg:text-4xl font-extrabold break-words text-left"
+                      className="text-xl sm:text-2xl lg:text-3xl font-extrabold break-words text-left"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     >
                       {nominee.name}
