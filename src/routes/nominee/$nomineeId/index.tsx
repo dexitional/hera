@@ -79,7 +79,7 @@ function RouteComponent() {
       <main className="pt-8 sm:pt-12 lg:pt-16 pb-20 md:pb-0">
         <div className="min-h-screen bg-[#18181b] text-white antialiased font-sans -mt-16">
           <main className="w-full">
-            <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-8">
+            <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-8 animate-in fade-in slide-in-from-top-4 duration-500">
               <div className="mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
                   <div className="flex items-center gap-4">
@@ -144,7 +144,7 @@ function RouteComponent() {
                 </div>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="relative rounded-3xl overflow-hidden">
+                <div className="relative rounded-3xl overflow-hidden animate-in fade-in slide-in-from-left-4 duration-500 delay-100 fill-mode-both">
                   <div className="relative w-full bg-slate-800/40 min-h-[320px] flex items-center justify-center">
                     {nominee.imageUrl ? (
                       <>
@@ -161,7 +161,7 @@ function RouteComponent() {
                     )}
                   </div>
                 </div>
-                <div className="space-y-6">
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500 delay-200 fill-mode-both">
                   <div className="bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 rounded-3xl p-6">
                     <h2 className="text-xl font-extrabold mb-4" style={{ fontFamily: "Inter, sans-serif" }}>
                       Category &amp; Event

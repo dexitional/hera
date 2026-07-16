@@ -137,7 +137,7 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* ================= SECURE TERMINAL HEADER ================= */}
-        <div className="bg-[#0a192a]/50 border border-zinc-800 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-20">
+        <div className="bg-[#0a192a]/50 border border-zinc-800 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-20 animate-in fade-in slide-in-from-top-2 duration-500">
           <div className="flex items-center gap-3">
             <Lock className="w-4 h-4 text-purple-400" />
             <div>

@@ -1,7 +1,7 @@
 import { getActiveEventsFn } from "#/server/tenant-events";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronDown, Clock, LayoutGrid, Search, ArrowRight, CalendarDays, ImageIcon } from "lucide-react";
+import { ChevronDown, Clock, LayoutGrid, Search, ArrowRight, CalendarDays, ImageIcon, Ticket } from "lucide-react";
 import moment from "moment";
 import { useEffect, useRef, useState } from "react";
 
@@ -55,7 +55,7 @@ function RouteComponent() {
   return (
     <div className="min-h-screen bg-[#18181b] text-white antialiased font-sans">
       <main className="w-full">
-        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-16">
+        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-16 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="text-left">
             <h1
               className="text-4xl md:text-6xl font-extrabold tracking-tight text-white mb-4 leading-tight"
@@ -70,7 +70,7 @@ function RouteComponent() {
           </div>
         </section>
 
-        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-8">
+        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-8 animate-in fade-in slide-in-from-top-2 duration-500 delay-100 fill-mode-both">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <input
@@ -118,16 +118,17 @@ function RouteComponent() {
           </div>
         </section>
 
-        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24">
+        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24 animate-in fade-in duration-500 delay-150 fill-mode-both">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredEvents.length > 0 ? (
-              filteredEvents.map((event: any) => {
+              filteredEvents.map((event: any, index: number) => {
                 const status = getEventStatus(event, rightNow);
                 const daysLeft = event.endAt ? Math.max(moment(event.endAt).diff(moment(), "days"), 0) : null;
                 return (
                   <div
                     key={event.id}
-                    className="rounded-3xl bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 overflow-hidden hover:border-slate-600/40 transition-all duration-300 group shadow-md"
+                    style={{ animationDelay: `${Math.min(index, 8) * 60}ms`, animationDuration: "500ms" }}
+                    className="rounded-3xl bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 overflow-hidden hover:border-slate-600/40 transition-all duration-300 group shadow-md animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
                   >
                     <div className="relative h-56 bg-gradient-to-br from-[#6d28d9]/30 via-slate-700/20 to-slate-900/40 flex items-center justify-center overflow-hidden">
                       {event.imageUrl ? (
@@ -187,39 +188,13 @@ function RouteComponent() {
                 );
               })
             ) : (
-              // <div className="col-span-full text-center py-16 text-zinc-500 text-sm border border-dashed border-slate-700 rounded-3xl">
-              //   No public voting events found matching your filters.
-              // </div>
-
-              <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" style={{ opacity: 1, transform: 'none' }}>
-                <div className="col-span-full flex flex-col items-center justify-center py-16 px-4 text-center" style={{ opacity: 1, transform: 'none' }}>
-                  <div className="w-20 h-20 bg-slate-600/10 rounded-3xl flex items-center justify-center mb-6 border border-slate-600/20">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="tabler-icon tabler-icon-ticket w-10 h-10 text-slate-400"
-                    >
-                      <path d="M15 5l0 2"></path>
-                      <path d="M15 11l0 2"></path>
-                      <path d="M15 17l0 2"></path>
-                      <path d="M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-3a2 2 0 0 0 0 -4v-3a2 2 0 0 1 2 -2"></path>
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-extrabold text-white mb-2">No Events Found</h3>
-                  <p className="text-zinc-300 max-w-md">
-                    There are no events available at the moment. Check back later for new events.
-                  </p>
+              <div className="col-span-full flex items-center justify-center min-h-[50vh] py-16">
+                <div className="flex flex-col items-center text-center gap-2 bg-slate-800/40 border border-slate-700/50 rounded-3xl px-12 py-10 max-w-sm animate-in fade-in zoom-in-95 duration-300">
+                  <Ticket className="w-12 h-12 text-slate-400 mb-2" />
+                  <h3 className="text-xl font-bold text-white">No Events Found</h3>
+                  <p className="text-sm text-zinc-400">There are no events available at the moment. Check back later for new events.</p>
                 </div>
               </div>
-            </section>
             )}
           </div>
         </section>

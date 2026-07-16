@@ -67,7 +67,7 @@ function RouteComponent() {
   return (
     <div className="min-h-screen bg-[#18181b] text-white antialiased font-sans">
       <main className="w-full">
-        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-16">
+        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-16 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="text-left" style={{ opacity: 1, transform: "none" }}>
             <h1
               className="text-3xl md:text-5xl font-extrabold tracking-tight text-white mb-4 leading-tight"
@@ -81,14 +81,14 @@ function RouteComponent() {
             </p>
           </div>
         </section>
-        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24">
+        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24 animate-in fade-in duration-500 delay-150 fill-mode-both">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {/* Election 1 */}
-            {data.map((row: any) => (
+            {data.map((row: any, index: number) => (
               <div
                 key={row?.id}
-                className="rounded-3xl bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 overflow-hidden hover:border-slate-600/40 transition-all duration-300 group shadow-lg"
-                style={{ opacity: 1, transform: "none" }}
+                className="rounded-3xl bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 overflow-hidden hover:border-slate-600/40 transition-all duration-300 group shadow-lg animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
+                style={{ animationDelay: `${Math.min(index, 8) * 60}ms`, animationDuration: "500ms" }}
               >
                 <div className="relative h-56 w-full">
                   {row.imageUrl && (

@@ -251,7 +251,7 @@ export default function AuthElection({ data }: any) {
     <main className="relative">
       <div className="min-h-screen  text-white antialiased font-sans">
         <main className="w-full">
-          <section className="w-full max-w-7xl bg-blue-950/10 rounded-4xl mx-auto sm:mt-24 px-4 sm:px-10 lg:px-6 pt-6 sm:pt-6 lg:pt-6 pb-8">
+          <section className="w-full max-w-7xl bg-blue-950/10 rounded-4xl mx-auto sm:mt-24 px-4 sm:px-10 lg:px-6 pt-6 sm:pt-6 lg:pt-6 pb-8 animate-in fade-in zoom-in-95 duration-500">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
               <div>
                   <div className="flex gap-3 mb-6">

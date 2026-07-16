@@ -3,7 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, Clock, Search, ThumbsUp, Users } from "lucide-react";
 import moment from "moment";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 function getEventStatus(event: any, now: Date): "LIVE" | "UPCOMING" | "ENDED" {
   if (!event.isActive) return "ENDED";
@@ -31,6 +31,7 @@ function RouteComponent() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const status = getEventStatus(event, new Date());
   const daysLeft = event.endAt ? Math.max(moment(event.endAt).diff(moment(), "days"), 0) : null;
@@ -43,7 +44,7 @@ function RouteComponent() {
   return (
     <div className="min-h-screen bg-[#18181b] text-white antialiased font-sans">
       <main className="w-full">
-        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-8">
+        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-8 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="flex flex-col gap-4">
             <div className="mb-2">
               <Link
@@ -61,30 +62,26 @@ function RouteComponent() {
             </h1>
             <p className="text-sm text-zinc-400 mb-3">{event.description}</p>
 
-            <div className="flex items-center gap-4 text-xs sm:text-sm text-zinc-400 mb-3 flex-wrap">
-              {isSearchOpen ? (
-                <div className="relative flex-1 min-w-[220px] max-w-sm">
-                  <input
-                    autoFocus
-                    placeholder="Search categories..."
-                    className="w-full px-3 py-2 bg-slate-600/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 pl-9 border border-slate-600/30 text-xs backdrop-blur-sm text-white placeholder-zinc-400"
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onBlur={() => !searchQuery && setIsSearchOpen(false)}
-                  />
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 w-3.5 h-3.5" />
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  aria-label="Search categories"
-                  onClick={() => setIsSearchOpen(true)}
-                  className="p-2 w-8 h-8 flex items-center justify-center rounded-xl bg-slate-700/30 hover:bg-purple-700/30 border border-slate-600/20 hover:border-purple-500/40 transition-colors"
-                >
-                  <Search className="w-4 h-4 text-purple-300" />
-                </button>
-              )}
+            <div className="flex items-center gap-3 text-xs sm:text-sm text-zinc-400 mb-1 flex-wrap">
+              <button
+                type="button"
+                aria-label={isSearchOpen ? "Hide search" : "Show search"}
+                aria-expanded={isSearchOpen}
+                onClick={() =>
+                  setIsSearchOpen((prev) => {
+                    const next = !prev;
+                    if (next) requestAnimationFrame(() => searchInputRef.current?.focus());
+                    return next;
+                  })
+                }
+                className={`p-2 w-8 h-8 flex items-center justify-center rounded-xl border transition-colors shrink-0 ${
+                  isSearchOpen
+                    ? "bg-purple-700/30 border-purple-500/40"
+                    : "bg-slate-700/30 hover:bg-purple-700/30 border-slate-600/20 hover:border-purple-500/40"
+                }`}
+              >
+                <Search className="w-4 h-4 text-purple-300" />
+              </button>
               <div className="flex items-center gap-1.5 bg-slate-600/20 px-3 py-1.5 rounded-full backdrop-blur-sm">
                 <Users className="w-3.5 h-3.5 text-purple-400" />
                 <span className="text-xs sm:text-sm font-medium text-white">
@@ -98,16 +95,32 @@ function RouteComponent() {
                 </div>
               )}
             </div>
+
+            {isSearchOpen && (
+              <div className="relative w-full animate-in fade-in slide-in-from-top-2 duration-300">
+                <input
+                  ref={searchInputRef}
+                  placeholder="Search categories..."
+                  className="w-full px-4 py-3.5 bg-slate-600/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-400 pl-12 border border-slate-600/30 text-sm backdrop-blur-sm text-white placeholder-zinc-400"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onBlur={() => !searchQuery && setIsSearchOpen(false)}
+                />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-zinc-400 w-5 h-5" />
+              </div>
+            )}
           </div>
         </section>
 
-        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-10 pb-24">
+        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-10 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {filteredCategories.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-              {filteredCategories.map((category: any) => (
+              {filteredCategories.map((category: any, index: number) => (
                 <div
                   key={category.id}
-                  className="rounded-3xl p-8 flex flex-col gap-4 shadow-md transition-all duration-300 group bg-[#6d28d9]/8"
+                  style={{ animationDelay: `${Math.min(index, 8) * 60}ms`, animationDuration: "500ms" }}
+                  className="rounded-3xl p-8 flex flex-col gap-4 shadow-md transition-all duration-300 group bg-[#6d28d9]/8 animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
                 >
                   <div className="flex items-center justify-between">
                     <ThumbsUp className="w-8 h-8 text-purple-300" />
@@ -144,8 +157,12 @@ function RouteComponent() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-16 text-zinc-500 text-sm border border-dashed border-slate-700 rounded-3xl">
-              No categories found matching your search.
+            <div className="flex justify-center py-16">
+              <div className="flex flex-col items-center text-center gap-2 bg-slate-800/40 border border-slate-700/50 rounded-3xl px-12 py-10 max-w-sm animate-in fade-in zoom-in-95 duration-300">
+                <Users className="w-12 h-12 text-slate-400 mb-2" />
+                <h3 className="text-xl font-bold text-white">No Categories Available</h3>
+                <p className="text-sm text-zinc-400">No categories match your search.</p>
+              </div>
             </div>
           )}
         </section>

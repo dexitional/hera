@@ -33,7 +33,7 @@ function RouteComponent() {
   return (
     <div className="min-h-screen bg-[#18181b] text-white antialiased font-sans">
       <main className="w-full">
-        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-8">
+        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-8 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="mb-6">
             <Link
               to="/events"
@@ -116,7 +116,7 @@ function RouteComponent() {
           </div>
         </section>
 
-        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24">
+        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24 animate-in fade-in duration-500 delay-150 fill-mode-both">
           <div className="col-span-full flex items-center my-4">
             <div className="flex-1 h-px bg-slate-700"></div>
             <span className="mx-6 text-zinc-400 text-sm font-semibold uppercase tracking-wider">
@@ -127,12 +127,13 @@ function RouteComponent() {
 
           {event.categories.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {event.categories.map((category: any) => (
+              {event.categories.map((category: any, index: number) => (
                 <Link
                   key={category.id}
                   to="/events/$eventId/categories/$categoryId"
                   params={{ eventId: String(event.id), categoryId: String(category.id) }}
-                  className="rounded-3xl p-6 flex flex-col gap-3 shadow-md transition-all duration-300 group bg-[#6d28d9]/8 hover:bg-[#6d28d9]/14"
+                  style={{ animationDelay: `${Math.min(index, 8) * 60}ms`, animationDuration: "500ms" }}
+                  className="rounded-3xl p-6 flex flex-col gap-3 shadow-md transition-all duration-300 group bg-[#6d28d9]/8 hover:bg-[#6d28d9]/14 animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
                 >
                   <div className="flex items-center justify-between">
                     <div className="w-10 h-10 rounded-xl bg-purple-950/30 border border-purple-900/30 flex items-center justify-center">

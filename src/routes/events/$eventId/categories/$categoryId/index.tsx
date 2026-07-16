@@ -70,7 +70,7 @@ function RouteComponent() {
       }}
     >
       <main className="w-full">
-        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-6 pb-8">
+        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-6 pb-8 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="mb-6 sm:mb-4">
             <Link
               className="p-3 rounded-2xl bg-slate-600/10 hover:bg-slate-600/20 transition-colors border border-slate-600/20 hover:border-slate-600/40 inline-flex"
@@ -110,10 +110,10 @@ function RouteComponent() {
         </section>
 
         {category.contestants.length === 0 ? (
-          <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24">
+          <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24 animate-in fade-in duration-500 delay-150 fill-mode-both">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
-                <div className="rounded-3xl bg-slate-600/10 p-8 flex flex-col items-center justify-center gap-4">
+                <div className="rounded-3xl bg-slate-600/10 p-8 flex flex-col items-center justify-center gap-4 animate-in fade-in zoom-in-95 duration-300">
                   <Users className="w-12 h-12 text-slate-400" />
                   <h3 className="text-xl font-bold text-white">No Nominees Yet</h3>
                   <p className="text-zinc-400 text-sm">
@@ -124,10 +124,14 @@ function RouteComponent() {
             </div>
           </section>
         ) : (
-          <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24">
+          <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24 animate-in fade-in duration-500 delay-150 fill-mode-both">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {category.contestants.map((contestant: any) => (
-                <div key={contestant.id} className="rounded-3xl bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 overflow-hidden hover:border-slate-600/40 transition-all duration-300 group shadow-lg relative">
+              {category.contestants.map((contestant: any, index: number) => (
+                <div
+                  key={contestant.id}
+                  style={{ animationDelay: `${Math.min(index, 8) * 60}ms`, animationDuration: "500ms" }}
+                  className="rounded-3xl bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 overflow-hidden hover:border-slate-600/40 transition-all duration-300 group shadow-lg relative animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
+                >
                   <div className="relative h-72 w-full bg-slate-800/40">
                     {contestant.imageUrl ? (
                       <div className="relative w-full h-full">

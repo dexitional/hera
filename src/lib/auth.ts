@@ -11,9 +11,6 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
   }),
-  // Restricts which origins may complete auth flows / send credentialed
-  // requests -- shared with the CORS allowlist in src/routes/api/auth.$.ts
-  // via ./trusted-origins so both include the www and non-www forms.
   trustedOrigins,
   user: {
     fields: {
@@ -52,13 +49,8 @@ export const auth = betterAuth({
     enabled: true,
     autoSignIn: true,
   },
+
   // Sends a verification link on signup and whenever a caller explicitly
-  // requests one. Deliberately NOT pairing this with
-  // emailAndPassword.requireEmailVerification -- the app immediately routes a
-  // brand-new signup to /welcome to collect onboarding details using the
-  // session that autoSignIn just created, so sign-in must not be blocked on
-  // verification completing first. emailVerified is tracked (and shown/used
-  // elsewhere) independently of whether the user can already sign in.
   emailVerification: {
     sendVerificationEmail: async ({ user, url }: any) => {
       await sendEmail({
@@ -75,20 +67,15 @@ export const auth = betterAuth({
       sameSite: "none",
       secure: true,
     },
-    // Shares the session cookie across heravote.com and www.heravote.com --
-    // cookieOptions has no `domain` field; better-auth only adds the Domain
-    // attribute via this dedicated option.
     crossSubDomainCookies: {
       enabled: true,
-      domain: ".heravote.com",
+      // domain: ".heravote.com",
     },
   },
   plugins: [
     admin({
       defaultRole: "user",
       adminRoles: ["super"],
-      // Reuse the plugin's built-in full-permission "admin" role, just re-keyed as "super"
-      // to match this app's role convention (adminRoles above tells the plugin to use it).
       roles: {
         super: adminAc,
         user: userAc,

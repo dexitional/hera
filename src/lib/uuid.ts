@@ -32,18 +32,11 @@ export function uuidv7(): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
-/**
- * Deterministically maps a legacy integer primary key to a UUID-shaped value so old
- * rows (and any bookmarked/hardcoded references to them) keep working after the
- * serial -> uuid primary key migration. Zero-padded and visually distinct from real
- * UUIDv7 values, which always have non-zero high-order timestamp bits.
- */
 export function legacyIntToUuid(id: number | string): string {
   const hex = Number(id).toString(16).padStart(12, '0');
   return `00000000-0000-0000-0000-${hex}`;
 }
 
-/** True if a uuid string looks like one produced by legacyIntToUuid(). */
 export function isLegacyUuid(value: string): boolean {
   return /^00000000-0000-0000-0000-[0-9a-f]{12}$/.test(value);
 }
