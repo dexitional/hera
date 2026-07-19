@@ -20,7 +20,7 @@ export default function AuthElection({ data }: any) {
   const [formData, setFormData]:any = useState({
     username: '',
     ... data?.authMode && data?.authMode.toLowerCase() == 'credential' && ({ password: '' }),
-    ... data?.authMode && data?.authMode.toLowerCase() == 'otp' && ({ phone: '' }),
+    ... data?.authMode && ['otp', 'aotp'].includes(data?.authMode.toLowerCase()) && ({ phone: '' }),
     ... data?.id && ({ electionId: data?.id }),
     authMode: data?.authMode || 'credential',
     otp: ''
@@ -74,8 +74,8 @@ export default function AuthElection({ data }: any) {
           return false;
         }
         
-        // Stage OTP after Authentication  
-        if(data?.authMode == 'otp'){
+        // Stage OTP after Authentication
+        if(['otp', 'aotp'].includes(data?.authMode?.toLowerCase())){
             useAuthStore.getState().loadOtp(dbOtp, maskPhone);
         } else {
           

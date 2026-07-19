@@ -1890,7 +1890,7 @@ export const updateVoterFn = createServerFn({ method: 'POST' })
           // const username = voter?.voters?.username;
               
           // Sent OTP to voter for verification
-          if(data.authMode == 'otp' && !isVerified){
+          if(['otp', 'aotp'].includes(data.authMode) && !isVerified){
               const smsPayload: any = {
                 sender: process.env.SMS_SENDER_ID,
                 message: `Hi ${fname}, Your verification OTP is ${inviteToken}. This expires in 15 minutes, Thank you`,
@@ -1924,7 +1924,7 @@ export const updateVoterFn = createServerFn({ method: 'POST' })
                 return { success: true, data: voter, otp: inviteToken, maskPhone: maskPhoneNumber(phone) }
               }
           
-          } else if(data.authMode == 'otp' && isVerified){
+          } else if(['otp', 'aotp'].includes(data.authMode) && isVerified){
             return { success: true, data: voter, otp: inviteToken, maskPhone: maskPhoneNumber(phone) }
           
           } else {
@@ -2068,7 +2068,7 @@ export const inviteVoterFn = createServerFn({ method: 'GET' }).middleware([arcje
       const username = rec?.voters?.username;
       const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${rec?.elections?.tag}`
       let smsPayload: any;
-      if(rec?.elections?.authMode?.toLowerCase() == 'otp'){
+      if(['otp', 'aotp'].includes(rec?.elections?.authMode?.toLowerCase())){
         smsPayload = {
           sender: process.env.SMS_SENDER_ID,
           message: `Hello ${fname}, Your Verification OTP is ${inviteToken} . Visit ${electionUrl} to vote!`,
@@ -2312,7 +2312,7 @@ async function processSmsQueueInBackground(rec: any[], electionId: string) {
         // username/password pair to hand out, just the code itself.
         const usernameLabel = r?.elections?.placeholder?.username || 'Username';
         const passwordLabel = r?.elections?.placeholder?.password || 'Password';
-        const message = r?.elections?.authMode?.toLowerCase() === 'otp'
+        const message = ['otp', 'aotp'].includes(r?.elections?.authMode?.toLowerCase())
           ? `Hello ${fname}, Your Verification OTP is ${inviteToken}. Visit ${electionUrl} to vote!`
           : `Hello ${fname}, Please vote with ${usernameLabel}: ${username}, ${passwordLabel}: ${inviteToken}. Visit ${electionUrl} to vote!`;
 
