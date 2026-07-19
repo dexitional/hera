@@ -336,7 +336,7 @@ export default function AuthElection({ data }: any) {
                       {/* Username Input */}
                       <div className="group relative">
                         <label className="block mb-1 text-xs font-bold uppercase tracking-wider text-zinc-400">
-                          { data?.authMode?.toLowerCase() === "credential" ? (data?.placeholder?.username || "Identity") : "Identity" }
+                          { ["credential", "otp", "aotp"].includes(data?.authMode?.toLowerCase()) ? (data?.placeholder?.username || "Identity") : "Identity" }
                         </label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -349,7 +349,7 @@ export default function AuthElection({ data }: any) {
                             value={formData.username}
                             onChange={handleInputChange}
                             className="block w-full pl-10 p-3.5 bg-white text-zinc-900 font-medium text-sm border-2 border-zinc-900 focus:outline-none focus:ring-0 focus:border-purple-600 transition-colors duration-200 ease-in-out"
-                            placeholder={data?.authMode?.toLowerCase() === "credential" ? (data?.placeholder?.username || "Username") : "Username"}
+                            placeholder={["credential", "otp", "aotp"].includes(data?.authMode?.toLowerCase()) ? (data?.placeholder?.username || "Username") : "Username"}
                           />
                           <div className="absolute top-0 left-0 w-full h-full bg-zinc-200 -z-10 translate-x-1.5 translate-y-1.5 border-2 border-transparent transition-transform group-focus-within:translate-x-2.5 group-focus-within:translate-y-2.5"></div>
                         </div>
@@ -380,10 +380,10 @@ export default function AuthElection({ data }: any) {
                       )}
 
                       {/* Phone Input */}
-                      { data?.authMode?.toLowerCase() == "otp" && (
+                      { ["otp","aotp"].includes(data?.authMode?.toLowerCase()) && (
                       <div className="group relative">
                         <label className="block mb-1 text-xs font-bold uppercase tracking-wider text-zinc-400">
-                          Identity
+                          Phone Number
                         </label>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -407,7 +407,7 @@ export default function AuthElection({ data }: any) {
                       <button
                         type="submit"
                         disabled={ loading || (data.status && ['staged','ended'].includes(data.status)) }
-                        className="relative inline-block w-full group mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="relative inline-block w-full group mt-2 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                       >
                         <span className="absolute top-0 left-0 w-full h-full transition-all duration-200 ease-out transform translate-x-1.5 translate-y-1.5 bg-purple-600 border-2 border-zinc-900 group-hover:translate-x-0 group-hover:translate-y-0"></span>
                         <span className="relative flex items-center justify-center gap-2 w-full px-5 py-3.5 text-sm font-bold tracking-widest uppercase border-2 border-zinc-900 bg-white text-zinc-900">
@@ -428,6 +428,7 @@ export default function AuthElection({ data }: any) {
                       </> :
 
                       <div className="flex flex-col gap-4">
+                        {/* Verify OTP */}
                           <div className="group relative">
                             <label className="block mb-1 text-xs font-bold uppercase tracking-wider text-zinc-400">
                               Access Key

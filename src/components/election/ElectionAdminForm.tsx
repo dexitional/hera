@@ -344,8 +344,9 @@ export default function ElectionAdminForm({ data, forUserId, forUserName }: any)
                               </div>
                             </div>
 
-                            {/* Credential label overrides -- only meaningful when voters log in with a username/password pair */}
-                            { formData?.authMode?.toLowerCase() === "credential" && (
+                            {/* Login field label overrides -- the username/identity field label applies to
+                                credential, otp, and aotp modes; the password field only exists for credential. */}
+                            { ["credential", "otp", "aotp"].includes(formData?.authMode?.toLowerCase()) && (
                             <div className="px-6 py-5">
                               <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-start">
                                 <div className="col-span-4 flex flex-col pt-1.5">
@@ -353,7 +354,9 @@ export default function ElectionAdminForm({ data, forUserId, forUserName }: any)
                                     Login Field Labels
                                   </label>
                                   <span className="text-[11px] text-zinc-500 mt-1">
-                                    Placeholder text shown on the voter login page's username/password fields.
+                                    { formData?.authMode?.toLowerCase() === "credential"
+                                      ? "Placeholder text shown on the voter login page's username/password fields."
+                                      : "Placeholder text shown on the voter login page's identity field." }
                                   </span>
                                 </div>
                                 <div className="order-1 col-span-8 w-full grid grid-cols-2 gap-3">
@@ -364,8 +367,9 @@ export default function ElectionAdminForm({ data, forUserId, forUserName }: any)
                                     value={formData?.placeholderUsername ?? formData?.placeholder?.username ?? 'Username'}
                                     onChange={handleInputChange}
                                     placeholder="Username"
-                                    className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs px-3 py-2 h-[36px]"
+                                    className={`flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs px-3 py-2 h-[36px] ${formData?.authMode?.toLowerCase() !== "credential" ? "col-span-2" : ""}`}
                                   />
+                                  { formData?.authMode?.toLowerCase() === "credential" && (
                                   <input
                                     type="text"
                                     name="placeholderPassword"
@@ -375,6 +379,7 @@ export default function ElectionAdminForm({ data, forUserId, forUserName }: any)
                                     placeholder="Password"
                                     className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs px-3 py-2 h-[36px]"
                                   />
+                                  )}
                                 </div>
                               </div>
                             </div>
