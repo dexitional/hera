@@ -21,6 +21,14 @@ import moment from "moment";
 const ELECTION_STATUSES = ['staged', 'started', 'ended'] as const;
 type ElectionStatus = typeof ELECTION_STATUSES[number];
 
+// Mirrors the modes ElectionAdminForm writes to elections.authMode.
+const AUTH_MODE_LABELS: Record<string, string> = {
+  otp: 'One-Time Password (SMS / Email)',
+  aotp: 'One-Time Password (SMS / Voice)',
+  google: 'Google Authentication',
+  credential: 'Username & Password',
+};
+
 const electionsQueryOptions = (electionId: any) => ({
   queryKey: ['election-overview', electionId ],
   queryFn: () => getElectionOverview({ data: electionId }),
@@ -49,7 +57,7 @@ function ManageElectionConsole() {
 
   election = {
     ...election,
-    authMode: election?.otp?.toLowerCase() == 'otp' ? 'One-Time Password (SMS / Email)' : election.otp == 'GOOGLE' ? 'Google Authentication': 'Username & Password',
+    authMode: AUTH_MODE_LABELS[election?.authMode?.toLowerCase()] || 'Username & Password',
     startAt: moment(election.startAt).format('LLL'),
     endAt: moment(election.endAt).format('LLL'),
   }
@@ -58,7 +66,9 @@ function ManageElectionConsole() {
   const [status, setStatus] = useState<ElectionStatus>(election.status);
   const [isPublic, setIsPublic] = useState<boolean>(!!election.makePublic);
   // Computes active mathematical voter turnout percentage on runtime execution profiles
-  const turnoutPercentage = ((election.counts.votesCast / election.counts.voters) * 100).toFixed(1);
+  const turnoutPercentage = election.counts.voters > 0
+    ? ((election.counts.votesCast / election.counts.voters) * 100).toFixed(2)
+    : "0.00";
   const [, setIsExportingResults] = useState(false);
 
   const statusMutation = useMutation({ mutationFn: updateElectionStatusFn });

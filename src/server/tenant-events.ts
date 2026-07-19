@@ -3,7 +3,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import XLSX from 'xlsx-js-style';
 import { db } from '../db';
-import { categories, contestants, events, eventTransactions } from '../db/schema';
+import { categories, contestants, events, eventTransactions, user } from '../db/schema';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
 import { generateContestantCode } from '#/lib/utils';
 import { creditCardVote } from './paystack-credit';
@@ -189,6 +189,18 @@ export const createEventFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data }: any) => {
     const admin: any = context?.user;
+    // Super admins can act regardless of verification status; everyone else
+    // must verify their email before creating an event. Re-read the flag
+    // straight from the database rather than trusting the session's copy --
+    // the session is populated at sign-in time (and social providers like
+    // Google can claim an email is verified even when our own record isn't),
+    // so only the live row is authoritative here.
+    if (admin.role !== 'super') {
+      const [freshAdmin] = await db.select({ emailVerified: user.emailVerified }).from(user).where(eq(user.id, admin.id));
+      if (!freshAdmin?.emailVerified) {
+        throw new Error('Please verify your email address before creating an event.');
+      }
+    }
     // Super admins can stage an event inside another tenant admin's workspace
     // by passing adminId; everyone else always creates in their own.
     const targetAdminId = admin.role === 'super' && data.get("adminId")

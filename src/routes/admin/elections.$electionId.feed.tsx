@@ -41,8 +41,10 @@ function ElectionLiveFeed() {
     ? Math.max(...ballotTally.map((p: any) => p.totalVotesForPosition || 0)) 
     : 0;
 
-  const totalEligible = electionDetails?.totalEligibleVoters || 1; 
-  const turnoutPercentage = ((totalVotesCast / totalEligible) * 100).toFixed(1);
+  const totalEligible = electionDetails?.totalEligibleVoters || 0;
+  const turnoutPercentage = totalEligible > 0
+    ? ((totalVotesCast / totalEligible) * 100).toFixed(2)
+    : "0.00";
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -92,8 +94,8 @@ function ElectionLiveFeed() {
 
         {/* ================= STREAM CONSOLE INFOBAR HEADER ================= */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
-          <div>
-            <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono uppercase tracking-wider">
+          <div className="flex flex-col md:flex-row">
+            <div className="flex flex-col md:flex-row items-center gap-2 text-xs text-zinc-500 font-mono uppercase tracking-wider">
               <Link
                 to="/admin/elections/$electionId/manage"
                 params={{ electionId }}
@@ -125,7 +127,7 @@ function ElectionLiveFeed() {
             <div>
               <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Aggregate Turnout</p>
               <h3 className="text-2xl font-black text-white mt-1 font-mono">
-                {!isNaN(parseFloat(turnoutPercentage)) ? turnoutPercentage : "0.0"}%
+                {!isNaN(parseFloat(turnoutPercentage)) ? turnoutPercentage : "0.00"}%
               </h3>
             </div>
             <Users className="w-8 h-8 text-zinc-800" />
@@ -194,7 +196,7 @@ function ElectionLiveFeed() {
                 </div>
 
                 {/* Candidate Vote Visual Progress Accumulator Bars Matrix */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {currentActiveOffice?.candidates?.map((candidate: any) => {
                     const isAbstain = candidate.id === null || candidate.id === -1;
                     const percentageShares = currentActiveOffice.totalVotesForPosition > 0 

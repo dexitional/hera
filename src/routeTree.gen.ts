@@ -35,6 +35,7 @@ import { Route as AdminEventsIndexRouteImport } from './routes/admin/events.inde
 import { Route as AdminElectionsIndexRouteImport } from './routes/admin/elections.index'
 import { Route as AdminContestantsIndexRouteImport } from './routes/admin/contestants.index'
 import { Route as AdminCategoriesIndexRouteImport } from './routes/admin/categories.index'
+import { Route as VoteRegisterElectionTagRouteImport } from './routes/vote/register.$electionTag'
 import { Route as ApiWebhooksPaystackRouteImport } from './routes/api/webhooks.paystack'
 import { Route as ApiWebhooksArkeselUssdRouteImport } from './routes/api/webhooks.arkesel-ussd'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
@@ -207,6 +208,11 @@ const AdminCategoriesIndexRoute = AdminCategoriesIndexRouteImport.update({
   id: '/categories/',
   path: '/categories/',
   getParentRoute: () => AdminRouteRoute,
+} as any)
+const VoteRegisterElectionTagRoute = VoteRegisterElectionTagRouteImport.update({
+  id: '/vote/register/$electionTag',
+  path: '/vote/register/$electionTag',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWebhooksPaystackRoute = ApiWebhooksPaystackRouteImport.update({
   id: '/api/webhooks/paystack',
@@ -478,6 +484,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/webhooks/arkesel-ussd': typeof ApiWebhooksArkeselUssdRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
+  '/vote/register/$electionTag': typeof VoteRegisterElectionTagRoute
   '/admin/categories/': typeof AdminCategoriesIndexRoute
   '/admin/contestants/': typeof AdminContestantsIndexRoute
   '/admin/elections/': typeof AdminElectionsIndexRoute
@@ -547,6 +554,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/webhooks/arkesel-ussd': typeof ApiWebhooksArkeselUssdRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
+  '/vote/register/$electionTag': typeof VoteRegisterElectionTagRoute
   '/admin/categories': typeof AdminCategoriesIndexRoute
   '/admin/contestants': typeof AdminContestantsIndexRoute
   '/admin/elections': typeof AdminElectionsIndexRoute
@@ -618,6 +626,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/webhooks/arkesel-ussd': typeof ApiWebhooksArkeselUssdRoute
   '/api/webhooks/paystack': typeof ApiWebhooksPaystackRoute
+  '/vote/register/$electionTag': typeof VoteRegisterElectionTagRoute
   '/admin/categories/': typeof AdminCategoriesIndexRoute
   '/admin/contestants/': typeof AdminContestantsIndexRoute
   '/admin/elections/': typeof AdminElectionsIndexRoute
@@ -690,6 +699,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/webhooks/arkesel-ussd'
     | '/api/webhooks/paystack'
+    | '/vote/register/$electionTag'
     | '/admin/categories/'
     | '/admin/contestants/'
     | '/admin/elections/'
@@ -759,6 +769,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/webhooks/arkesel-ussd'
     | '/api/webhooks/paystack'
+    | '/vote/register/$electionTag'
     | '/admin/categories'
     | '/admin/contestants'
     | '/admin/elections'
@@ -829,6 +840,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/webhooks/arkesel-ussd'
     | '/api/webhooks/paystack'
+    | '/vote/register/$electionTag'
     | '/admin/categories/'
     | '/admin/contestants/'
     | '/admin/elections/'
@@ -891,6 +903,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiWebhooksArkeselUssdRoute: typeof ApiWebhooksArkeselUssdRoute
   ApiWebhooksPaystackRoute: typeof ApiWebhooksPaystackRoute
+  VoteRegisterElectionTagRoute: typeof VoteRegisterElectionTagRoute
   EventsEventIdIndexRoute: typeof EventsEventIdIndexRoute
   NomineeNomineeIdIndexRoute: typeof NomineeNomineeIdIndexRoute
   EventsEventIdCategoriesIndexRoute: typeof EventsEventIdCategoriesIndexRoute
@@ -1080,6 +1093,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/categories/'
       preLoaderRoute: typeof AdminCategoriesIndexRouteImport
       parentRoute: typeof AdminRouteRoute
+    }
+    '/vote/register/$electionTag': {
+      id: '/vote/register/$electionTag'
+      path: '/vote/register/$electionTag'
+      fullPath: '/vote/register/$electionTag'
+      preLoaderRoute: typeof VoteRegisterElectionTagRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/webhooks/paystack': {
       id: '/api/webhooks/paystack'
@@ -1529,6 +1549,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiWebhooksArkeselUssdRoute: ApiWebhooksArkeselUssdRoute,
   ApiWebhooksPaystackRoute: ApiWebhooksPaystackRoute,
+  VoteRegisterElectionTagRoute: VoteRegisterElectionTagRoute,
   EventsEventIdIndexRoute: EventsEventIdIndexRoute,
   NomineeNomineeIdIndexRoute: NomineeNomineeIdIndexRoute,
   EventsEventIdCategoriesIndexRoute: EventsEventIdCategoriesIndexRoute,

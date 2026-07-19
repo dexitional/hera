@@ -4,8 +4,8 @@ import { fetchGoogleProfileFromServer, verifyVoterFn, verifyVoterOtpFn } from '#
 import { TokensIcon } from '@radix-ui/react-icons';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
-import { ArrowRight, Calendar, Info, LoaderCircle, Lock, Phone, User } from 'lucide-react';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { ArrowRight, Calendar, Info, LoaderCircle, Lock, Phone, User, Users2 } from 'lucide-react';
 import moment from 'moment';
 import { useState } from 'react';
 
@@ -251,7 +251,7 @@ export default function AuthElection({ data }: any) {
     <main className="relative">
       <div className="min-h-screen  text-white antialiased font-sans">
         <main className="w-full">
-          <section className="w-full max-w-7xl bg-blue-950/10 rounded-4xl mx-auto sm:mt-24 px-4 sm:px-10 lg:px-6 pt-6 sm:pt-6 lg:pt-6 pb-8 animate-in fade-in zoom-in-95 duration-500">
+          <section className="w-full max-w-7xl bg-[#0a192a] rounded-xl mx-auto sm:mt-24 px-4 sm:px-10 lg:px-6 pt-6 sm:pt-6 lg:pt-6 pb-8 animate-in fade-in zoom-in-95 duration-500">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
               <div>
                   <div className="flex gap-3 mb-6">
@@ -278,7 +278,10 @@ export default function AuthElection({ data }: any) {
               
               {/*  Login */}
               <div>
-                <div className="bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 rounded-3xl p-8 shadow-xl">
+                {/* Rotating gradient-border glow (Uiverse.io by bhaveshxrawat) -- real content lives in the
+                    z-10 wrapper below since the ::before/::after pseudo-elements paint above static-flow children */}
+                <div className="card relative overflow-hidden bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 rounded-lg p-8 pb-12 shadow-xl before:content-[''] before:absolute before:inset-0 before:m-auto before:w-[100px] before:h-[130%] before:bg-[linear-gradient(180deg,var(--color-purple-400),var(--color-orange-400))] before:animate-[rotBGimg_6s_linear_infinite] after:content-[''] after:absolute after:bg-[#07182E] after:inset-[1px] after:rounded-lg">
+                <div className="relative z-10">
                   <div className="mb-6">
                     <h2 className="text-base sm:text-xl italic font-bold tracking-wide text-white mb-2 rel font-sans">
                       VOTER LOGIN
@@ -304,7 +307,7 @@ export default function AuthElection({ data }: any) {
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                         <path d="M20.945 11a9 9 0 1 1 -3.284 -5.997l-2.655 2.392a5.5 5.5 0 1 0 2.119 6.605h-4.125v-3h7.945"></path>
                       </svg>
-                      { loading  ? <span className="animate-pulse">Connecting ...</span> : <span>Login vote with Google</span> }
+                      { loading  ? <span className="animate-pulse">Connecting ...</span> : <span>Login with Google Account</span> }
                     </button>
                     { msg && (<div className="mt-4 text-red-300 text-sm text-center animate-pulse">{msg}</div>)}
                   </div>
@@ -325,115 +328,149 @@ export default function AuthElection({ data }: any) {
                   {/* Credential & OTP Strategy */}
 
                   { ["credential","otp"].includes(data?.authMode?.toLowerCase()) && (
-                  <form onSubmit={handleSubmit} className="space-y-4">
+                  <form onSubmit={handleSubmit} className="space-y-4 pb-10">
                    
                     {/* Credentials Strategy */}
-                    { !otp ? 
+                    { !otp ?
                       <>
                       {/* Username Input */}
-                      <div className="relative group">
-                        <input 
-                          type="text" 
-                          required 
-                          name="username"
-                          value={formData.username}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-2 bg-slate-600/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 pl-10 border border-slate-600/20 group-hover:border-slate-600/40 transition-colors text-sm text-white placeholder-zinc-400" 
-                          placeholder="Username" 
-                        />
-                        <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 group-hover:text-purple-400 transition-colors w-4 h-4" />
+                      <div className="group relative">
+                        <label className="block mb-1 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                          { data?.authMode?.toLowerCase() === "credential" ? (data?.placeholder?.username || "Identity") : "Identity" }
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <User className="w-4 h-4 text-zinc-900" />
+                          </div>
+                          <input
+                            type="text"
+                            required
+                            name="username"
+                            value={formData.username}
+                            onChange={handleInputChange}
+                            className="block w-full pl-10 p-3.5 bg-white text-zinc-900 font-medium text-sm border-2 border-zinc-900 focus:outline-none focus:ring-0 focus:border-purple-600 transition-colors duration-200 ease-in-out"
+                            placeholder={data?.authMode?.toLowerCase() === "credential" ? (data?.placeholder?.username || "Username") : "Username"}
+                          />
+                          <div className="absolute top-0 left-0 w-full h-full bg-zinc-200 -z-10 translate-x-1.5 translate-y-1.5 border-2 border-transparent transition-transform group-focus-within:translate-x-2.5 group-focus-within:translate-y-2.5"></div>
+                        </div>
                       </div>
-                      
+
                       {/* Password Input */}
                       { data?.authMode?.toLowerCase() == "credential" && (
-                      <div className="relative group">
-                        <input 
-                          type="password" 
-                          required 
-                          name="password"
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-2 bg-slate-600/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 pl-10 border border-slate-600/20 group-hover:border-slate-600/40 transition-colors text-sm text-white placeholder-zinc-400" 
-                          placeholder="Password" 
-                        />
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 group-hover:text-purple-400 transition-colors w-4 h-4" />
+                      <div className="group relative">
+                        <label className="block mb-1 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                          { data?.placeholder?.password || "Access Key" }
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <Lock className="w-4 h-4 text-zinc-900" />
+                          </div>
+                          <input
+                            type="password"
+                            required
+                            name="password"
+                            value={formData.password}
+                            onChange={handleInputChange}
+                            className="block w-full pl-10 p-3.5 bg-white text-zinc-900 font-medium text-sm border-2 border-zinc-900 focus:outline-none focus:ring-0 focus:border-purple-600 transition-colors duration-200 ease-in-out"
+                            placeholder={data?.placeholder?.password || "Password"}
+                          />
+                          <div className="absolute top-0 left-0 w-full h-full bg-zinc-200 -z-10 translate-x-1.5 translate-y-1.5 border-2 border-transparent transition-transform group-focus-within:translate-x-2.5 group-focus-within:translate-y-2.5"></div>
+                        </div>
                       </div>
                       )}
-                    
+
                       {/* Phone Input */}
                       { data?.authMode?.toLowerCase() == "otp" && (
-                      <div className="relative group">
-                        <input 
-                          type="tel" 
-                          required 
-                          name="phone"
-                          value={formData.phone}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-1 bg-slate-600/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 pl-10 border border-slate-600/20 group-hover:border-slate-600/40 transition-colors text-sm text-white placeholder-zinc-400" 
-                          placeholder="Phone Number" 
-                        />
-                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 group-hover:text-purple-400 transition-colors w-4 h-4" />
+                      <div className="group relative">
+                        <label className="block mb-1 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                          Identity
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <Phone className="w-4 h-4 text-zinc-900" />
+                          </div>
+                          <input
+                            type="tel"
+                            required
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleInputChange}
+                            className="block w-full pl-10 p-3.5 bg-white text-zinc-900 font-medium text-sm border-2 border-zinc-900 focus:outline-none focus:ring-0 focus:border-purple-600 transition-colors duration-200 ease-in-out"
+                            placeholder="Phone Number"
+                          />
+                          <div className="absolute top-0 left-0 w-full h-full bg-zinc-200 -z-10 translate-x-1.5 translate-y-1.5 border-2 border-transparent transition-transform group-focus-within:translate-x-2.5 group-focus-within:translate-y-2.5"></div>
+                        </div>
                       </div>
                       )}
 
                       {/* Submit Button */}
-                      <div>
-                        <button 
-                          type="submit" 
-                          disabled={ loading || (data.status && ['staged','ended'].includes(data.status)) }
-                          className="w-full px-4 py-3 bg-[#E3F09B] hover:bg-purple-600 disabled:bg-zinc-400 disabled:hover:bg-zinc-400  text-black disabled:text-zinc-100 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 group text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                        >
-                           { loading 
+                      <button
+                        type="submit"
+                        disabled={ loading || (data.status && ['staged','ended'].includes(data.status)) }
+                        className="relative inline-block w-full group mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span className="absolute top-0 left-0 w-full h-full transition-all duration-200 ease-out transform translate-x-1.5 translate-y-1.5 bg-purple-600 border-2 border-zinc-900 group-hover:translate-x-0 group-hover:translate-y-0"></span>
+                        <span className="relative flex items-center justify-center gap-2 w-full px-5 py-3.5 text-sm font-bold tracking-widest uppercase border-2 border-zinc-900 bg-white text-zinc-900">
+                           { loading
                             ?   <>
-                                  <LoaderCircle className="h-4 animate-spin"/>
-                                  <span className="animate-pulse">Authenticating ...</span>
+                                  <LoaderCircle className="h-4 w-4 animate-spin"/>
+                                  <span className="animate-pulse">Authenticating...</span>
                                 </>
-                            : 
+                            :
                                 <>
                                    Login to Vote
                                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                 </>
                             }
-                        </button>
-                      </div>
+                        </span>
+                      </button>
 
                       </> :
-                      
+
                       <div className="flex flex-col gap-4">
-                          <div className="relative group">
-                            <input 
-                              type="text" 
-                              required 
-                              name="otp"
-                              value={formData.otp}
-                              onChange={handleInputChange}
-                              className="w-full px-4 py-3 bg-slate-600/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 pl-10 border border-slate-600/20 group-hover:border-slate-600/40 transition-colors text-sm text-white placeholder-zinc-400" 
-                              placeholder="Enter OTP Sent to Phone" 
-                            />
-                            <TokensIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 group-hover:text-purple-400 transition-colors w-4 h-4" />
+                          <div className="group relative">
+                            <label className="block mb-1 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                              Access Key
+                            </label>
+                            <div className="relative">
+                              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <TokensIcon className="w-4 h-4 text-zinc-900" />
+                              </div>
+                              <input
+                                type="text"
+                                required
+                                name="otp"
+                                value={formData.otp}
+                                onChange={handleInputChange}
+                                className="block w-full pl-10 p-3.5 bg-white text-zinc-900 font-medium text-sm border-2 border-zinc-900 focus:outline-none focus:ring-0 focus:border-purple-600 transition-colors duration-200 ease-in-out"
+                                placeholder="Enter OTP Sent to Phone"
+                              />
+                              <div className="absolute top-0 left-0 w-full h-full bg-zinc-200 -z-10 translate-x-1.5 translate-y-1.5 border-2 border-transparent transition-transform group-focus-within:translate-x-2.5 group-focus-within:translate-y-2.5"></div>
+                            </div>
                           </div>
-                          <div>
-                            <button 
-                              onClick={() => verifyMutation.mutate({ data: { otp: formData.otp, electionId: formData.electionId, username: formData.username }} as any) }
-                              disabled={ loading || (data.status && ['staged','ended'].includes(data.status)) }
-                              className="w-full px-4 py-3 bg-[#E3F09B] hover:bg-purple-600 disabled:bg-zinc-400 disabled:hover:bg-zinc-400  text-black disabled:text-zinc-100 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 group text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                            >
-                               { loading 
+                          <button
+                            onClick={() => verifyMutation.mutate({ data: { otp: formData.otp, electionId: formData.electionId, username: formData.username }} as any) }
+                            disabled={ loading || (data.status && ['staged','ended'].includes(data.status)) }
+                            className="relative inline-block w-full group disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <span className="absolute top-0 left-0 w-full h-full transition-all duration-200 ease-out transform translate-x-1.5 translate-y-1.5 bg-purple-600 border-2 border-zinc-900 group-hover:translate-x-0 group-hover:translate-y-0"></span>
+                            <span className="relative flex items-center justify-center gap-2 w-full px-5 py-3.5 text-sm font-bold tracking-widest uppercase border-2 border-zinc-900 bg-white text-zinc-900">
+                               { loading
                                 ?   <>
-                                      <LoaderCircle className="h-4 animate-spin"/>
-                                      <span className="animate-pulse">Verifying ...</span>
+                                      <LoaderCircle className="h-4 w-4 animate-spin"/>
+                                      <span className="animate-pulse">Verifying...</span>
                                     </>
-                                : 
+                                :
                                     <>
                                       Verify to Vote
                                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                     </>
                                 }
-                              </button>
-                          </div>
+                            </span>
+                          </button>
                           <p className="text-center text-sm text-zinc-400 ">
                             Can't verify voter?{' '}&nbsp;&nbsp;
-                            <button 
+                            <button
                               type='button'
                               onClick={() => useAuthStore.getState().clearOtp()}
                               className="cursor-pointer text-purple-400 hover:text-purple-300 transition-colors font-medium"
@@ -443,7 +480,7 @@ export default function AuthElection({ data }: any) {
                           </p>
                           <div className="text-amber-400 text-xs text-center font-semibold animate-pulse"><div>Note: OTP has been sent to phone number</div><div className="italic tracking-widest">{maskPhone}</div></div>
 
-                      </div> 
+                      </div>
                     }
                       
                     { msg && (<div className="text-red-300 text-sm text-center animate-pulse">{msg}</div>)}
@@ -457,6 +494,7 @@ export default function AuthElection({ data }: any) {
                       Verify voter
                     </a>
                   </p> */}
+                </div>
                 </div>
               </div>
               
@@ -481,7 +519,23 @@ export default function AuthElection({ data }: any) {
                         <p className="text-sm text-zinc-300">{ (rightNow < data.startAt || rightNow > data.endAt) ? "INACTIVE" : data.status == 'staged' ? 'NOT STARTED': data.status == 'started'? 'LIVE & ON-GOING' : 'CLOSED'  }</p>
                       </div>
                     </div>
-                
+                    {/* Voter lookup page only exists when the admin has show-feed enabled */}
+                    { data?.showFeed && (
+                    <div className="rounded-xl bg-[#6d28d9]/8 py-4 px-6 flex items-center gap-4">
+                      <Users2 className="w-8 h-8 text-purple-400 shrink-0" />
+                      {/* <div>
+                        <h3 className="text-lg font-bold text-white">Instructions</h3>
+                        <p className="text-sm text-zinc-300">Please use OTP method to login into the system or portal credentials</p>
+                      </div> */}
+                      <div>
+                        <h3 className="text=base sm:text-lg italic font-bold text-white">Voter Register</h3>
+                        <Link to="/vote/register/$electionTag" params={{ electionTag: data?.tag }} className="text-sm text-purple-400 hover:text-purple-300 transition-colors font-medium">
+                          Goto Register
+                        </Link>
+                      </div>
+                    </div>
+                    )}
+
               </div>
              
             </div>

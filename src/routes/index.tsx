@@ -21,9 +21,9 @@ export const Route = createFileRoute('/')({
 function App() {
   const { data: stats }: any = useSuspenseQuery(homepageStatsQueryOptions());
   return (
-    <div className="min-h-screen bg-[#0a192a]/80 text-white antialiased font-sans flex flex-col items-center">
+    <div className="min-h-screen bg-[#0d1f36] text-white antialiased font-sans flex flex-col items-center">
     <main className="relative">
-      <div className="min-h-screen bg-[#0a192a]/80 text-white antialiased font-sans flex flex-col items-center">
+      <div className="min-h-screen bg-[#0d1f36] text-white antialiased font-sans flex flex-col items-center">
         <main className="w-full flex flex-col items-center justify-center">
           <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-12 lg:pt-24 pb-20">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">

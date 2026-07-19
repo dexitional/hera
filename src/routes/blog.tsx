@@ -7,7 +7,7 @@ export const Route = createFileRoute('/blog')({
 function RouteComponent() {
   return (
     <main className="relative">
-      <div className="min-h-screen bg-[#0a192a]/80 text-white antialiased font-sans">
+      <div className="min-h-screen bg-[#0d1f36] text-white antialiased font-sans">
         <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-12 lg:pt-24 pb-24">
           <header className="mb-12" style={{ opacity: 1, transform: 'none' }}>
             <div className="flex items-center gap-4 mb-6">

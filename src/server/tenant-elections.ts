@@ -7,7 +7,7 @@ import { candidates, elections, electionVotes, positions, voters, user } from '.
 import { processImageUpload } from './image-upload';
 // import * as XLSX from 'xlsx';
 import XLSX from 'xlsx-js-style';
-import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
+import { arcjetMiddleware, arcjetVoterLookupMiddleware } from '#/middleware/arcjetMiddleware';
 import { getRequest } from '@tanstack/react-start/server';
 import { generateBallotReceiptSignature } from './ballot-signature';
 
@@ -89,8 +89,20 @@ export const getActiveElectionsFn = createServerFn({ method: 'GET' }).middleware
 export const createElectionFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware,authMiddleware])
   .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    // Super admins can act regardless of verification status; everyone else
+    // must verify their email before staging an election. Re-read the flag
+    // straight from the database rather than trusting the session's copy --
+    // the session is populated at sign-in time (and social providers like
+    // Google can claim an email is verified even when our own record isn't),
+    // so only the live row is authoritative here.
+    if (admin.role !== 'super') {
+      const [freshAdmin] = await db.select({ emailVerified: user.emailVerified }).from(user).where(eq(user.id, admin.id));
+      if (!freshAdmin?.emailVerified) {
+        throw new Error('Please verify your email address before creating an election.');
+      }
+    }
     try {
-      const admin: any = context?.user;
       // Super admins can stage an election inside another tenant admin's
       // workspace by passing adminId; everyone else always creates in their own.
       const targetAdminId = admin.role === 'super' && data.get("adminId")
@@ -117,6 +129,10 @@ export const createElectionFn = createServerFn({ method: 'POST' })
         status: data.get("status") as string || 'staged',
         startAt: new Date(data.get("startAt") as string),
         endAt: new Date(data.get("endAt") as string),
+        placeholder: {
+          username: (data.get("placeholderUsername") as string) || 'Username',
+          password: (data.get("placeholderPassword") as string) || 'Password',
+        },
         ...(finalAvatarUrl && { imageUrl: finalAvatarUrl })
       }).returning();
 
@@ -169,6 +185,10 @@ export const updateElectionFn = createServerFn({ method: 'POST' })
           status: data.get("status") as string,
           startAt: new Date(data.get("startAt") as string),
           endAt: new Date(data.get("endAt") as string),
+          placeholder: {
+            username: (data.get("placeholderUsername") as string) || 'Username',
+            password: (data.get("placeholderPassword") as string) || 'Password',
+          },
           ...(finalAvatarUrl && { imageUrl: finalAvatarUrl })
         }).where(eq<any>(elections.id, data.get("id") as string)).returning();
 
@@ -1688,6 +1708,81 @@ export const getElectionByTagFn = createServerFn({ method: 'GET' }).middleware([
   }
 );
 
+// Public, read-only voter lookup -- reachable with no admin session, unlike
+// getVotersByElectionFn. Only ever returns name + username (the voter's
+// login "Voter ID"); no phone/email/inviteToken/vote-status leaves the server.
+// Requires a real search term so it can't be used to dump the full roster.
+export const searchVotersFn = createServerFn({ method: 'GET' }).middleware([arcjetVoterLookupMiddleware]).handler(
+  async ({ data }: any) => {
+    const { electionTag, searchQuery } = data;
+    const query = (searchQuery || '').trim();
+    if (query.length < 2) return [];
+
+    return await db
+      .select({ name: voters.name, username: voters.username })
+      .from(voters)
+      .innerJoin(elections, eq<any>(voters.electionId, elections.id))
+      .where(and(eq<any>(elections.tag, electionTag), ilike(voters.name, `%${query}%`)))
+      .orderBy(asc(voters.name))
+      .limit(20);
+  }
+);
+
+// Public aggregate counts only (registered voters + ballots cast) -- same
+// "cheap counts, no PII" shape as getHomepageStatsFn, scoped to one election.
+export const getElectionRegistrationStatsFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
+  async ({ data: electionTag }: any) => {
+    const [electionRecord] = await db.select({ id: elections.id }).from(elections).where(eq<any>(elections.tag, electionTag));
+    if (!electionRecord) {
+      throw new Error('Election not found.');
+    }
+
+    const [[votersCountResult], [votesCastResult]] = await Promise.all([
+      db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(eq<any>(voters.electionId, electionRecord.id)),
+      db.select({ count: sql<number>`count(${voters.id})::int` }).from(voters).where(and(eq<any>(voters.electionId, electionRecord.id), eq<any>(voters.hasVoted, true))),
+    ]);
+
+    return {
+      totalVoters: votersCountResult?.count ?? 0,
+      votesCast: votesCastResult?.count ?? 0,
+    };
+  }
+);
+
+// Public bulk export -- deliberately name-only (no username/voter ID) so this
+// can't be used to harvest login credentials in bulk the way searchVotersFn's
+// per-name, rate-limited lookup is designed to prevent. Reuses the same tight
+// bucket as searchVotersFn since dumping the whole roster in one shot is, if
+// anything, more sensitive than a single-name search.
+export const exportVoterNamesFn = createServerFn({ method: 'GET' }).middleware([arcjetVoterLookupMiddleware]).handler(
+  async ({ data: electionTag }: any) => {
+    const [electionRecord] = await db.select({ id: elections.id, tag: elections.tag }).from(elections).where(eq<any>(elections.tag, electionTag));
+    if (!electionRecord) {
+      throw new Error('Election not found.');
+    }
+
+    const registeredVoters = await db
+      .select({ name: voters.name })
+      .from(voters)
+      .where(eq<any>(voters.electionId, electionRecord.id))
+      .orderBy(asc(voters.name));
+
+    const formattedRows = registeredVoters.map((voter) => ({ 'Name': voter.name }));
+    const worksheet = XLSX.utils.json_to_sheet(formattedRows);
+    worksheet['!cols'] = [{ wch: 32 }];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Registered Voters');
+
+    const excelBuffer64 = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+
+    return {
+      success: true,
+      filename: `${electionRecord.tag}_registered_voters.xlsx`,
+      base64Data: excelBuffer64,
+    };
+  }
+);
+
 
 
 export const createVoterFn = createServerFn({ method: 'POST' })
@@ -1981,10 +2076,12 @@ export const inviteVoterFn = createServerFn({ method: 'GET' }).middleware([arcje
         }
 
       } else {
+        const usernameLabel = rec?.elections?.placeholder?.username || 'Username';
+        const passwordLabel = rec?.elections?.placeholder?.password || 'Password';
 
         smsPayload = {
           sender: process.env.SMS_SENDER_ID,
-          message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken} . Visit ${electionUrl} to vote!`,
+          message: `Hello ${fname}, Please vote with ${usernameLabel}: ${username}, ${passwordLabel}: ${inviteToken} . Visit ${electionUrl} to vote!`,
           recipients: [phone],
         };
       }
@@ -2047,9 +2144,11 @@ export const inviteVoters2Fn = createServerFn({ method: 'GET' }).middleware([arc
 
       // Send Invite Code via SMS
       const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${rec[0]?.elections?.tag}`
+      const usernameLabel = rec[0]?.elections?.placeholder?.username || 'Username';
+      const passwordLabel = rec[0]?.elections?.placeholder?.password || 'Password';
       const smsPayload: any = {
         sender: process.env.SMS_SENDER_ID,
-        message: `Hello <%fname%>, Please vote with Username: <%username%>, Password: <%inviteToken%> . Try and Visit ${electionUrl} to vote!`,
+        message: `Hello <%fname%>, Please vote with ${usernameLabel}: <%username%>, ${passwordLabel}: <%inviteToken%> . Try and Visit ${electionUrl} to vote!`,
         recipients: mdata,
       };
       
@@ -2209,9 +2308,17 @@ async function processSmsQueueInBackground(rec: any[], electionId: string) {
           return;
         }
 
+        // Mirrors inviteVoterFn's branching -- OTP-mode elections don't have a
+        // username/password pair to hand out, just the code itself.
+        const usernameLabel = r?.elections?.placeholder?.username || 'Username';
+        const passwordLabel = r?.elections?.placeholder?.password || 'Password';
+        const message = r?.elections?.authMode?.toLowerCase() === 'otp'
+          ? `Hello ${fname}, Your Verification OTP is ${inviteToken}. Visit ${electionUrl} to vote!`
+          : `Hello ${fname}, Please vote with ${usernameLabel}: ${username}, ${passwordLabel}: ${inviteToken}. Visit ${electionUrl} to vote!`;
+
         const smsPayload = {
           sender: process.env.SMS_SENDER_ID,
-          message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken}. Visit ${electionUrl} to vote!`,
+          message,
           recipients: [phone],
         };
 

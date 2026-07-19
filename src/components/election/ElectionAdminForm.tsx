@@ -92,7 +92,7 @@ export default function ElectionAdminForm({ data, forUserId, forUserName }: any)
             onSuccess: () => {
               queryClient.invalidateQueries({ queryKey: ['elections-admin'] });
             },
-            onError: (error) => console.error(error.message)
+            onError: (error) => alert(error.message)
           });
         
         const editMutation = useMutation({
@@ -344,6 +344,42 @@ export default function ElectionAdminForm({ data, forUserId, forUserName }: any)
                               </div>
                             </div>
 
+                            {/* Credential label overrides -- only meaningful when voters log in with a username/password pair */}
+                            { formData?.authMode?.toLowerCase() === "credential" && (
+                            <div className="px-6 py-5">
+                              <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-start">
+                                <div className="col-span-4 flex flex-col pt-1.5">
+                                  <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                                    Login Field Labels
+                                  </label>
+                                  <span className="text-[11px] text-zinc-500 mt-1">
+                                    Placeholder text shown on the voter login page's username/password fields.
+                                  </span>
+                                </div>
+                                <div className="order-1 col-span-8 w-full grid grid-cols-2 gap-3">
+                                  <input
+                                    type="text"
+                                    name="placeholderUsername"
+                                    disabled={isSubmitting}
+                                    value={formData?.placeholderUsername ?? formData?.placeholder?.username ?? 'Username'}
+                                    onChange={handleInputChange}
+                                    placeholder="Username"
+                                    className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs px-3 py-2 h-[36px]"
+                                  />
+                                  <input
+                                    type="text"
+                                    name="placeholderPassword"
+                                    disabled={isSubmitting}
+                                    value={formData?.placeholderPassword ?? formData?.placeholder?.password ?? 'Password'}
+                                    onChange={handleInputChange}
+                                    placeholder="Password"
+                                    className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs px-3 py-2 h-[36px]"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                            )}
+
                             <div className="px-6 py-5">
                               <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-start">
                                 <div className="col-span-4 flex flex-col pt-1.5">
@@ -524,7 +560,7 @@ export default function ElectionAdminForm({ data, forUserId, forUserName }: any)
                               <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-left">
                                 <div className="col-span-4 flex items-center gap-1.5">
                                   <Eye className="w-3.5 h-3.5 text-zinc-500" />
-                                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Display Feed</span>
+                                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Display Voters Register</span>
                                 </div>
                                 <div className="order-1 col-span-8 flex items-center">
                                   <input
@@ -535,7 +571,7 @@ export default function ElectionAdminForm({ data, forUserId, forUserName }: any)
                                     className="w-4 h-4 rounded text-purple-600 bg-[#0a192a]/50 border-zinc-700 focus:ring-purple-500 accent-purple-500 cursor-pointer"
                                   />
                                   <label htmlFor="showFeed" className="ml-2 text-xs text-zinc-400 cursor-pointer select-none">
-                                    Allow real-time cryptographic audit trail metrics and count logs to stream publicly.
+                                    Allow real-time cryptographic audit trail metrics and count logs to stream publicly, and let voters search the public voters register to look up their Voter ID.
                                   </label>
                                 </div>
                               </div>

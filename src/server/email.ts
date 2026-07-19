@@ -1,49 +1,37 @@
-import nodemailer from 'nodemailer';
-
 // Kept as the sole plain export in this module (not mixed alongside
 // createServerFn exports) -- see paystack-credit.ts's comment for why that
 // matters. Safe to import at top-level from src/lib/auth.ts (a plain config
 // module, not a raw route file) the same way db/pg already is.
-let transporter: ReturnType<typeof nodemailer.createTransport> | null | undefined;
-
-function getTransporter() {
-  if (transporter !== undefined) return transporter;
-
-  const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASSWORD;
-
-  if (!host || !port || !user || !pass) {
-    transporter = null;
-    return transporter;
-  }
-
-  transporter = nodemailer.createTransport({
-    host,
-    port: Number(port),
-    secure: Number(port) === 465,
-    auth: { user, pass },
-  });
-  return transporter;
-}
+const UNOSEND_API_URL = 'https://api.unosend.co/emails';
 
 export async function sendEmail(params: { to: string; subject: string; html: string }): Promise<void> {
-  const t = getTransporter();
-  if (!t) {
-    console.error('sendEmail: SMTP not configured (SMTP_HOST/PORT/USER/PASSWORD missing in .env), skipping send.');
+  const apiKey = process.env.UNOSEND_API_KEY;
+  if (!apiKey) {
+    console.error('sendEmail: UNOSEND_API_KEY not configured, skipping send.');
     return;
   }
 
-  const fromName = process.env.SMTP_FROM_NAME || 'Heravote.com';
-  const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+  const fromName = process.env.SMTP_FROM_NAME || 'Heravote';
+  const fromEmail = process.env.SMTP_FROM_EMAIL || 'noreply@heravote.com';
 
-  await t.sendMail({
-    from: `"${fromName}" <${fromEmail}>`,
-    to: params.to,
-    subject: params.subject,
-    html: params.html,
+  const res = await fetch(UNOSEND_API_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: `${fromName} <${fromEmail}>`,
+      to: [params.to],
+      subject: params.subject,
+      html: params.html,
+    }),
   });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    console.error(`sendEmail: Unosend request failed (${res.status}): ${body}`);
+  }
 }
 
 // ==========================================

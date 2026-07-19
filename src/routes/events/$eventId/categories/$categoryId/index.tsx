@@ -62,7 +62,7 @@ function RouteComponent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a192a]/30 text-white antialiased font-sans">
+    <div className="min-h-screen bg-[#0d1f36] text-white antialiased font-sans">
     <Dialog
       open={modal.open}
       onOpenChange={(open) => {

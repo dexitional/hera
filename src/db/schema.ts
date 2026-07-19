@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, uuid, text, integer, timestamp, varchar, boolean, doublePrecision, unique, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, timestamp, varchar, boolean, doublePrecision, unique, index, uniqueIndex, jsonb } from 'drizzle-orm/pg-core';
 import { uuidv7 } from '../lib/uuid';
 
 // ==========================================
@@ -145,6 +145,10 @@ export const elections = pgTable('elections', {
   publicToken: text('public_token'),
   showFeed: boolean('show_feed').default(false).notNull(),
   isActive: boolean('is_active').default(false).notNull(),
+  // Custom labels for the username/password inputs shown on the voter login
+  // page (/vote/election) when authMode is 'credential'.
+  placeholder: jsonb('placeholder').$type<{ username: string; password: string }>()
+    .default({ username: 'Username', password: 'Password' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

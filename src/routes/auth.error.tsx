@@ -43,7 +43,7 @@ function RouteComponent() {
     : { bg: 'bg-amber-950/30', border: 'border-amber-900/30', text: 'text-amber-400' }
 
   return (
-    <main className="min-h-screen bg-[#0a192a]/50 text-white antialiased font-sans flex items-center justify-center px-4 py-16">
+    <main className="min-h-screen bg-[#233554] text-white antialiased font-sans flex items-center justify-center px-4 py-16">
       <div className="w-full max-w-md">
         <div className="bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 rounded-3xl p-8 shadow-xl text-center">
           <div className={`w-14 h-14 rounded-full ${toneClasses.bg} border ${toneClasses.border} flex items-center justify-center mx-auto mb-5`}>

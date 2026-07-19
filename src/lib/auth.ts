@@ -43,11 +43,21 @@ export const auth = betterAuth({
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      // better-auth trusts Google's email_verified claim by default and will
+      // silently flip our local user.emailVerified to true on every sign-in
+      // (not just the first link) -- including accounts a super admin has
+      // deliberately marked unverified. Verification must only ever happen
+      // through the explicit link-click flow, so never let the provider's
+      // claim override our own column.
+      mapProfileToUser: () => ({ emailVerified: false }),
     },
   },
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
+    // Unverified users are allowed to sign in -- verification instead gates
+    // specific actions (see createElectionFn/createEventFn) rather than login
+    // itself, since role=super accounts must never be blocked by it.
   },
 
   // Sends a verification link on signup and whenever a caller explicitly

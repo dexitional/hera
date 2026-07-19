@@ -57,7 +57,7 @@ export default function EventAdminForm({ data, forUserId, forUserName }: any) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events-admin'] });
     },
-    onError: (error) => console.error(error.message),
+    onError: (error) => alert(error.message),
   });
 
   const editMutation = useMutation({

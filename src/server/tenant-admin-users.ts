@@ -4,6 +4,7 @@ import { db } from '../db';
 import { elections, events, user } from '../db/schema';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
 import { authMiddleware } from '#/middleware/authMiddleware';
+import { auth } from '#/lib/auth';
 
 function assertSuperAdmin(context: any) {
   const admin: any = context?.user;
@@ -108,6 +109,34 @@ export const setUserEmailVerifiedFn = createServerFn({ method: 'POST' })
       .returning();
 
     return updated;
+  });
+
+// Resends the signup verification link to an unverified account. Deliberately
+// calls auth.api.sendVerificationEmail with only { email } (no headers) so it
+// hits better-auth's no-session branch, which looks the user up by email and
+// sends to them directly -- passing the caller's own session headers here
+// would instead make better-auth compare the target email against the super
+// admin's own session email and reject as a mismatch.
+export const resendVerificationEmailFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    assertSuperAdmin(context);
+    const { userId } = data;
+
+    const [target] = await db
+      .select({ email: user.email, emailVerified: user.emailVerified })
+      .from(user)
+      .where(eq(user.id, userId));
+
+    if (!target) {
+      throw new Error('User not found.');
+    }
+    if (target.emailVerified) {
+      throw new Error('This user is already verified.');
+    }
+
+    await auth.api.sendVerificationEmail({ body: { email: target.email } });
+    return { success: true };
   });
 
 // Every election owned by a given tenant admin -- the "election workspace" for that user.

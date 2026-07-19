@@ -1,0 +1,1 @@
+ALTER TABLE "elections" ADD COLUMN "placeholder" jsonb DEFAULT '{"username":"Username","password":"Password"}'::jsonb NOT NULL;

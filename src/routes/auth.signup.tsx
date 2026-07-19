@@ -86,7 +86,7 @@ function RouteComponent() {
 
   return (
     <main className="relative">
-    <div className="min-h-screen bg-[#0a192a]/50 text-white antialiased font-sans">
+    <div className="min-h-screen bg-[#0d1f36] text-white antialiased font-sans">
       <main className="w-full">
         <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">

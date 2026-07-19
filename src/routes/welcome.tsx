@@ -61,7 +61,7 @@ function RouteComponent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a192a]/50 text-white antialiased font-sans flex flex-col items-center">
+    <div className="min-h-screen bg-[#233554] text-white antialiased font-sans flex flex-col items-center">
       <main className="w-full flex flex-col items-center justify-center">
         <section className="w-full max-w-2xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-14 lg:pt-20 pb-24">
           <div className="text-left mb-8">

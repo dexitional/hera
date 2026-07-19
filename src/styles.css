@@ -103,6 +103,17 @@
   }
 }
 
+/* From Uiverse.io by bhaveshxrawat -- rotating gradient bar behind the
+   ::after mask on AuthElection's logo card creates the spinning-border glow. */
+@keyframes rotBGimg {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @theme {
   
       /* Cornflower Shades */

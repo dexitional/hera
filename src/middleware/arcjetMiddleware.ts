@@ -1,17 +1,17 @@
 // app/middleware/arcjetMiddleware.ts
 import { createMiddleware } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { aj } from "#/lib/arcjet";
+import { aj, ajVoterLookup } from "#/lib/arcjet";
 
-export const arcjetMiddleware = createMiddleware().server(async ({ next }) => {
+async function protectWith(client: any) {
   // 1. Extract the underlying Web API Request object from TanStack Start
   const request: any = getRequest();
   if (!request) {
-    return next(); // Fallback if not executed in a server context
+    return null; // Fallback if not executed in a server context
   }
 
   // 2. Run the request through the Arcjet engine
-  const decision:any = await (aj as any).protect(request, { requested: 1 });
+  const decision: any = await client.protect(request, { requested: 1 });
 
   // 3. If Arcjet signals a block, intercept the request and throw.
   // Thrown as plain Errors, not Response objects -- a thrown Response doesn't
@@ -32,6 +32,18 @@ export const arcjetMiddleware = createMiddleware().server(async ({ next }) => {
     throw new Error("Access Denied");
   }
 
-  // 4. Continue to the Server Function handler if clean
+  return null;
+}
+
+export const arcjetMiddleware = createMiddleware().server(async ({ next }) => {
+  await protectWith(aj);
+  return next();
+});
+
+// Same shield/bot checks as arcjetMiddleware, plus a much tighter dedicated
+// rate limit -- see ajVoterLookup's comment in lib/arcjet.ts. Use this in
+// place of (not alongside) arcjetMiddleware on the handler it protects.
+export const arcjetVoterLookupMiddleware = createMiddleware().server(async ({ next }) => {
+  await protectWith(ajVoterLookup);
   return next();
 });

@@ -65,7 +65,7 @@ function RouteComponent() {
   }, [isModalVisible, modalProduct]);
 
   return (
-    <div className="min-h-screen bg-[#0a192a]/30 text-white antialiased font-sans">
+    <div className="min-h-screen bg-[#0d1f36] text-white antialiased font-sans">
       <main className="w-full">
         <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-16 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="text-left" style={{ opacity: 1, transform: "none" }}>
@@ -188,7 +188,7 @@ function RouteComponent() {
           >
             <div
               className={[
-                "relative w-full max-w-4xl max-h-[90vh] bg-[#0a192a]/30 rounded-3xl overflow-hidden shadow-2xl border border-white/10",
+                "relative w-full max-w-4xl max-h-[90vh] bg-[#233554] rounded-3xl overflow-hidden shadow-2xl border border-white/10",
                 "transition duration-200 ease-out will-change-transform",
                 isModalVisible
                   ? "opacity-100 scale-100 translate-y-0"

@@ -32,3 +32,18 @@ export const aj = arcjet({
     }),
   ],
 } as any);
+
+// Stricter bucket layered on top of the base client (shield + bot detection +
+// the shared 60/min bucket still apply) for public, unauthenticated,
+// PII-returning endpoints -- currently searchVotersFn, which hands back voter
+// names + usernames to anyone with an election tag. A real visitor only needs
+// a handful of searches while they find their own name; this mainly exists to
+// slow down scripted a-z roster scraping.
+export const ajVoterLookup = (aj as any).withRule([
+  tokenBucket({
+    mode,
+    refillRate: 10,
+    interval: 60,
+    capacity: 10,
+  }),
+]);

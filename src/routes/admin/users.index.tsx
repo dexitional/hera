@@ -2,11 +2,11 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   ArrowLeft, Search, UserPlus, ShieldCheck, ShieldOff, Ban, Loader2,
-  CheckCircle2, XCircle, KeyRound, FolderCog, X, Shield, Copy
+  CheckCircle2, XCircle, KeyRound, FolderCog, X, Shield, Copy, MailCheck
 } from "lucide-react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authClient } from "#/lib/auth-client";
-import { getAllUsersFn, setUserEmailVerifiedFn } from "#/server/tenant-admin-users";
+import { getAllUsersFn, setUserEmailVerifiedFn, resendVerificationEmailFn } from "#/server/tenant-admin-users";
 
 const USERS_PAGE_SIZE = 15;
 
@@ -93,6 +93,12 @@ function UsersDirectory() {
     mutationFn: (payload: { userId: string; emailVerified: boolean }) => setUserEmailVerifiedFn({ data: payload } as any),
     onSuccess: invalidateUsers,
     onError: (error: any) => alert(error?.message || "Failed to update verification status."),
+  });
+
+  const resendVerificationMutation = useMutation({
+    mutationFn: (userId: string) => resendVerificationEmailFn({ data: { userId } } as any),
+    onSuccess: () => alert("Verification email sent."),
+    onError: (error: any) => alert(error?.message || "Failed to send verification email."),
   });
 
   const banMutation = useMutation({
@@ -259,6 +265,18 @@ function UsersDirectory() {
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
                         </button>
+
+                        {!u.emailVerified && (
+                          <button
+                            type="button"
+                            title="Send verification email"
+                            onClick={() => resendVerificationMutation.mutate(u.id)}
+                            disabled={resendVerificationMutation.isPending}
+                            className="p-1.5 rounded text-zinc-400 hover:text-purple-400 hover:bg-purple-950/20 transition-colors disabled:opacity-40"
+                          >
+                            <MailCheck className="w-3.5 h-3.5" />
+                          </button>
+                        )}
 
                         <button
                           type="button"

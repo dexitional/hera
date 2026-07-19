@@ -6,7 +6,7 @@ export const Route = createFileRoute('/about')({
 
 function About() {
   return (
-    <div className="min-h-screen bg-[#0a192a]/80 text-white antialiased font-sans flex flex-col items-center">
+    <div className="min-h-screen bg-[#0d1f36] text-white antialiased font-sans flex flex-col items-center">
     <main className="w-full flex flex-col items-center justify-center">
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24">
         <div className="grid md:grid-cols-2 gap-12 items-center">

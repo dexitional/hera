@@ -6,7 +6,7 @@ export const Route = createFileRoute('/contact')({
 
 function RouteComponent() {
   return (
-    <div className="min-h-screen bg-[#0a192a]/80 text-white antialiased font-sans">
+    <div className="min-h-screen bg-[#0d1f36] text-white antialiased font-sans">
     <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <section className="w-full pt-6 sm:pt-12 lg:pt-24 pb-10">
         <div className="text-left" style={{ opacity: 1, transform: 'none' }}>
