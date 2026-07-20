@@ -76,7 +76,7 @@ export const getElectionDataFn = createServerFn({ method: 'GET' }).middleware([a
 export const getActiveElectionsFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
   async ({ data }: any) => {
     const page = Math.max(Number(data?.page) || 1, 1);
-    const pageSize = 8;
+    const pageSize = 3;
     const offsetValue = (page - 1) * pageSize;
 
     const baseCondition = and(
