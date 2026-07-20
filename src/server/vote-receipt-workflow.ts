@@ -39,12 +39,17 @@ export async function runVoteReceiptWorkflow(params: {
     ]);
 
     const positionTitleById = new Map(positionRows.map((p) => [p.id, p.title]));
-    const candidateNameById = new Map(candidateRows.map((c) => [c.id, c.name]));
+    const candidateById = new Map(candidateRows.map((c) => [c.id, c]));
 
-    const selectionLines = selections.map((s) => ({
-      position: positionTitleById.get(s.positionId) || 'Unknown Position',
-      candidate: s.candidateId ? (candidateNameById.get(s.candidateId) || 'Unknown Candidate') : 'Abstained',
-    }));
+    const selectionLines = selections.map((s) => {
+      const candidateRow = s.candidateId ? candidateById.get(s.candidateId) : undefined;
+      return {
+        position: positionTitleById.get(s.positionId) || 'Unknown Position',
+        candidate: s.candidateId ? (candidateRow?.name || 'Unknown Candidate') : 'Abstained',
+        candidateImageUrl: candidateRow?.imageUrl ?? null,
+        isAbstain: !s.candidateId,
+      };
+    });
 
     await sendEmail({
       to: voter.email,
@@ -52,6 +57,7 @@ export async function runVoteReceiptWorkflow(params: {
       html: voteReceiptEmailHtml({
         voterName: voter.name,
         electionTitle: election.title,
+        electionLogoUrl: election.imageUrl,
         selections: selectionLines,
         castAt: new Date(castAt).toUTCString(),
         ip,

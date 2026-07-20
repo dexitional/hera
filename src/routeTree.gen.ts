@@ -9,79 +9,104 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as TicketsRouteImport } from './routes/tickets'
+import { Route as StoreRouteImport } from './routes/store'
+import { Route as ElectionsRouteImport } from './routes/elections'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
-import { Route as BlogRouteImport } from './routes/blog'
-import { Route as ContactRouteImport } from './routes/contact'
-import { Route as ElectionsRouteImport } from './routes/elections'
-import { Route as StoreRouteImport } from './routes/store'
-import { Route as TicketsRouteImport } from './routes/tickets'
-import { Route as WelcomeRouteImport } from './routes/welcome'
-import { Route as AdminIndexRouteImport } from './routes/admin/index'
-import { Route as AdminPublicRouteImport } from './routes/admin/public'
-import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
-import { Route as AuthErrorRouteImport } from './routes/auth.error'
-import { Route as AuthSigninRouteImport } from './routes/auth.signin'
-import { Route as AuthSignupRouteImport } from './routes/auth.signup'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as EventsIndexRouteImport } from './routes/events/index'
-import { Route as VoteCastRouteImport } from './routes/vote/cast'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as VoteElectionRouteImport } from './routes/vote/election'
-import { Route as AdminCategoriesIndexRouteImport } from './routes/admin/categories.index'
-import { Route as AdminCategoriesNewRouteImport } from './routes/admin/categories.new'
-import { Route as AdminContestantsIndexRouteImport } from './routes/admin/contestants.index'
-import { Route as AdminContestantsNewRouteImport } from './routes/admin/contestants.new'
-import { Route as AdminElectionsIndexRouteImport } from './routes/admin/elections.index'
-import { Route as AdminElectionsNewRouteImport } from './routes/admin/elections.new'
-import { Route as AdminEventsIndexRouteImport } from './routes/admin/events.index'
-import { Route as AdminEventsNewRouteImport } from './routes/admin/events.new'
-import { Route as AdminOrganizationsIndexRouteImport } from './routes/admin/organizations.index'
-import { Route as AdminOrganizationsNewRouteImport } from './routes/admin/organizations.new'
-import { Route as AdminUsersIndexRouteImport } from './routes/admin/users.index'
-import { Route as AdminUsersUserIdRouteImport } from './routes/admin/users.$userId'
-import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
-import { Route as ApiWebhooksArkeselUssdRouteImport } from './routes/api/webhooks.arkesel-ussd'
-import { Route as ApiWebhooksPaystackRouteImport } from './routes/api/webhooks.paystack'
-import { Route as EventsEventIdIndexRouteImport } from './routes/events/$eventId/index'
+import { Route as VoteCastRouteImport } from './routes/vote/cast'
+import { Route as AuthSignupRouteImport } from './routes/auth.signup'
+import { Route as AuthSigninRouteImport } from './routes/auth.signin'
+import { Route as AuthErrorRouteImport } from './routes/auth.error'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminPublicRouteImport } from './routes/admin/public'
 import { Route as NomineeNomineeIdIndexRouteImport } from './routes/nominee/$nomineeId/index'
+import { Route as EventsEventIdIndexRouteImport } from './routes/events/$eventId/index'
+import { Route as AdminUsersIndexRouteImport } from './routes/admin/users.index'
+import { Route as AdminOrganizationsIndexRouteImport } from './routes/admin/organizations.index'
+import { Route as AdminEventsIndexRouteImport } from './routes/admin/events.index'
+import { Route as AdminElectionsIndexRouteImport } from './routes/admin/elections.index'
+import { Route as AdminContestantsIndexRouteImport } from './routes/admin/contestants.index'
+import { Route as AdminCategoriesIndexRouteImport } from './routes/admin/categories.index'
 import { Route as VoteRegisterElectionTagRouteImport } from './routes/vote/register.$electionTag'
-import { Route as AdminElectionsElectionIdAdminfeedRouteImport } from './routes/admin/elections.$electionId.adminfeed'
-import { Route as AdminElectionsElectionIdEditRouteImport } from './routes/admin/elections.$electionId.edit'
-import { Route as AdminElectionsElectionIdFeedRouteImport } from './routes/admin/elections.$electionId.feed'
-import { Route as AdminElectionsElectionIdInvoiceRouteImport } from './routes/admin/elections.$electionId.invoice'
-import { Route as AdminElectionsElectionIdManageRouteImport } from './routes/admin/elections.$electionId.manage'
-import { Route as AdminElectionsElectionIdPayRouteImport } from './routes/admin/elections.$electionId.pay'
-import { Route as AdminElectionsElectionIdReceiptRouteImport } from './routes/admin/elections.$electionId.receipt'
-import { Route as AdminElectionsElectionIdResultsRouteImport } from './routes/admin/elections.$electionId.results'
-import { Route as AdminEventsEventIdEditRouteImport } from './routes/admin/events.$eventId.edit'
-import { Route as AdminEventsEventIdFeedRouteImport } from './routes/admin/events.$eventId.feed'
-import { Route as AdminEventsEventIdManageRouteImport } from './routes/admin/events.$eventId.manage'
-import { Route as AdminEventsEventIdResultsRouteImport } from './routes/admin/events.$eventId.results'
+import { Route as ApiWebhooksPaystackRouteImport } from './routes/api/webhooks.paystack'
+import { Route as ApiWebhooksArkeselUssdRouteImport } from './routes/api/webhooks.arkesel-ussd'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
+import { Route as AdminUsersUserIdRouteImport } from './routes/admin/users.$userId'
+import { Route as AdminOrganizationsNewRouteImport } from './routes/admin/organizations.new'
+import { Route as AdminEventsNewRouteImport } from './routes/admin/events.new'
+import { Route as AdminElectionsNewRouteImport } from './routes/admin/elections.new'
+import { Route as AdminContestantsNewRouteImport } from './routes/admin/contestants.new'
+import { Route as AdminCategoriesNewRouteImport } from './routes/admin/categories.new'
 import { Route as EventsEventIdCategoriesIndexRouteImport } from './routes/events/$eventId/categories/index'
-import { Route as AdminElectionsElectionIdCandidatesIndexRouteImport } from './routes/admin/elections.$electionId.candidates.index'
-import { Route as AdminElectionsElectionIdCandidatesNewRouteImport } from './routes/admin/elections.$electionId.candidates.new'
-import { Route as AdminElectionsElectionIdFeedBakRouteImport } from './routes/admin/elections.$electionId.feed.bak'
-import { Route as AdminElectionsElectionIdPositionsIndexRouteImport } from './routes/admin/elections.$electionId.positions.index'
-import { Route as AdminElectionsElectionIdPositionsNewRouteImport } from './routes/admin/elections.$electionId.positions.new'
-import { Route as AdminElectionsElectionIdVotersIndexRouteImport } from './routes/admin/elections.$electionId.voters.index'
-import { Route as AdminElectionsElectionIdVotersNewRouteImport } from './routes/admin/elections.$electionId.voters.new'
-import { Route as AdminEventsEventIdCategoriesIndexRouteImport } from './routes/admin/events.$eventId.categories.index'
-import { Route as AdminEventsEventIdCategoriesNewRouteImport } from './routes/admin/events.$eventId.categories.new'
-import { Route as AdminEventsEventIdContestantsIndexRouteImport } from './routes/admin/events.$eventId.contestants.index'
-import { Route as AdminEventsEventIdContestantsNewRouteImport } from './routes/admin/events.$eventId.contestants.new'
-import { Route as AdminEventsEventIdTransactionsIndexRouteImport } from './routes/admin/events.$eventId.transactions.index'
-import { Route as AdminEventsEventIdTransactionsNewRouteImport } from './routes/admin/events.$eventId.transactions.new'
+import { Route as AdminEventsEventIdResultsRouteImport } from './routes/admin/events.$eventId.results'
+import { Route as AdminEventsEventIdManageRouteImport } from './routes/admin/events.$eventId.manage'
+import { Route as AdminEventsEventIdFeedRouteImport } from './routes/admin/events.$eventId.feed'
+import { Route as AdminEventsEventIdEditRouteImport } from './routes/admin/events.$eventId.edit'
+import { Route as AdminElectionsElectionIdResultsRouteImport } from './routes/admin/elections.$electionId.results'
+import { Route as AdminElectionsElectionIdReceiptRouteImport } from './routes/admin/elections.$electionId.receipt'
+import { Route as AdminElectionsElectionIdPayRouteImport } from './routes/admin/elections.$electionId.pay'
+import { Route as AdminElectionsElectionIdManageRouteImport } from './routes/admin/elections.$electionId.manage'
+import { Route as AdminElectionsElectionIdInvoiceRouteImport } from './routes/admin/elections.$electionId.invoice'
+import { Route as AdminElectionsElectionIdFeedRouteImport } from './routes/admin/elections.$electionId.feed'
+import { Route as AdminElectionsElectionIdEditRouteImport } from './routes/admin/elections.$electionId.edit'
+import { Route as AdminElectionsElectionIdAdminfeedRouteImport } from './routes/admin/elections.$electionId.adminfeed'
 import { Route as EventsEventIdCategoriesCategoryIdIndexRouteImport } from './routes/events/$eventId/categories/$categoryId/index'
-import { Route as AdminElectionsElectionIdCandidatesCandidateIdEditRouteImport } from './routes/admin/elections.$electionId.candidates.$candidateId.edit'
-import { Route as AdminElectionsElectionIdPositionsPositionIdEditRouteImport } from './routes/admin/elections.$electionId.positions.$positionId.edit'
-import { Route as AdminElectionsElectionIdVotersVoterIdEditRouteImport } from './routes/admin/elections.$electionId.voters.$voterId.edit'
-import { Route as AdminEventsEventIdCategoriesCategoryIdEditRouteImport } from './routes/admin/events.$eventId.categories.$categoryId.edit'
-import { Route as AdminEventsEventIdContestantsContestantIdEditRouteImport } from './routes/admin/events.$eventId.contestants.$contestantId.edit'
+import { Route as AdminEventsEventIdTransactionsIndexRouteImport } from './routes/admin/events.$eventId.transactions.index'
+import { Route as AdminEventsEventIdContestantsIndexRouteImport } from './routes/admin/events.$eventId.contestants.index'
+import { Route as AdminEventsEventIdCategoriesIndexRouteImport } from './routes/admin/events.$eventId.categories.index'
+import { Route as AdminElectionsElectionIdVotersIndexRouteImport } from './routes/admin/elections.$electionId.voters.index'
+import { Route as AdminElectionsElectionIdPositionsIndexRouteImport } from './routes/admin/elections.$electionId.positions.index'
+import { Route as AdminElectionsElectionIdCandidatesIndexRouteImport } from './routes/admin/elections.$electionId.candidates.index'
+import { Route as AdminEventsEventIdTransactionsNewRouteImport } from './routes/admin/events.$eventId.transactions.new'
+import { Route as AdminEventsEventIdContestantsNewRouteImport } from './routes/admin/events.$eventId.contestants.new'
+import { Route as AdminEventsEventIdCategoriesNewRouteImport } from './routes/admin/events.$eventId.categories.new'
+import { Route as AdminElectionsElectionIdVotersNewRouteImport } from './routes/admin/elections.$electionId.voters.new'
+import { Route as AdminElectionsElectionIdPositionsNewRouteImport } from './routes/admin/elections.$electionId.positions.new'
+import { Route as AdminElectionsElectionIdFeedBakRouteImport } from './routes/admin/elections.$electionId.feed.bak'
+import { Route as AdminElectionsElectionIdCandidatesNewRouteImport } from './routes/admin/elections.$electionId.candidates.new'
 import { Route as AdminEventsEventIdTransactionsTransactionIdEditRouteImport } from './routes/admin/events.$eventId.transactions.$transactionId.edit'
+import { Route as AdminEventsEventIdContestantsContestantIdEditRouteImport } from './routes/admin/events.$eventId.contestants.$contestantId.edit'
+import { Route as AdminEventsEventIdCategoriesCategoryIdEditRouteImport } from './routes/admin/events.$eventId.categories.$categoryId.edit'
+import { Route as AdminElectionsElectionIdVotersVoterIdEditRouteImport } from './routes/admin/elections.$electionId.voters.$voterId.edit'
+import { Route as AdminElectionsElectionIdPositionsPositionIdEditRouteImport } from './routes/admin/elections.$electionId.positions.$positionId.edit'
+import { Route as AdminElectionsElectionIdCandidatesCandidateIdEditRouteImport } from './routes/admin/elections.$electionId.candidates.$candidateId.edit'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TicketsRoute = TicketsRouteImport.update({
+  id: '/tickets',
+  path: '/tickets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StoreRoute = StoreRouteImport.update({
+  id: '/store',
+  path: '/store',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ElectionsRoute = ElectionsRouteImport.update({
+  id: '/elections',
+  path: '/elections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogRoute = BlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -94,64 +119,9 @@ const AdminRouteRoute = AdminRouteRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BlogRoute = BlogRouteImport.update({
-  id: '/blog',
-  path: '/blog',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContactRoute = ContactRouteImport.update({
-  id: '/contact',
-  path: '/contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ElectionsRoute = ElectionsRouteImport.update({
-  id: '/elections',
-  path: '/elections',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StoreRoute = StoreRouteImport.update({
-  id: '/store',
-  path: '/store',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TicketsRoute = TicketsRouteImport.update({
-  id: '/tickets',
-  path: '/tickets',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WelcomeRoute = WelcomeRouteImport.update({
-  id: '/welcome',
-  path: '/welcome',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminIndexRoute = AdminIndexRouteImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminPublicRoute = AdminPublicRouteImport.update({
-  id: '/public',
-  path: '/public',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminSettingsRoute = AdminSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AuthErrorRoute = AuthErrorRouteImport.update({
-  id: '/auth/error',
-  path: '/auth/error',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthSigninRoute = AuthSigninRouteImport.update({
-  id: '/auth/signin',
-  path: '/auth/signin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthSignupRoute = AuthSignupRouteImport.update({
-  id: '/auth/signup',
-  path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EventsIndexRoute = EventsIndexRouteImport.update({
@@ -159,89 +129,49 @@ const EventsIndexRoute = EventsIndexRouteImport.update({
   path: '/events/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const VoteCastRoute = VoteCastRouteImport.update({
-  id: '/vote/cast',
-  path: '/vote/cast',
-  getParentRoute: () => rootRouteImport,
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 const VoteElectionRoute = VoteElectionRouteImport.update({
   id: '/vote/election',
   path: '/vote/election',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminCategoriesIndexRoute = AdminCategoriesIndexRouteImport.update({
-  id: '/categories/',
-  path: '/categories/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminCategoriesNewRoute = AdminCategoriesNewRouteImport.update({
-  id: '/categories/new',
-  path: '/categories/new',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminContestantsIndexRoute = AdminContestantsIndexRouteImport.update({
-  id: '/contestants/',
-  path: '/contestants/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminContestantsNewRoute = AdminContestantsNewRouteImport.update({
-  id: '/contestants/new',
-  path: '/contestants/new',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminElectionsIndexRoute = AdminElectionsIndexRouteImport.update({
-  id: '/elections/',
-  path: '/elections/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminElectionsNewRoute = AdminElectionsNewRouteImport.update({
-  id: '/elections/new',
-  path: '/elections/new',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminEventsIndexRoute = AdminEventsIndexRouteImport.update({
-  id: '/events/',
-  path: '/events/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminEventsNewRoute = AdminEventsNewRouteImport.update({
-  id: '/events/new',
-  path: '/events/new',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminOrganizationsIndexRoute = AdminOrganizationsIndexRouteImport.update({
-  id: '/organizations/',
-  path: '/organizations/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminOrganizationsNewRoute = AdminOrganizationsNewRouteImport.update({
-  id: '/organizations/new',
-  path: '/organizations/new',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminUsersIndexRoute = AdminUsersIndexRouteImport.update({
-  id: '/users/',
-  path: '/users/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminUsersUserIdRoute = AdminUsersUserIdRouteImport.update({
-  id: '/users/$userId',
-  path: '/users/$userId',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
+const VoteCastRoute = VoteCastRouteImport.update({
+  id: '/vote/cast',
+  path: '/vote/cast',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiWebhooksArkeselUssdRoute = ApiWebhooksArkeselUssdRouteImport.update({
-  id: '/api/webhooks/arkesel-ussd',
-  path: '/api/webhooks/arkesel-ussd',
+const AuthSignupRoute = AuthSignupRouteImport.update({
+  id: '/auth/signup',
+  path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiWebhooksPaystackRoute = ApiWebhooksPaystackRouteImport.update({
-  id: '/api/webhooks/paystack',
-  path: '/api/webhooks/paystack',
+const AuthSigninRoute = AuthSigninRouteImport.update({
+  id: '/auth/signin',
+  path: '/auth/signin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthErrorRoute = AuthErrorRouteImport.update({
+  id: '/auth/error',
+  path: '/auth/error',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminPublicRoute = AdminPublicRouteImport.update({
+  id: '/public',
+  path: '/public',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const NomineeNomineeIdIndexRoute = NomineeNomineeIdIndexRouteImport.update({
+  id: '/nominee/$nomineeId/',
+  path: '/nominee/$nomineeId/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EventsEventIdIndexRoute = EventsEventIdIndexRouteImport.update({
@@ -249,50 +179,118 @@ const EventsEventIdIndexRoute = EventsEventIdIndexRouteImport.update({
   path: '/events/$eventId/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NomineeNomineeIdIndexRoute = NomineeNomineeIdIndexRouteImport.update({
-  id: '/nominee/$nomineeId/',
-  path: '/nominee/$nomineeId/',
-  getParentRoute: () => rootRouteImport,
+const AdminUsersIndexRoute = AdminUsersIndexRouteImport.update({
+  id: '/users/',
+  path: '/users/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminOrganizationsIndexRoute = AdminOrganizationsIndexRouteImport.update({
+  id: '/organizations/',
+  path: '/organizations/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminEventsIndexRoute = AdminEventsIndexRouteImport.update({
+  id: '/events/',
+  path: '/events/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminElectionsIndexRoute = AdminElectionsIndexRouteImport.update({
+  id: '/elections/',
+  path: '/elections/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminContestantsIndexRoute = AdminContestantsIndexRouteImport.update({
+  id: '/contestants/',
+  path: '/contestants/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminCategoriesIndexRoute = AdminCategoriesIndexRouteImport.update({
+  id: '/categories/',
+  path: '/categories/',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 const VoteRegisterElectionTagRoute = VoteRegisterElectionTagRouteImport.update({
   id: '/vote/register/$electionTag',
   path: '/vote/register/$electionTag',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminElectionsElectionIdAdminfeedRoute =
-  AdminElectionsElectionIdAdminfeedRouteImport.update({
-    id: '/elections/$electionId/adminfeed',
-    path: '/elections/$electionId/adminfeed',
+const ApiWebhooksPaystackRoute = ApiWebhooksPaystackRouteImport.update({
+  id: '/api/webhooks/paystack',
+  path: '/api/webhooks/paystack',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWebhooksArkeselUssdRoute = ApiWebhooksArkeselUssdRouteImport.update({
+  id: '/api/webhooks/arkesel-ussd',
+  path: '/api/webhooks/arkesel-ussd',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersUserIdRoute = AdminUsersUserIdRouteImport.update({
+  id: '/users/$userId',
+  path: '/users/$userId',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminOrganizationsNewRoute = AdminOrganizationsNewRouteImport.update({
+  id: '/organizations/new',
+  path: '/organizations/new',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminEventsNewRoute = AdminEventsNewRouteImport.update({
+  id: '/events/new',
+  path: '/events/new',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminElectionsNewRoute = AdminElectionsNewRouteImport.update({
+  id: '/elections/new',
+  path: '/elections/new',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminContestantsNewRoute = AdminContestantsNewRouteImport.update({
+  id: '/contestants/new',
+  path: '/contestants/new',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminCategoriesNewRoute = AdminCategoriesNewRouteImport.update({
+  id: '/categories/new',
+  path: '/categories/new',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const EventsEventIdCategoriesIndexRoute =
+  EventsEventIdCategoriesIndexRouteImport.update({
+    id: '/events/$eventId/categories/',
+    path: '/events/$eventId/categories/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminEventsEventIdResultsRoute =
+  AdminEventsEventIdResultsRouteImport.update({
+    id: '/events/$eventId/results',
+    path: '/events/$eventId/results',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const AdminElectionsElectionIdEditRoute =
-  AdminElectionsElectionIdEditRouteImport.update({
-    id: '/elections/$electionId/edit',
-    path: '/elections/$electionId/edit',
+const AdminEventsEventIdManageRoute =
+  AdminEventsEventIdManageRouteImport.update({
+    id: '/events/$eventId/manage',
+    path: '/events/$eventId/manage',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const AdminElectionsElectionIdFeedRoute =
-  AdminElectionsElectionIdFeedRouteImport.update({
-    id: '/elections/$electionId/feed',
-    path: '/elections/$electionId/feed',
-    getParentRoute: () => AdminRouteRoute,
-  } as any)
-const AdminElectionsElectionIdInvoiceRoute =
-  AdminElectionsElectionIdInvoiceRouteImport.update({
-    id: '/elections/$electionId/invoice',
-    path: '/elections/$electionId/invoice',
-    getParentRoute: () => AdminRouteRoute,
-  } as any)
-const AdminElectionsElectionIdManageRoute =
-  AdminElectionsElectionIdManageRouteImport.update({
-    id: '/elections/$electionId/manage',
-    path: '/elections/$electionId/manage',
-    getParentRoute: () => AdminRouteRoute,
-  } as any)
-const AdminElectionsElectionIdPayRoute =
-  AdminElectionsElectionIdPayRouteImport.update({
-    id: '/elections/$electionId/pay',
-    path: '/elections/$electionId/pay',
+const AdminEventsEventIdFeedRoute = AdminEventsEventIdFeedRouteImport.update({
+  id: '/events/$eventId/feed',
+  path: '/events/$eventId/feed',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminEventsEventIdEditRoute = AdminEventsEventIdEditRouteImport.update({
+  id: '/events/$eventId/edit',
+  path: '/events/$eventId/edit',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminElectionsElectionIdResultsRoute =
+  AdminElectionsElectionIdResultsRouteImport.update({
+    id: '/elections/$electionId/results',
+    path: '/elections/$electionId/results',
     getParentRoute: () => AdminRouteRoute,
   } as any)
 const AdminElectionsElectionIdReceiptRoute =
@@ -301,116 +299,40 @@ const AdminElectionsElectionIdReceiptRoute =
     path: '/elections/$electionId/receipt',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const AdminElectionsElectionIdResultsRoute =
-  AdminElectionsElectionIdResultsRouteImport.update({
-    id: '/elections/$electionId/results',
-    path: '/elections/$electionId/results',
+const AdminElectionsElectionIdPayRoute =
+  AdminElectionsElectionIdPayRouteImport.update({
+    id: '/elections/$electionId/pay',
+    path: '/elections/$electionId/pay',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const AdminEventsEventIdEditRoute = AdminEventsEventIdEditRouteImport.update({
-  id: '/events/$eventId/edit',
-  path: '/events/$eventId/edit',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminEventsEventIdFeedRoute = AdminEventsEventIdFeedRouteImport.update({
-  id: '/events/$eventId/feed',
-  path: '/events/$eventId/feed',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminEventsEventIdManageRoute =
-  AdminEventsEventIdManageRouteImport.update({
-    id: '/events/$eventId/manage',
-    path: '/events/$eventId/manage',
+const AdminElectionsElectionIdManageRoute =
+  AdminElectionsElectionIdManageRouteImport.update({
+    id: '/elections/$electionId/manage',
+    path: '/elections/$electionId/manage',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const AdminEventsEventIdResultsRoute =
-  AdminEventsEventIdResultsRouteImport.update({
-    id: '/events/$eventId/results',
-    path: '/events/$eventId/results',
+const AdminElectionsElectionIdInvoiceRoute =
+  AdminElectionsElectionIdInvoiceRouteImport.update({
+    id: '/elections/$electionId/invoice',
+    path: '/elections/$electionId/invoice',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const EventsEventIdCategoriesIndexRoute =
-  EventsEventIdCategoriesIndexRouteImport.update({
-    id: '/events/$eventId/categories/',
-    path: '/events/$eventId/categories/',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AdminElectionsElectionIdCandidatesIndexRoute =
-  AdminElectionsElectionIdCandidatesIndexRouteImport.update({
-    id: '/elections/$electionId/candidates/',
-    path: '/elections/$electionId/candidates/',
+const AdminElectionsElectionIdFeedRoute =
+  AdminElectionsElectionIdFeedRouteImport.update({
+    id: '/elections/$electionId/feed',
+    path: '/elections/$electionId/feed',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const AdminElectionsElectionIdCandidatesNewRoute =
-  AdminElectionsElectionIdCandidatesNewRouteImport.update({
-    id: '/elections/$electionId/candidates/new',
-    path: '/elections/$electionId/candidates/new',
+const AdminElectionsElectionIdEditRoute =
+  AdminElectionsElectionIdEditRouteImport.update({
+    id: '/elections/$electionId/edit',
+    path: '/elections/$electionId/edit',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const AdminElectionsElectionIdFeedBakRoute =
-  AdminElectionsElectionIdFeedBakRouteImport.update({
-    id: '/bak',
-    path: '/bak',
-    getParentRoute: () => AdminElectionsElectionIdFeedRoute,
-  } as any)
-const AdminElectionsElectionIdPositionsIndexRoute =
-  AdminElectionsElectionIdPositionsIndexRouteImport.update({
-    id: '/elections/$electionId/positions/',
-    path: '/elections/$electionId/positions/',
-    getParentRoute: () => AdminRouteRoute,
-  } as any)
-const AdminElectionsElectionIdPositionsNewRoute =
-  AdminElectionsElectionIdPositionsNewRouteImport.update({
-    id: '/elections/$electionId/positions/new',
-    path: '/elections/$electionId/positions/new',
-    getParentRoute: () => AdminRouteRoute,
-  } as any)
-const AdminElectionsElectionIdVotersIndexRoute =
-  AdminElectionsElectionIdVotersIndexRouteImport.update({
-    id: '/elections/$electionId/voters/',
-    path: '/elections/$electionId/voters/',
-    getParentRoute: () => AdminRouteRoute,
-  } as any)
-const AdminElectionsElectionIdVotersNewRoute =
-  AdminElectionsElectionIdVotersNewRouteImport.update({
-    id: '/elections/$electionId/voters/new',
-    path: '/elections/$electionId/voters/new',
-    getParentRoute: () => AdminRouteRoute,
-  } as any)
-const AdminEventsEventIdCategoriesIndexRoute =
-  AdminEventsEventIdCategoriesIndexRouteImport.update({
-    id: '/events/$eventId/categories/',
-    path: '/events/$eventId/categories/',
-    getParentRoute: () => AdminRouteRoute,
-  } as any)
-const AdminEventsEventIdCategoriesNewRoute =
-  AdminEventsEventIdCategoriesNewRouteImport.update({
-    id: '/events/$eventId/categories/new',
-    path: '/events/$eventId/categories/new',
-    getParentRoute: () => AdminRouteRoute,
-  } as any)
-const AdminEventsEventIdContestantsIndexRoute =
-  AdminEventsEventIdContestantsIndexRouteImport.update({
-    id: '/events/$eventId/contestants/',
-    path: '/events/$eventId/contestants/',
-    getParentRoute: () => AdminRouteRoute,
-  } as any)
-const AdminEventsEventIdContestantsNewRoute =
-  AdminEventsEventIdContestantsNewRouteImport.update({
-    id: '/events/$eventId/contestants/new',
-    path: '/events/$eventId/contestants/new',
-    getParentRoute: () => AdminRouteRoute,
-  } as any)
-const AdminEventsEventIdTransactionsIndexRoute =
-  AdminEventsEventIdTransactionsIndexRouteImport.update({
-    id: '/events/$eventId/transactions/',
-    path: '/events/$eventId/transactions/',
-    getParentRoute: () => AdminRouteRoute,
-  } as any)
-const AdminEventsEventIdTransactionsNewRoute =
-  AdminEventsEventIdTransactionsNewRouteImport.update({
-    id: '/events/$eventId/transactions/new',
-    path: '/events/$eventId/transactions/new',
+const AdminElectionsElectionIdAdminfeedRoute =
+  AdminElectionsElectionIdAdminfeedRouteImport.update({
+    id: '/elections/$electionId/adminfeed',
+    path: '/elections/$electionId/adminfeed',
     getParentRoute: () => AdminRouteRoute,
   } as any)
 const EventsEventIdCategoriesCategoryIdIndexRoute =
@@ -419,28 +341,88 @@ const EventsEventIdCategoriesCategoryIdIndexRoute =
     path: '/events/$eventId/categories/$categoryId/',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AdminElectionsElectionIdCandidatesCandidateIdEditRoute =
-  AdminElectionsElectionIdCandidatesCandidateIdEditRouteImport.update({
-    id: '/elections/$electionId/candidates/$candidateId/edit',
-    path: '/elections/$electionId/candidates/$candidateId/edit',
+const AdminEventsEventIdTransactionsIndexRoute =
+  AdminEventsEventIdTransactionsIndexRouteImport.update({
+    id: '/events/$eventId/transactions/',
+    path: '/events/$eventId/transactions/',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const AdminElectionsElectionIdPositionsPositionIdEditRoute =
-  AdminElectionsElectionIdPositionsPositionIdEditRouteImport.update({
-    id: '/elections/$electionId/positions/$positionId/edit',
-    path: '/elections/$electionId/positions/$positionId/edit',
+const AdminEventsEventIdContestantsIndexRoute =
+  AdminEventsEventIdContestantsIndexRouteImport.update({
+    id: '/events/$eventId/contestants/',
+    path: '/events/$eventId/contestants/',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const AdminElectionsElectionIdVotersVoterIdEditRoute =
-  AdminElectionsElectionIdVotersVoterIdEditRouteImport.update({
-    id: '/elections/$electionId/voters/$voterId/edit',
-    path: '/elections/$electionId/voters/$voterId/edit',
+const AdminEventsEventIdCategoriesIndexRoute =
+  AdminEventsEventIdCategoriesIndexRouteImport.update({
+    id: '/events/$eventId/categories/',
+    path: '/events/$eventId/categories/',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const AdminEventsEventIdCategoriesCategoryIdEditRoute =
-  AdminEventsEventIdCategoriesCategoryIdEditRouteImport.update({
-    id: '/events/$eventId/categories/$categoryId/edit',
-    path: '/events/$eventId/categories/$categoryId/edit',
+const AdminElectionsElectionIdVotersIndexRoute =
+  AdminElectionsElectionIdVotersIndexRouteImport.update({
+    id: '/elections/$electionId/voters/',
+    path: '/elections/$electionId/voters/',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminElectionsElectionIdPositionsIndexRoute =
+  AdminElectionsElectionIdPositionsIndexRouteImport.update({
+    id: '/elections/$electionId/positions/',
+    path: '/elections/$electionId/positions/',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminElectionsElectionIdCandidatesIndexRoute =
+  AdminElectionsElectionIdCandidatesIndexRouteImport.update({
+    id: '/elections/$electionId/candidates/',
+    path: '/elections/$electionId/candidates/',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminEventsEventIdTransactionsNewRoute =
+  AdminEventsEventIdTransactionsNewRouteImport.update({
+    id: '/events/$eventId/transactions/new',
+    path: '/events/$eventId/transactions/new',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminEventsEventIdContestantsNewRoute =
+  AdminEventsEventIdContestantsNewRouteImport.update({
+    id: '/events/$eventId/contestants/new',
+    path: '/events/$eventId/contestants/new',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminEventsEventIdCategoriesNewRoute =
+  AdminEventsEventIdCategoriesNewRouteImport.update({
+    id: '/events/$eventId/categories/new',
+    path: '/events/$eventId/categories/new',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminElectionsElectionIdVotersNewRoute =
+  AdminElectionsElectionIdVotersNewRouteImport.update({
+    id: '/elections/$electionId/voters/new',
+    path: '/elections/$electionId/voters/new',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminElectionsElectionIdPositionsNewRoute =
+  AdminElectionsElectionIdPositionsNewRouteImport.update({
+    id: '/elections/$electionId/positions/new',
+    path: '/elections/$electionId/positions/new',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminElectionsElectionIdFeedBakRoute =
+  AdminElectionsElectionIdFeedBakRouteImport.update({
+    id: '/bak',
+    path: '/bak',
+    getParentRoute: () => AdminElectionsElectionIdFeedRoute,
+  } as any)
+const AdminElectionsElectionIdCandidatesNewRoute =
+  AdminElectionsElectionIdCandidatesNewRouteImport.update({
+    id: '/elections/$electionId/candidates/new',
+    path: '/elections/$electionId/candidates/new',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminEventsEventIdTransactionsTransactionIdEditRoute =
+  AdminEventsEventIdTransactionsTransactionIdEditRouteImport.update({
+    id: '/events/$eventId/transactions/$transactionId/edit',
+    path: '/events/$eventId/transactions/$transactionId/edit',
     getParentRoute: () => AdminRouteRoute,
   } as any)
 const AdminEventsEventIdContestantsContestantIdEditRoute =
@@ -449,10 +431,28 @@ const AdminEventsEventIdContestantsContestantIdEditRoute =
     path: '/events/$eventId/contestants/$contestantId/edit',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const AdminEventsEventIdTransactionsTransactionIdEditRoute =
-  AdminEventsEventIdTransactionsTransactionIdEditRouteImport.update({
-    id: '/events/$eventId/transactions/$transactionId/edit',
-    path: '/events/$eventId/transactions/$transactionId/edit',
+const AdminEventsEventIdCategoriesCategoryIdEditRoute =
+  AdminEventsEventIdCategoriesCategoryIdEditRouteImport.update({
+    id: '/events/$eventId/categories/$categoryId/edit',
+    path: '/events/$eventId/categories/$categoryId/edit',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminElectionsElectionIdVotersVoterIdEditRoute =
+  AdminElectionsElectionIdVotersVoterIdEditRouteImport.update({
+    id: '/elections/$electionId/voters/$voterId/edit',
+    path: '/elections/$electionId/voters/$voterId/edit',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminElectionsElectionIdPositionsPositionIdEditRoute =
+  AdminElectionsElectionIdPositionsPositionIdEditRouteImport.update({
+    id: '/elections/$electionId/positions/$positionId/edit',
+    path: '/elections/$electionId/positions/$positionId/edit',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminElectionsElectionIdCandidatesCandidateIdEditRoute =
+  AdminElectionsElectionIdCandidatesCandidateIdEditRouteImport.update({
+    id: '/elections/$electionId/candidates/$candidateId/edit',
+    path: '/elections/$electionId/candidates/$candidateId/edit',
     getParentRoute: () => AdminRouteRoute,
   } as any)
 
@@ -912,11 +912,46 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tickets': {
+      id: '/tickets'
+      path: '/tickets'
+      fullPath: '/tickets'
+      preLoaderRoute: typeof TicketsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/store': {
+      id: '/store'
+      path: '/store'
+      fullPath: '/store'
+      preLoaderRoute: typeof StoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/elections': {
+      id: '/elections'
+      path: '/elections'
+      fullPath: '/elections'
+      preLoaderRoute: typeof ElectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog': {
+      id: '/blog'
+      path: '/blog'
+      fullPath: '/blog'
+      preLoaderRoute: typeof BlogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -933,88 +968,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/blog': {
-      id: '/blog'
-      path: '/blog'
-      fullPath: '/blog'
-      preLoaderRoute: typeof BlogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contact': {
-      id: '/contact'
-      path: '/contact'
-      fullPath: '/contact'
-      preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/elections': {
-      id: '/elections'
-      path: '/elections'
-      fullPath: '/elections'
-      preLoaderRoute: typeof ElectionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/store': {
-      id: '/store'
-      path: '/store'
-      fullPath: '/store'
-      preLoaderRoute: typeof StoreRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tickets': {
-      id: '/tickets'
-      path: '/tickets'
-      fullPath: '/tickets'
-      preLoaderRoute: typeof TicketsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/welcome': {
-      id: '/welcome'
-      path: '/welcome'
-      fullPath: '/welcome'
-      preLoaderRoute: typeof WelcomeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/': {
-      id: '/admin/'
+    '/': {
+      id: '/'
       path: '/'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/public': {
-      id: '/admin/public'
-      path: '/public'
-      fullPath: '/admin/public'
-      preLoaderRoute: typeof AdminPublicRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/settings': {
-      id: '/admin/settings'
-      path: '/settings'
-      fullPath: '/admin/settings'
-      preLoaderRoute: typeof AdminSettingsRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/auth/error': {
-      id: '/auth/error'
-      path: '/auth/error'
-      fullPath: '/auth/error'
-      preLoaderRoute: typeof AuthErrorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/signin': {
-      id: '/auth/signin'
-      path: '/auth/signin'
-      fullPath: '/auth/signin'
-      preLoaderRoute: typeof AuthSigninRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/signup': {
-      id: '/auth/signup'
-      path: '/auth/signup'
-      fullPath: '/auth/signup'
-      preLoaderRoute: typeof AuthSignupRouteImport
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/events/': {
@@ -1024,12 +982,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/vote/cast': {
-      id: '/vote/cast'
-      path: '/vote/cast'
-      fullPath: '/vote/cast'
-      preLoaderRoute: typeof VoteCastRouteImport
-      parentRoute: typeof rootRouteImport
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/vote/election': {
       id: '/vote/election'
@@ -1038,109 +996,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VoteElectionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/categories/': {
-      id: '/admin/categories/'
-      path: '/categories'
-      fullPath: '/admin/categories/'
-      preLoaderRoute: typeof AdminCategoriesIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/categories/new': {
-      id: '/admin/categories/new'
-      path: '/categories/new'
-      fullPath: '/admin/categories/new'
-      preLoaderRoute: typeof AdminCategoriesNewRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/contestants/': {
-      id: '/admin/contestants/'
-      path: '/contestants'
-      fullPath: '/admin/contestants/'
-      preLoaderRoute: typeof AdminContestantsIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/contestants/new': {
-      id: '/admin/contestants/new'
-      path: '/contestants/new'
-      fullPath: '/admin/contestants/new'
-      preLoaderRoute: typeof AdminContestantsNewRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/elections/': {
-      id: '/admin/elections/'
-      path: '/elections'
-      fullPath: '/admin/elections/'
-      preLoaderRoute: typeof AdminElectionsIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/elections/new': {
-      id: '/admin/elections/new'
-      path: '/elections/new'
-      fullPath: '/admin/elections/new'
-      preLoaderRoute: typeof AdminElectionsNewRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/events/': {
-      id: '/admin/events/'
-      path: '/events'
-      fullPath: '/admin/events/'
-      preLoaderRoute: typeof AdminEventsIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/events/new': {
-      id: '/admin/events/new'
-      path: '/events/new'
-      fullPath: '/admin/events/new'
-      preLoaderRoute: typeof AdminEventsNewRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/organizations/': {
-      id: '/admin/organizations/'
-      path: '/organizations'
-      fullPath: '/admin/organizations/'
-      preLoaderRoute: typeof AdminOrganizationsIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/organizations/new': {
-      id: '/admin/organizations/new'
-      path: '/organizations/new'
-      fullPath: '/admin/organizations/new'
-      preLoaderRoute: typeof AdminOrganizationsNewRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/users/': {
-      id: '/admin/users/'
-      path: '/users'
-      fullPath: '/admin/users/'
-      preLoaderRoute: typeof AdminUsersIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/users/$userId': {
-      id: '/admin/users/$userId'
-      path: '/users/$userId'
-      fullPath: '/admin/users/$userId'
-      preLoaderRoute: typeof AdminUsersUserIdRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
+    '/vote/cast': {
+      id: '/vote/cast'
+      path: '/vote/cast'
+      fullPath: '/vote/cast'
+      preLoaderRoute: typeof VoteCastRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/webhooks/arkesel-ussd': {
-      id: '/api/webhooks/arkesel-ussd'
-      path: '/api/webhooks/arkesel-ussd'
-      fullPath: '/api/webhooks/arkesel-ussd'
-      preLoaderRoute: typeof ApiWebhooksArkeselUssdRouteImport
+    '/auth/signup': {
+      id: '/auth/signup'
+      path: '/auth/signup'
+      fullPath: '/auth/signup'
+      preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/webhooks/paystack': {
-      id: '/api/webhooks/paystack'
-      path: '/api/webhooks/paystack'
-      fullPath: '/api/webhooks/paystack'
-      preLoaderRoute: typeof ApiWebhooksPaystackRouteImport
+    '/auth/signin': {
+      id: '/auth/signin'
+      path: '/auth/signin'
+      fullPath: '/auth/signin'
+      preLoaderRoute: typeof AuthSigninRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/error': {
+      id: '/auth/error'
+      path: '/auth/error'
+      fullPath: '/auth/error'
+      preLoaderRoute: typeof AuthErrorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/public': {
+      id: '/admin/public'
+      path: '/public'
+      fullPath: '/admin/public'
+      preLoaderRoute: typeof AdminPublicRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/nominee/$nomineeId/': {
+      id: '/nominee/$nomineeId/'
+      path: '/nominee/$nomineeId'
+      fullPath: '/nominee/$nomineeId/'
+      preLoaderRoute: typeof NomineeNomineeIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/events/$eventId/': {
@@ -1150,12 +1052,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsEventIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/nominee/$nomineeId/': {
-      id: '/nominee/$nomineeId/'
-      path: '/nominee/$nomineeId'
-      fullPath: '/nominee/$nomineeId/'
-      preLoaderRoute: typeof NomineeNomineeIdIndexRouteImport
-      parentRoute: typeof rootRouteImport
+    '/admin/users/': {
+      id: '/admin/users/'
+      path: '/users'
+      fullPath: '/admin/users/'
+      preLoaderRoute: typeof AdminUsersIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/organizations/': {
+      id: '/admin/organizations/'
+      path: '/organizations'
+      fullPath: '/admin/organizations/'
+      preLoaderRoute: typeof AdminOrganizationsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/': {
+      id: '/admin/events/'
+      path: '/events'
+      fullPath: '/admin/events/'
+      preLoaderRoute: typeof AdminEventsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/elections/': {
+      id: '/admin/elections/'
+      path: '/elections'
+      fullPath: '/admin/elections/'
+      preLoaderRoute: typeof AdminElectionsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/contestants/': {
+      id: '/admin/contestants/'
+      path: '/contestants'
+      fullPath: '/admin/contestants/'
+      preLoaderRoute: typeof AdminContestantsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/categories/': {
+      id: '/admin/categories/'
+      path: '/categories'
+      fullPath: '/admin/categories/'
+      preLoaderRoute: typeof AdminCategoriesIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/vote/register/$electionTag': {
       id: '/vote/register/$electionTag'
@@ -1164,88 +1101,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VoteRegisterElectionTagRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/elections/$electionId/adminfeed': {
-      id: '/admin/elections/$electionId/adminfeed'
-      path: '/elections/$electionId/adminfeed'
-      fullPath: '/admin/elections/$electionId/adminfeed'
-      preLoaderRoute: typeof AdminElectionsElectionIdAdminfeedRouteImport
+    '/api/webhooks/paystack': {
+      id: '/api/webhooks/paystack'
+      path: '/api/webhooks/paystack'
+      fullPath: '/api/webhooks/paystack'
+      preLoaderRoute: typeof ApiWebhooksPaystackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/webhooks/arkesel-ussd': {
+      id: '/api/webhooks/arkesel-ussd'
+      path: '/api/webhooks/arkesel-ussd'
+      fullPath: '/api/webhooks/arkesel-ussd'
+      preLoaderRoute: typeof ApiWebhooksArkeselUssdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users/$userId': {
+      id: '/admin/users/$userId'
+      path: '/users/$userId'
+      fullPath: '/admin/users/$userId'
+      preLoaderRoute: typeof AdminUsersUserIdRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/elections/$electionId/edit': {
-      id: '/admin/elections/$electionId/edit'
-      path: '/elections/$electionId/edit'
-      fullPath: '/admin/elections/$electionId/edit'
-      preLoaderRoute: typeof AdminElectionsElectionIdEditRouteImport
+    '/admin/organizations/new': {
+      id: '/admin/organizations/new'
+      path: '/organizations/new'
+      fullPath: '/admin/organizations/new'
+      preLoaderRoute: typeof AdminOrganizationsNewRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/elections/$electionId/feed': {
-      id: '/admin/elections/$electionId/feed'
-      path: '/elections/$electionId/feed'
-      fullPath: '/admin/elections/$electionId/feed'
-      preLoaderRoute: typeof AdminElectionsElectionIdFeedRouteImport
+    '/admin/events/new': {
+      id: '/admin/events/new'
+      path: '/events/new'
+      fullPath: '/admin/events/new'
+      preLoaderRoute: typeof AdminEventsNewRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/elections/$electionId/invoice': {
-      id: '/admin/elections/$electionId/invoice'
-      path: '/elections/$electionId/invoice'
-      fullPath: '/admin/elections/$electionId/invoice'
-      preLoaderRoute: typeof AdminElectionsElectionIdInvoiceRouteImport
+    '/admin/elections/new': {
+      id: '/admin/elections/new'
+      path: '/elections/new'
+      fullPath: '/admin/elections/new'
+      preLoaderRoute: typeof AdminElectionsNewRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/elections/$electionId/manage': {
-      id: '/admin/elections/$electionId/manage'
-      path: '/elections/$electionId/manage'
-      fullPath: '/admin/elections/$electionId/manage'
-      preLoaderRoute: typeof AdminElectionsElectionIdManageRouteImport
+    '/admin/contestants/new': {
+      id: '/admin/contestants/new'
+      path: '/contestants/new'
+      fullPath: '/admin/contestants/new'
+      preLoaderRoute: typeof AdminContestantsNewRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/elections/$electionId/pay': {
-      id: '/admin/elections/$electionId/pay'
-      path: '/elections/$electionId/pay'
-      fullPath: '/admin/elections/$electionId/pay'
-      preLoaderRoute: typeof AdminElectionsElectionIdPayRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/elections/$electionId/receipt': {
-      id: '/admin/elections/$electionId/receipt'
-      path: '/elections/$electionId/receipt'
-      fullPath: '/admin/elections/$electionId/receipt'
-      preLoaderRoute: typeof AdminElectionsElectionIdReceiptRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/elections/$electionId/results': {
-      id: '/admin/elections/$electionId/results'
-      path: '/elections/$electionId/results'
-      fullPath: '/admin/elections/$electionId/results'
-      preLoaderRoute: typeof AdminElectionsElectionIdResultsRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/events/$eventId/edit': {
-      id: '/admin/events/$eventId/edit'
-      path: '/events/$eventId/edit'
-      fullPath: '/admin/events/$eventId/edit'
-      preLoaderRoute: typeof AdminEventsEventIdEditRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/events/$eventId/feed': {
-      id: '/admin/events/$eventId/feed'
-      path: '/events/$eventId/feed'
-      fullPath: '/admin/events/$eventId/feed'
-      preLoaderRoute: typeof AdminEventsEventIdFeedRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/events/$eventId/manage': {
-      id: '/admin/events/$eventId/manage'
-      path: '/events/$eventId/manage'
-      fullPath: '/admin/events/$eventId/manage'
-      preLoaderRoute: typeof AdminEventsEventIdManageRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/events/$eventId/results': {
-      id: '/admin/events/$eventId/results'
-      path: '/events/$eventId/results'
-      fullPath: '/admin/events/$eventId/results'
-      preLoaderRoute: typeof AdminEventsEventIdResultsRouteImport
+    '/admin/categories/new': {
+      id: '/admin/categories/new'
+      path: '/categories/new'
+      fullPath: '/admin/categories/new'
+      preLoaderRoute: typeof AdminCategoriesNewRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/events/$eventId/categories/': {
@@ -1255,95 +1171,88 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsEventIdCategoriesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/elections/$electionId/candidates/': {
-      id: '/admin/elections/$electionId/candidates/'
-      path: '/elections/$electionId/candidates'
-      fullPath: '/admin/elections/$electionId/candidates/'
-      preLoaderRoute: typeof AdminElectionsElectionIdCandidatesIndexRouteImport
+    '/admin/events/$eventId/results': {
+      id: '/admin/events/$eventId/results'
+      path: '/events/$eventId/results'
+      fullPath: '/admin/events/$eventId/results'
+      preLoaderRoute: typeof AdminEventsEventIdResultsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/elections/$electionId/candidates/new': {
-      id: '/admin/elections/$electionId/candidates/new'
-      path: '/elections/$electionId/candidates/new'
-      fullPath: '/admin/elections/$electionId/candidates/new'
-      preLoaderRoute: typeof AdminElectionsElectionIdCandidatesNewRouteImport
+    '/admin/events/$eventId/manage': {
+      id: '/admin/events/$eventId/manage'
+      path: '/events/$eventId/manage'
+      fullPath: '/admin/events/$eventId/manage'
+      preLoaderRoute: typeof AdminEventsEventIdManageRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/elections/$electionId/feed/bak': {
-      id: '/admin/elections/$electionId/feed/bak'
-      path: '/bak'
-      fullPath: '/admin/elections/$electionId/feed/bak'
-      preLoaderRoute: typeof AdminElectionsElectionIdFeedBakRouteImport
-      parentRoute: typeof AdminElectionsElectionIdFeedRoute
-    }
-    '/admin/elections/$electionId/positions/': {
-      id: '/admin/elections/$electionId/positions/'
-      path: '/elections/$electionId/positions'
-      fullPath: '/admin/elections/$electionId/positions/'
-      preLoaderRoute: typeof AdminElectionsElectionIdPositionsIndexRouteImport
+    '/admin/events/$eventId/feed': {
+      id: '/admin/events/$eventId/feed'
+      path: '/events/$eventId/feed'
+      fullPath: '/admin/events/$eventId/feed'
+      preLoaderRoute: typeof AdminEventsEventIdFeedRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/elections/$electionId/positions/new': {
-      id: '/admin/elections/$electionId/positions/new'
-      path: '/elections/$electionId/positions/new'
-      fullPath: '/admin/elections/$electionId/positions/new'
-      preLoaderRoute: typeof AdminElectionsElectionIdPositionsNewRouteImport
+    '/admin/events/$eventId/edit': {
+      id: '/admin/events/$eventId/edit'
+      path: '/events/$eventId/edit'
+      fullPath: '/admin/events/$eventId/edit'
+      preLoaderRoute: typeof AdminEventsEventIdEditRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/elections/$electionId/voters/': {
-      id: '/admin/elections/$electionId/voters/'
-      path: '/elections/$electionId/voters'
-      fullPath: '/admin/elections/$electionId/voters/'
-      preLoaderRoute: typeof AdminElectionsElectionIdVotersIndexRouteImport
+    '/admin/elections/$electionId/results': {
+      id: '/admin/elections/$electionId/results'
+      path: '/elections/$electionId/results'
+      fullPath: '/admin/elections/$electionId/results'
+      preLoaderRoute: typeof AdminElectionsElectionIdResultsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/elections/$electionId/voters/new': {
-      id: '/admin/elections/$electionId/voters/new'
-      path: '/elections/$electionId/voters/new'
-      fullPath: '/admin/elections/$electionId/voters/new'
-      preLoaderRoute: typeof AdminElectionsElectionIdVotersNewRouteImport
+    '/admin/elections/$electionId/receipt': {
+      id: '/admin/elections/$electionId/receipt'
+      path: '/elections/$electionId/receipt'
+      fullPath: '/admin/elections/$electionId/receipt'
+      preLoaderRoute: typeof AdminElectionsElectionIdReceiptRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/events/$eventId/categories/': {
-      id: '/admin/events/$eventId/categories/'
-      path: '/events/$eventId/categories'
-      fullPath: '/admin/events/$eventId/categories/'
-      preLoaderRoute: typeof AdminEventsEventIdCategoriesIndexRouteImport
+    '/admin/elections/$electionId/pay': {
+      id: '/admin/elections/$electionId/pay'
+      path: '/elections/$electionId/pay'
+      fullPath: '/admin/elections/$electionId/pay'
+      preLoaderRoute: typeof AdminElectionsElectionIdPayRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/events/$eventId/categories/new': {
-      id: '/admin/events/$eventId/categories/new'
-      path: '/events/$eventId/categories/new'
-      fullPath: '/admin/events/$eventId/categories/new'
-      preLoaderRoute: typeof AdminEventsEventIdCategoriesNewRouteImport
+    '/admin/elections/$electionId/manage': {
+      id: '/admin/elections/$electionId/manage'
+      path: '/elections/$electionId/manage'
+      fullPath: '/admin/elections/$electionId/manage'
+      preLoaderRoute: typeof AdminElectionsElectionIdManageRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/events/$eventId/contestants/': {
-      id: '/admin/events/$eventId/contestants/'
-      path: '/events/$eventId/contestants'
-      fullPath: '/admin/events/$eventId/contestants/'
-      preLoaderRoute: typeof AdminEventsEventIdContestantsIndexRouteImport
+    '/admin/elections/$electionId/invoice': {
+      id: '/admin/elections/$electionId/invoice'
+      path: '/elections/$electionId/invoice'
+      fullPath: '/admin/elections/$electionId/invoice'
+      preLoaderRoute: typeof AdminElectionsElectionIdInvoiceRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/events/$eventId/contestants/new': {
-      id: '/admin/events/$eventId/contestants/new'
-      path: '/events/$eventId/contestants/new'
-      fullPath: '/admin/events/$eventId/contestants/new'
-      preLoaderRoute: typeof AdminEventsEventIdContestantsNewRouteImport
+    '/admin/elections/$electionId/feed': {
+      id: '/admin/elections/$electionId/feed'
+      path: '/elections/$electionId/feed'
+      fullPath: '/admin/elections/$electionId/feed'
+      preLoaderRoute: typeof AdminElectionsElectionIdFeedRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/events/$eventId/transactions/': {
-      id: '/admin/events/$eventId/transactions/'
-      path: '/events/$eventId/transactions'
-      fullPath: '/admin/events/$eventId/transactions/'
-      preLoaderRoute: typeof AdminEventsEventIdTransactionsIndexRouteImport
+    '/admin/elections/$electionId/edit': {
+      id: '/admin/elections/$electionId/edit'
+      path: '/elections/$electionId/edit'
+      fullPath: '/admin/elections/$electionId/edit'
+      preLoaderRoute: typeof AdminElectionsElectionIdEditRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/events/$eventId/transactions/new': {
-      id: '/admin/events/$eventId/transactions/new'
-      path: '/events/$eventId/transactions/new'
-      fullPath: '/admin/events/$eventId/transactions/new'
-      preLoaderRoute: typeof AdminEventsEventIdTransactionsNewRouteImport
+    '/admin/elections/$electionId/adminfeed': {
+      id: '/admin/elections/$electionId/adminfeed'
+      path: '/elections/$electionId/adminfeed'
+      fullPath: '/admin/elections/$electionId/adminfeed'
+      preLoaderRoute: typeof AdminElectionsElectionIdAdminfeedRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/events/$eventId/categories/$categoryId/': {
@@ -1353,32 +1262,102 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsEventIdCategoriesCategoryIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/elections/$electionId/candidates/$candidateId/edit': {
-      id: '/admin/elections/$electionId/candidates/$candidateId/edit'
-      path: '/elections/$electionId/candidates/$candidateId/edit'
-      fullPath: '/admin/elections/$electionId/candidates/$candidateId/edit'
-      preLoaderRoute: typeof AdminElectionsElectionIdCandidatesCandidateIdEditRouteImport
+    '/admin/events/$eventId/transactions/': {
+      id: '/admin/events/$eventId/transactions/'
+      path: '/events/$eventId/transactions'
+      fullPath: '/admin/events/$eventId/transactions/'
+      preLoaderRoute: typeof AdminEventsEventIdTransactionsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/elections/$electionId/positions/$positionId/edit': {
-      id: '/admin/elections/$electionId/positions/$positionId/edit'
-      path: '/elections/$electionId/positions/$positionId/edit'
-      fullPath: '/admin/elections/$electionId/positions/$positionId/edit'
-      preLoaderRoute: typeof AdminElectionsElectionIdPositionsPositionIdEditRouteImport
+    '/admin/events/$eventId/contestants/': {
+      id: '/admin/events/$eventId/contestants/'
+      path: '/events/$eventId/contestants'
+      fullPath: '/admin/events/$eventId/contestants/'
+      preLoaderRoute: typeof AdminEventsEventIdContestantsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/elections/$electionId/voters/$voterId/edit': {
-      id: '/admin/elections/$electionId/voters/$voterId/edit'
-      path: '/elections/$electionId/voters/$voterId/edit'
-      fullPath: '/admin/elections/$electionId/voters/$voterId/edit'
-      preLoaderRoute: typeof AdminElectionsElectionIdVotersVoterIdEditRouteImport
+    '/admin/events/$eventId/categories/': {
+      id: '/admin/events/$eventId/categories/'
+      path: '/events/$eventId/categories'
+      fullPath: '/admin/events/$eventId/categories/'
+      preLoaderRoute: typeof AdminEventsEventIdCategoriesIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/events/$eventId/categories/$categoryId/edit': {
-      id: '/admin/events/$eventId/categories/$categoryId/edit'
-      path: '/events/$eventId/categories/$categoryId/edit'
-      fullPath: '/admin/events/$eventId/categories/$categoryId/edit'
-      preLoaderRoute: typeof AdminEventsEventIdCategoriesCategoryIdEditRouteImport
+    '/admin/elections/$electionId/voters/': {
+      id: '/admin/elections/$electionId/voters/'
+      path: '/elections/$electionId/voters'
+      fullPath: '/admin/elections/$electionId/voters/'
+      preLoaderRoute: typeof AdminElectionsElectionIdVotersIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/elections/$electionId/positions/': {
+      id: '/admin/elections/$electionId/positions/'
+      path: '/elections/$electionId/positions'
+      fullPath: '/admin/elections/$electionId/positions/'
+      preLoaderRoute: typeof AdminElectionsElectionIdPositionsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/elections/$electionId/candidates/': {
+      id: '/admin/elections/$electionId/candidates/'
+      path: '/elections/$electionId/candidates'
+      fullPath: '/admin/elections/$electionId/candidates/'
+      preLoaderRoute: typeof AdminElectionsElectionIdCandidatesIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/transactions/new': {
+      id: '/admin/events/$eventId/transactions/new'
+      path: '/events/$eventId/transactions/new'
+      fullPath: '/admin/events/$eventId/transactions/new'
+      preLoaderRoute: typeof AdminEventsEventIdTransactionsNewRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/contestants/new': {
+      id: '/admin/events/$eventId/contestants/new'
+      path: '/events/$eventId/contestants/new'
+      fullPath: '/admin/events/$eventId/contestants/new'
+      preLoaderRoute: typeof AdminEventsEventIdContestantsNewRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/categories/new': {
+      id: '/admin/events/$eventId/categories/new'
+      path: '/events/$eventId/categories/new'
+      fullPath: '/admin/events/$eventId/categories/new'
+      preLoaderRoute: typeof AdminEventsEventIdCategoriesNewRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/elections/$electionId/voters/new': {
+      id: '/admin/elections/$electionId/voters/new'
+      path: '/elections/$electionId/voters/new'
+      fullPath: '/admin/elections/$electionId/voters/new'
+      preLoaderRoute: typeof AdminElectionsElectionIdVotersNewRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/elections/$electionId/positions/new': {
+      id: '/admin/elections/$electionId/positions/new'
+      path: '/elections/$electionId/positions/new'
+      fullPath: '/admin/elections/$electionId/positions/new'
+      preLoaderRoute: typeof AdminElectionsElectionIdPositionsNewRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/elections/$electionId/feed/bak': {
+      id: '/admin/elections/$electionId/feed/bak'
+      path: '/bak'
+      fullPath: '/admin/elections/$electionId/feed/bak'
+      preLoaderRoute: typeof AdminElectionsElectionIdFeedBakRouteImport
+      parentRoute: typeof AdminElectionsElectionIdFeedRoute
+    }
+    '/admin/elections/$electionId/candidates/new': {
+      id: '/admin/elections/$electionId/candidates/new'
+      path: '/elections/$electionId/candidates/new'
+      fullPath: '/admin/elections/$electionId/candidates/new'
+      preLoaderRoute: typeof AdminElectionsElectionIdCandidatesNewRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/transactions/$transactionId/edit': {
+      id: '/admin/events/$eventId/transactions/$transactionId/edit'
+      path: '/events/$eventId/transactions/$transactionId/edit'
+      fullPath: '/admin/events/$eventId/transactions/$transactionId/edit'
+      preLoaderRoute: typeof AdminEventsEventIdTransactionsTransactionIdEditRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/events/$eventId/contestants/$contestantId/edit': {
@@ -1388,11 +1367,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEventsEventIdContestantsContestantIdEditRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/events/$eventId/transactions/$transactionId/edit': {
-      id: '/admin/events/$eventId/transactions/$transactionId/edit'
-      path: '/events/$eventId/transactions/$transactionId/edit'
-      fullPath: '/admin/events/$eventId/transactions/$transactionId/edit'
-      preLoaderRoute: typeof AdminEventsEventIdTransactionsTransactionIdEditRouteImport
+    '/admin/events/$eventId/categories/$categoryId/edit': {
+      id: '/admin/events/$eventId/categories/$categoryId/edit'
+      path: '/events/$eventId/categories/$categoryId/edit'
+      fullPath: '/admin/events/$eventId/categories/$categoryId/edit'
+      preLoaderRoute: typeof AdminEventsEventIdCategoriesCategoryIdEditRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/elections/$electionId/voters/$voterId/edit': {
+      id: '/admin/elections/$electionId/voters/$voterId/edit'
+      path: '/elections/$electionId/voters/$voterId/edit'
+      fullPath: '/admin/elections/$electionId/voters/$voterId/edit'
+      preLoaderRoute: typeof AdminElectionsElectionIdVotersVoterIdEditRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/elections/$electionId/positions/$positionId/edit': {
+      id: '/admin/elections/$electionId/positions/$positionId/edit'
+      path: '/elections/$electionId/positions/$positionId/edit'
+      fullPath: '/admin/elections/$electionId/positions/$positionId/edit'
+      preLoaderRoute: typeof AdminElectionsElectionIdPositionsPositionIdEditRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/elections/$electionId/candidates/$candidateId/edit': {
+      id: '/admin/elections/$electionId/candidates/$candidateId/edit'
+      path: '/elections/$electionId/candidates/$candidateId/edit'
+      fullPath: '/admin/elections/$electionId/candidates/$candidateId/edit'
+      preLoaderRoute: typeof AdminElectionsElectionIdCandidatesCandidateIdEditRouteImport
       parentRoute: typeof AdminRouteRoute
     }
   }

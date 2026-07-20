@@ -119,34 +119,154 @@ export function verificationEmailHtml(params: { name: string; url: string }): st
   });
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Standalone layout (doesn't route through renderEmailLayout) -- a ballot
+// receipt is a document, not a single-CTA notice: it needs the election's own
+// mark up top rather than the Heravote wordmark, and a line-item list of
+// selections the generic narrow layout has no room for. Every dynamic string
+// is user- or admin-authored (voter name, election title, candidate/position
+// names), so all of it is escaped before it reaches the markup.
+const RECEIPT_PALETTE = {
+  paper: '#eef0f6',
+  card: '#ffffff',
+  navy: '#0a192a',
+  ink: '#18181b',
+  slate: '#52525b',
+  mist: '#f6f6f9',
+  hairline: '#e7e7ee',
+  purple: '#6d28d9',
+  selected: '#0f9d58',
+  abstained: '#b45309',
+};
+
 export function voteReceiptEmailHtml(params: {
   voterName: string;
   electionTitle: string;
-  selections: { position: string; candidate: string }[];
+  electionLogoUrl?: string | null;
+  selections: { position: string; candidate: string; candidateImageUrl?: string | null; isAbstain: boolean }[];
   castAt: string;
   ip: string;
 }): string {
-  const selectionRows = params.selections.map((s) => `
-    <tr>
-      <td style="padding:8px 0; border-bottom:1px solid #eee; font-family:Arial, Helvetica, sans-serif; font-size:14px; color:#18181b;">${s.position}</td>
-      <td style="padding:8px 0; border-bottom:1px solid #eee; font-family:Arial, Helvetica, sans-serif; font-size:14px; color:#666; text-align:right;">${s.candidate}</td>
-    </tr>
-  `).join('');
+  const c = RECEIPT_PALETTE;
+  const voterName = escapeHtml(params.voterName || 'Voter');
+  const electionTitle = escapeHtml(params.electionTitle);
 
-  const bodyHtml = `
-    <h2 style="margin:0 0 16px; font-family:Arial, Helvetica, sans-serif; font-size:20px; color:${BRAND.primary};">Your ballot receipt</h2>
-    <p style="margin:0 0 12px; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:1.6; color:#18181b;">Hi ${params.voterName},</p>
-    <p style="margin:0 0 20px; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:1.6; color:#18181b;">Your ballot for <strong>${params.electionTitle}</strong> was cast successfully. Here's a copy of your selections for your records:</p>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
-      ${selectionRows}
+  const selectionRows = params.selections.map((s) => {
+    const position = escapeHtml(s.position);
+    const candidate = escapeHtml(s.candidate);
+    const thumb = s.candidateImageUrl
+      ? `<img src="${escapeHtml(s.candidateImageUrl)}" width="56" height="56" alt="${candidate}" style="display:block; width:56px; height:56px; border-radius:10px; object-fit:cover; background-color:${c.mist};" />`
+      : `<div style="width:56px; height:56px; border-radius:10px; background-color:${c.mist}; text-align:center; line-height:56px; font-family:Arial, Helvetica, sans-serif; font-size:20px; color:${s.isAbstain ? c.abstained : c.slate};">${s.isAbstain ? '—' : candidate.charAt(0).toUpperCase()}</div>`;
+    const badgeColor = s.isAbstain ? c.abstained : c.selected;
+    const badgeLabel = s.isAbstain ? 'Abstained' : 'Selected';
+
+    return `
+      <tr>
+        <td style="padding:14px 0; border-bottom:1px solid ${c.hairline};">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td width="56" valign="middle" style="padding-right:14px;">${thumb}</td>
+              <td valign="middle">
+                <p style="margin:0 0 3px; font-family:Arial, Helvetica, sans-serif; font-size:15px; font-weight:700; color:${c.ink};">${candidate}</p>
+                <p style="margin:0; font-family:Arial, Helvetica, sans-serif; font-size:12px; color:${c.slate};">${position}</p>
+              </td>
+              <td align="right" valign="middle" style="white-space:nowrap;">
+                <span style="display:inline-block; font-family:Arial, Helvetica, sans-serif; font-size:10px; font-weight:700; letter-spacing:0.4px; text-transform:uppercase; color:#ffffff; background-color:${badgeColor}; padding:6px 12px; border-radius:999px;">${badgeLabel}</span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`;
+  }).join('');
+
+  const logoBlock = params.electionLogoUrl
+    ? `<img src="${escapeHtml(params.electionLogoUrl)}" alt="${electionTitle}" width="72" height="72" style="display:block; width:72px; height:72px; border-radius:16px; object-fit:cover; margin:0 auto;" />`
+    : `<div style="width:72px; height:72px; border-radius:16px; background-color:${c.navy}; margin:0 auto; text-align:center; line-height:72px; font-family:Arial, Helvetica, sans-serif; font-size:26px; font-weight:800; color:#ffffff;">${electionTitle.charAt(0).toUpperCase()}</div>`;
+
+  const year = new Date().getFullYear();
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${electionTitle} — Ballot Receipt</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:${c.paper};">
+    <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; opacity:0;">Your ballot receipt for ${electionTitle}.</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${c.paper};">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; background-color:${c.card}; border-radius:20px; overflow:hidden; box-shadow:0 2px 14px rgba(10,25,42,0.08);">
+
+            <tr>
+              <td align="center" style="padding:36px 32px 4px;">
+                ${logoBlock}
+                <p style="margin:14px 0 0; font-family:Arial, Helvetica, sans-serif; font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:${c.purple};">Ballot Receipt</p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:8px 32px 0;">
+                <p style="margin:18px 0 0; font-family:Arial, Helvetica, sans-serif; font-size:14px; color:${c.slate};">Dear ${voterName},</p>
+                <h1 style="margin:8px 0 14px; font-family:Arial, Helvetica, sans-serif; font-size:24px; font-weight:800; color:${c.ink}; text-wrap:balance;">Your vote has been cast</h1>
+                <p style="margin:0 0 4px; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:1.6; color:${c.slate};">Your ballot for <strong style="color:${c.ink};">${electionTitle}</strong> was recorded successfully. Here is a copy of your selections for your records.</p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:18px 32px 4px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  ${selectionRows}
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:20px 32px 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${c.mist}; border-radius:12px;">
+                  <tr>
+                    <td style="padding:14px 18px;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="font-family:Arial, Helvetica, sans-serif; font-size:11px; font-weight:700; letter-spacing:0.4px; text-transform:uppercase; color:${c.slate};">Cast at</td>
+                          <td align="right" style="font-family:Arial, Helvetica, sans-serif; font-size:12px; color:${c.ink};">${escapeHtml(params.castAt)}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding-top:6px; font-family:Arial, Helvetica, sans-serif; font-size:11px; font-weight:700; letter-spacing:0.4px; text-transform:uppercase; color:${c.slate};">IP address</td>
+                          <td align="right" style="padding-top:6px; font-family:Arial, Helvetica, sans-serif; font-size:12px; color:${c.ink}; font-variant-numeric:tabular-nums;">${escapeHtml(params.ip)}</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:16px 0 0; font-family:Arial, Helvetica, sans-serif; font-size:11px; line-height:1.6; color:#a1a1aa;">If you didn't cast this ballot, contact your election administrator immediately.</p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="background-color:${c.navy}; padding:20px 32px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="font-family:Arial, Helvetica, sans-serif; font-size:13px; font-weight:800; letter-spacing:0.6px; color:#ffffff;">HERAVOTE</td>
+                    <td align="right" style="font-family:Arial, Helvetica, sans-serif; font-size:11px; color:#8b93a3;">&copy; ${year} Heravote</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
     </table>
-    <p style="margin:0 0 4px; font-family:Arial, Helvetica, sans-serif; font-size:13px; color:#666;">Cast at: ${params.castAt}</p>
-    <p style="margin:0 0 16px; font-family:Arial, Helvetica, sans-serif; font-size:13px; color:#666;">IP address: ${params.ip}</p>
-    <p style="margin:16px 0 0; font-family:Arial, Helvetica, sans-serif; font-size:12px; color:#999;">If you didn't cast this ballot, please contact your election administrator immediately.</p>
-  `;
-
-  return renderEmailLayout({
-    preheader: `Your ballot receipt for ${params.electionTitle}.`,
-    bodyHtml,
-  });
+  </body>
+</html>`;
 }
