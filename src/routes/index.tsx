@@ -14,7 +14,18 @@ const homepageStatsQueryOptions = () => ({
 export const Route = createFileRoute('/')({
   component: App,
   loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(homepageStatsQueryOptions());
+    try {
+      await context.queryClient.ensureQueryData(homepageStatsQueryOptions());
+    } catch {
+      // getHomepageStatsFn is gated by arcjetMiddleware, which throws a
+      // plain Error when Arcjet blocks the request (rate limit/bot/shield).
+      // ensureQueryData rethrows that through this loader, and since this
+      // is the homepage -- the page every bot/crawler/rate-limited visitor
+      // hits first -- an unhandled throw here crashed the entire site for
+      // them instead of just leaving the live stats ticker unpopulated.
+      // The client re-fetches on mount regardless, so this only affects the
+      // SSR-prefetched value, not real users' actual browsing.
+    }
   },
 })
 

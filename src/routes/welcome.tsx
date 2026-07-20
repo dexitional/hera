@@ -2,19 +2,21 @@ import { useState } from 'react';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { Building2, Briefcase, Phone, MapPin, ArrowRight } from 'lucide-react';
 import { authClient } from '#/lib/auth-client';
-import { checkAuthSession } from '#/lib/auth-helper';
 
 export const Route = createFileRoute('/welcome')({
-  beforeLoad: async () => {
-    const authState: any = await checkAuthSession();
-    if (!authState?.authenticated) {
+  // Reuses root's beforeLoad result instead of calling checkAuthSession()
+  // again -- that serverFn is gated by arcjetMiddleware, which throws a
+  // plain Error when Arcjet blocks the request; an unhandled throw here
+  // crashed this page (see __root.tsx and admin/route.tsx for the same fix).
+  beforeLoad: async ({ context }: any) => {
+    if (!context.authenticated) {
       throw redirect({ to: '/auth/signin', search: { redirect: '/welcome' } });
     }
     // Already completed onboarding -- nothing left to collect here.
-    if (authState.user?.organization) {
+    if (context.user?.organization) {
       throw redirect({ to: '/admin' });
     }
-    return { user: authState.user };
+    return { user: context.user };
   },
   component: RouteComponent,
 });

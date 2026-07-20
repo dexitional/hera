@@ -33,7 +33,15 @@ export const Route = createFileRoute('/vote/election')({
   // },
   loader: async ({ context, deps }) => {
     const { page } = deps
-    return await context.queryClient.ensureQueryData(electionsQueryOptions(page));
+    try {
+      await context.queryClient.ensureQueryData(electionsQueryOptions(page));
+    } catch {
+      // getElectionByTagFn is gated by arcjetMiddleware, which throws a
+      // plain Error when Arcjet blocks the request (rate limit/bot/shield).
+      // This page is a very common bot/crawler target (shared vote links) --
+      // don't let an unhandled throw here crash the whole page for them;
+      // the client re-fetches on mount regardless (see index.tsx).
+    }
   },
 
 })

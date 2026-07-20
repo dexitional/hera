@@ -65,8 +65,21 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   },
 
   beforeLoad: async () => {
-    const authState = await checkAuthSession();
-    return { user: authState?.user, authenticated: authState?.authenticated };
+    try {
+      const authState = await checkAuthSession();
+      return { user: authState?.user, authenticated: authState?.authenticated };
+    } catch {
+      // checkAuthSession is gated by arcjetMiddleware, which throws a plain
+      // Error (not a Response -- that breaks seroval SSR serialization, see
+      // arcjetMiddleware.ts) whenever Arcjet blocks the request. Since this
+      // runs on EVERY page's beforeLoad, an unhandled throw here crashed the
+      // entire render (any bot/rate-limited/shield-tripped visitor got a
+      // generic 500 "Application Error" instead of just the normal public
+      // page). Fail closed to "not authenticated" instead -- the real
+      // sign-in endpoint still gets its own clean 403/429 via
+      // rejectIfArcjetDenied in api/auth.$.ts.
+      return { user: null, authenticated: false };
+    }
   },
   notFoundComponent: () => {
     return (

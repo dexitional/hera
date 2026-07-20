@@ -20,7 +20,15 @@ export const Route = createFileRoute("/elections")({
   validateSearch: searchSchema,
   loaderDeps: ({ search }) => search,
   loader: async ({ context, deps }) => {
-    return await context.queryClient.ensureQueryData(electionsQueryOptions(deps.page || 1));
+    try {
+      await context.queryClient.ensureQueryData(electionsQueryOptions(deps.page || 1));
+    } catch {
+      // getActiveElectionsFn is gated by arcjetMiddleware, which throws a
+      // plain Error when Arcjet blocks the request (rate limit/bot/shield).
+      // This is a public listing page bots hit constantly -- don't let an
+      // unhandled throw here crash the whole page for them; the client
+      // re-fetches on mount regardless (see index.tsx for the same fix).
+    }
   },
 });
 
