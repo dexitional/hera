@@ -79,7 +79,7 @@ export const auth = betterAuth({
     },
     crossSubDomainCookies: {
       enabled: true,
-      // domain: ".heravote.com",
+      ... process.env.NODE_ENV == 'production' && ({ domain: ".heravote.com" }),
     },
   },
   plugins: [
