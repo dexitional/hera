@@ -48,6 +48,13 @@ export default function AuthPage({ error, redirectTo }: any) {
           navigate({ to: redirectTo || '/admin', reloadDocument: true })
         }
     } catch (error: any) {
+        // Previously silent: signIn.email() throws (rather than resolving
+        // with { error }) if the response isn't the JSON shape better-auth
+        // expects -- e.g. Arcjet's shield/bot-detection/rate-limit rejecting
+        // /api/auth/sign-in/email with a plain-text 403/429 body. Without
+        // this, that looked to the user like sign-in silently did nothing
+        // and left them stuck on the signin page with zero feedback.
+        setMsg(error?.message || "Sign in failed. Please try again.");
         console.error("Authentication failed:", error?.message);
     } finally {
         setLoading(false);
