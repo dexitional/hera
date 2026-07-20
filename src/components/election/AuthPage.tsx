@@ -3,7 +3,7 @@ import { Shield, Users, ThumbsUp, Mail, Lock, ArrowRight, LoaderCircle } from 'l
 import { useNavigate } from '@tanstack/react-router';
 import { authClient } from '#/lib/auth-client';
 
-export default function AuthPage({ error }: any) {
+export default function AuthPage({ error, redirectTo }: any) {
 
   const navigate = useNavigate();
   const [ loading, setLoading ] = useState(false)
@@ -39,9 +39,22 @@ export default function AuthPage({ error }: any) {
           setMsg(error?.message);
           console.error("Authentication failed:", error.message);
         } else {
-          navigate({ to: '/admin' })
+          // A client-side navigate() here would reuse the current document,
+          // so the beforeLoad chain's checkAuthSession call can race the
+          // just-set session cookie and bounce back to signin even though
+          // sign-in succeeded. reloadDocument forces a real top-level
+          // navigation (like the Google OAuth callbackURL flow below already
+          // gets for free) so /admin's SSR render reads the cookie fresh.
+          navigate({ to: redirectTo || '/admin', reloadDocument: true })
         }
     } catch (error: any) {
+        // Previously silent: signIn.email() throws (rather than resolving
+        // with { error }) if the response isn't the JSON shape better-auth
+        // expects -- e.g. Arcjet's shield/bot-detection/rate-limit rejecting
+        // /api/auth/sign-in/email with a plain-text 403/429 body. Without
+        // this, that looked to the user like sign-in silently did nothing
+        // and left them stuck on the signin page with zero feedback.
+        setMsg(error?.message || "Sign in failed. Please try again.");
         console.error("Authentication failed:", error?.message);
     } finally {
         setLoading(false);

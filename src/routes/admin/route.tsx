@@ -1,12 +1,14 @@
 import { createFileRoute, Outlet, redirect, useLocation } from '@tanstack/react-router'
 import DashboardHeader from '#/components/DashboardHeader';
-import { checkAuthSession } from '#/lib/auth-helper';
 export const Route = createFileRoute('/admin')({
-    beforeLoad: async () => {
-        const authState = await checkAuthSession();
-        if (!authState?.authenticated) throw redirect({ to: "/auth/signin"  });
+    // Reuses the root route's beforeLoad result instead of calling
+    // checkAuthSession() again -- that serverFn is gated by Arcjet's
+    // site-wide shared rate-limit bucket, and every admin navigation was
+    // burning two tokens from it (root + here) for the exact same check.
+    beforeLoad: async ({ context }) => {
+        if (!context.authenticated) throw redirect({ to: "/auth/signin"  });
         return {
-          user: authState?.user,
+          user: context.user,
         };
     },
     component: DashboardLayout,

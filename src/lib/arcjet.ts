@@ -1,4 +1,4 @@
-import arcjet, { detectBot, shield, tokenBucket } from "@arcjet/node";
+import arcjet, { cloudflare, detectBot, shield, tokenBucket } from "@arcjet/node";
 
 // In dev, Arcjet falls back to a single shared IP (127.0.0.1) for every
 // request since there's no public IP to key on. Every loader on every page
@@ -10,6 +10,15 @@ const mode = import.meta.env.DEV ? "DRY_RUN" : "LIVE";
 export const aj = arcjet({
   key: process.env.ARCJET_KEY,
   characteristics: ["ip.src"], // Track rate limits by IP address
+  // Requests arrive as Cloudflare -> nginx (proxy_pass over loopback) -> Node,
+  // so there's no socket for Arcjet to read a peer address from -- it falls
+  // back to parsing X-Forwarded-For. cloudflare() teaches that fallback to
+  // recognize a Cloudflare edge IP in the chain and, only then, pull the real
+  // client IP from CF-Connecting-IP -- otherwise ip.src would key every rule
+  // (rate limits, bot detection) off nginx's/Cloudflare's IP instead of the
+  // visitor's. nginx's own real_ip module (set up separately for CF-only
+  // origin lockdown) does the equivalent job for nginx's own $remote_addr.
+  proxies: [cloudflare()],
   rules: [
     // Protect against common web attacks (SQL injection, XSS)
     shield({ mode }),
