@@ -22,7 +22,7 @@ export const Route = createFileRoute('/auth/signin')({
 })
 
 function RouteComponent() {
-  
-  const { error } = Route.useSearch();
-  return (<AuthPage error={error} />)
+
+  const { error, redirect: redirectTo } = Route.useSearch();
+  return (<AuthPage error={error} redirectTo={redirectTo} />)
 }

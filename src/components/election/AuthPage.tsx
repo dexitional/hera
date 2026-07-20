@@ -3,7 +3,7 @@ import { Shield, Users, ThumbsUp, Mail, Lock, ArrowRight, LoaderCircle } from 'l
 import { useNavigate } from '@tanstack/react-router';
 import { authClient } from '#/lib/auth-client';
 
-export default function AuthPage({ error }: any) {
+export default function AuthPage({ error, redirectTo }: any) {
 
   const navigate = useNavigate();
   const [ loading, setLoading ] = useState(false)
@@ -39,7 +39,13 @@ export default function AuthPage({ error }: any) {
           setMsg(error?.message);
           console.error("Authentication failed:", error.message);
         } else {
-          navigate({ to: '/admin' })
+          // A client-side navigate() here would reuse the current document,
+          // so the beforeLoad chain's checkAuthSession call can race the
+          // just-set session cookie and bounce back to signin even though
+          // sign-in succeeded. reloadDocument forces a real top-level
+          // navigation (like the Google OAuth callbackURL flow below already
+          // gets for free) so /admin's SSR render reads the cookie fresh.
+          navigate({ to: redirectTo || '/admin', reloadDocument: true })
         }
     } catch (error: any) {
         console.error("Authentication failed:", error?.message);
