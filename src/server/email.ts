@@ -118,3 +118,35 @@ export function verificationEmailHtml(params: { name: string; url: string }): st
     bodyHtml,
   });
 }
+
+export function voteReceiptEmailHtml(params: {
+  voterName: string;
+  electionTitle: string;
+  selections: { position: string; candidate: string }[];
+  castAt: string;
+  ip: string;
+}): string {
+  const selectionRows = params.selections.map((s) => `
+    <tr>
+      <td style="padding:8px 0; border-bottom:1px solid #eee; font-family:Arial, Helvetica, sans-serif; font-size:14px; color:#18181b;">${s.position}</td>
+      <td style="padding:8px 0; border-bottom:1px solid #eee; font-family:Arial, Helvetica, sans-serif; font-size:14px; color:#666; text-align:right;">${s.candidate}</td>
+    </tr>
+  `).join('');
+
+  const bodyHtml = `
+    <h2 style="margin:0 0 16px; font-family:Arial, Helvetica, sans-serif; font-size:20px; color:${BRAND.primary};">Your ballot receipt</h2>
+    <p style="margin:0 0 12px; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:1.6; color:#18181b;">Hi ${params.voterName},</p>
+    <p style="margin:0 0 20px; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:1.6; color:#18181b;">Your ballot for <strong>${params.electionTitle}</strong> was cast successfully. Here's a copy of your selections for your records:</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+      ${selectionRows}
+    </table>
+    <p style="margin:0 0 4px; font-family:Arial, Helvetica, sans-serif; font-size:13px; color:#666;">Cast at: ${params.castAt}</p>
+    <p style="margin:0 0 16px; font-family:Arial, Helvetica, sans-serif; font-size:13px; color:#666;">IP address: ${params.ip}</p>
+    <p style="margin:16px 0 0; font-family:Arial, Helvetica, sans-serif; font-size:12px; color:#999;">If you didn't cast this ballot, please contact your election administrator immediately.</p>
+  `;
+
+  return renderEmailLayout({
+    preheader: `Your ballot receipt for ${params.electionTitle}.`,
+    bodyHtml,
+  });
+}

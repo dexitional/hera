@@ -19,8 +19,8 @@ export default function AuthElection({ data }: any) {
   
   const [formData, setFormData]:any = useState({
     username: '',
-    ... data?.authMode && data?.authMode.toLowerCase() == 'credential' && ({ password: '' }),
-    ... data?.authMode && ['otp', 'aotp'].includes(data?.authMode.toLowerCase()) && ({ phone: '' }),
+    ... data?.authMode && data?.authMode?.toLowerCase() == 'credential' && ({ password: '' }),
+    ... data?.authMode && ['otp', 'aotp'].includes(data?.authMode?.toLowerCase()) && ({ phone: '' }),
     ... data?.id && ({ electionId: data?.id }),
     authMode: data?.authMode || 'credential',
     otp: ''
@@ -90,11 +90,12 @@ export default function AuthElection({ data }: any) {
       } else {
         setLoading(false);
         setMsg("Invalid credentials. try again !");
-        setTimeout(() => setMsg(null),5000)
+        setTimeout(() => setMsg(null), 5000)
       }
     },
     onError: (error) => {
       setLoading(false);
+      setMsg(null);
       console.error(error.message)
     }
   });
@@ -184,7 +185,7 @@ export default function AuthElection({ data }: any) {
       const accessToken = tokenResponse?.access_token;
       if (!accessToken) return;
       try {
-        const resp: any = await fetchGoogleProfileFromServer({ data: { accessToken } } as any);
+        const resp: any = await fetchGoogleProfileFromServer({ data: { accessToken, electionId: data.id } } as any);
         const dt = resp?.data;
         if(dt){
           // Initialize Store
@@ -203,6 +204,13 @@ export default function AuthElection({ data }: any) {
             electionAutoStart: dt?.elections?.autoStop,
             electionImageUrl: dt?.elections?.imageUrl,
             inviteToken: dt?.voters?.inviteToken,
+          }
+
+          if(user.electionId != data.id){
+            setMsg(`You are not a permitted voter !`);
+            setTimeout(() => setMsg(null),5000);
+            setLoading(false);
+            return false;
           }
 
           if(user.hasVoted){
@@ -228,6 +236,7 @@ export default function AuthElection({ data }: any) {
           queryClient.invalidateQueries({ queryKey: ['voter-page'] });
 
         } else {
+           setLoading(false);
            setMsg("Invalid credentials. try again !");
            setTimeout(() => setMsg(null),5000)
         }
@@ -298,7 +307,7 @@ export default function AuthElection({ data }: any) {
                       disabled={loading}
                       onClick={() => {
                         setLoading(true);
-                        setTimeout(() =>  handleGoogleSignIn() ,2000)
+                        setTimeout(() =>  handleGoogleSignIn() ,2000);
                       }}
                       type="button"
                       className="w-full px-4 py-3 bg-white text-black rounded-xl hover:bg-zinc-100 transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -309,7 +318,7 @@ export default function AuthElection({ data }: any) {
                       </svg>
                       { loading  ? <span className="animate-pulse">Connecting ...</span> : <span>Login with Google Account</span> }
                     </button>
-                    { msg && (<div className="mt-4 text-red-300 text-sm text-center animate-pulse">{msg}</div>)}
+                    { msg && (<div className="mt-4 text-red-300 text-sm text-center animate-pulse font-medium tracking-wide">{msg}</div>)}
                   </div>
                   
                   </>
@@ -484,7 +493,7 @@ export default function AuthElection({ data }: any) {
                       </div>
                     }
                       
-                    { msg && (<div className="text-red-300 text-sm text-center animate-pulse">{msg}</div>)}
+                    { msg && (<div className="text-red-300 text-sm text-center animate-pulse font-medium tracking-wide">{msg}</div>)}
                   </form>
                   )}
                 

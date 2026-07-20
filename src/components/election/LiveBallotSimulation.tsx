@@ -195,7 +195,7 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
                           onClick={() => handleSelectCandidate(position.id, candidate.id)}
                           className={`border rounded-xl overflow-hidden transition-all duration-200 cursor-pointer flex flex-col bg-zinc-900/10 shadow-sm relative ${isCandidateSelected ? 'border-purple-500 ring-2 ring-purple-500/20 bg-purple-950/10' : 'border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/30'}`}
                         >
-                          <div className="w-full h-40 border-b border-zinc-900 flex items-center justify-center relative overflow-hidden bg-white/60 shrink-0">
+                          <div className="w-full h-52 border-b border-zinc-900 flex items-center justify-center relative overflow-hidden bg-white/60 shrink-0">
                             {candidate.imageUrl ? (
                               <img src={candidate.imageUrl} aria-label={candidate.name} alt={candidate.name} className="w-full h-full object-contain" />
                             ) : (

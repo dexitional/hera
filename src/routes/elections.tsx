@@ -134,7 +134,6 @@ function RouteComponent() {
                       {row.title?.toUpperCase()}
                     </p>
                     <p className="text-sm border border-zinc-700 text-zinc-300 flex flex-col space-y-2 rounded">
-                      {/* Election starts at: April 23, 2026 5:00 AM and  */}
                       <button className="px-1 py-1 bg-slate-600/20 hover:bg-slate-600/30 text-zinc-300  transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-medium border border-slate-600/30">
                         Opens : {moment(row.startAt).format("LLL")}
                       </button>
@@ -144,23 +143,6 @@ function RouteComponent() {
                     </p>
                   </div>
                   <div className="space-y-3">
-                    {/* <div className="flex items-center gap-2 text-sm text-zinc-300">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="tabler-icon tabler-icon-phone w-4 h-4 text-purple-400"
-                      >
-                        <path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"></path>
-                      </svg>
-                      <span>{row.tag}</span>
-                    </div> */}
                     <div className="flex gap-3">
                       { !(rightNow < row.startAt || rightNow > row.endAt) && (
                       <Link

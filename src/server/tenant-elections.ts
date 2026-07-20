@@ -10,6 +10,7 @@ import XLSX from 'xlsx-js-style';
 import { arcjetMiddleware, arcjetVoterLookupMiddleware } from '#/middleware/arcjetMiddleware';
 import { getRequest } from '@tanstack/react-start/server';
 import { generateBallotReceiptSignature } from './ballot-signature';
+import { runVoteReceiptWorkflow } from './vote-receipt-workflow';
 
 
 // ELECTIONS FUNCTIONS
@@ -76,7 +77,7 @@ export const getElectionDataFn = createServerFn({ method: 'GET' }).middleware([a
 export const getActiveElectionsFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
   async ({ data }: any) => {
     const page = Math.max(Number(data?.page) || 1, 1);
-    const pageSize = 3;
+    const pageSize = 8;
     const offsetValue = (page - 1) * pageSize;
 
     const baseCondition = and(
@@ -2006,12 +2007,21 @@ export const fetchGoogleProfileFromServer = createServerFn({ method: 'POST' })
       if (!response.ok) throw new Error(`Google error status: ${response.status}`);
 
       const profile = await response.json();
-      // Authenticate Voter 
+      // Authenticate Voter -- scoped to the election being logged into, since
+      // the same email can legitimately be a registered voter in more than
+      // one election (uniqueness is per electionId+email, not global).
+      // Without this filter a match from a different election -- including
+      // its hasVoted flag -- could be returned instead.
       const [voter] = await db
         .select()
         .from(voters)
         .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-        .where(eq<any>(voters.email, profile?.email))
+        .where(
+          and(
+            eq<any>(voters.email, profile?.email),
+            eq<any>(elections.id, data.electionId)
+          )
+        )
         .orderBy(asc(voters.id));
 
       if (voter) return { success: true, data: voter, message: null }
@@ -2605,6 +2615,9 @@ export const castBallotServerFn = createServerFn({
     const { voterId, electionId, selections, inviteToken } = data;
     const request = getRequest();
     const ip = request?.headers.get('x-forwarded-for')?.split(',')[0] || request?.headers.get('x-real-ip') || '127.0.0.1';
+    // Hoisted so the post-commit receipt workflow stamps the exact same
+    // moment as the ballot's own receiptSignature, not a second later.
+    const castAt = new Date().toISOString();
 
     try {
       // Execute the entire ballot block inside an atomic SQL transaction isolation container
@@ -2639,7 +2652,6 @@ export const castBallotServerFn = createServerFn({
         }
 
         // 4. Batch insert the ballot selections, each stamped with a real server-generated signature
-        const signatureTimestamp = new Date().toISOString();
         const ballotPayloads = selections.map((vote: any) => ({
           electionId: electionId,
           positionId: vote.positionId,
@@ -2648,7 +2660,7 @@ export const castBallotServerFn = createServerFn({
             electionId,
             positionId: vote.positionId,
             candidateId: vote.candidateId ?? 0,
-            timestamp: signatureTimestamp,
+            timestamp: castAt,
           }),
         }));
 
@@ -2662,6 +2674,16 @@ export const castBallotServerFn = createServerFn({
 
         return { success: true };
       });
+
+      if (result.success) {
+        // Fire-and-forget: never blocks the voter's response, and its own
+        // internal try/catch means a mail-provider outage can't turn a
+        // successful vote into a failed one.
+        runVoteReceiptWorkflow({ voterId, electionId, selections, ip, castAt }).catch((err) => {
+          console.error('[VOTE RECEIPT WORKFLOW] dispatch failed:', err);
+        });
+      }
+
       return result;
 
     } catch (error) {
