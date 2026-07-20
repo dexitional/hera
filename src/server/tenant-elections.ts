@@ -74,15 +74,38 @@ export const getElectionDataFn = createServerFn({ method: 'GET' }).middleware([a
 
 
 export const getActiveElectionsFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async () => {
-    return await db.select()
-      .from(elections)
-      .where(
-        and(
-          eq<any>(elections.isActive, true),
-          eq<any>(elections.makePublic, true)
+  async ({ data }: any) => {
+    const page = Math.max(Number(data?.page) || 1, 1);
+    const pageSize = 8;
+    const offsetValue = (page - 1) * pageSize;
+
+    const baseCondition = and(
+      eq<any>(elections.isActive, true),
+      eq<any>(elections.makePublic, true)
+    );
+
+    const [rows, [countResult]] = await Promise.all([
+      db.select()
+        .from(elections)
+        .where(baseCondition)
+        // Currently live elections (started, and inside their voting window) surface
+        // first; everything else (staged/ended) falls back to newest-created first.
+        .orderBy(
+          sql`case when ${elections.status} = 'started' and now() between ${elections.startAt} and ${elections.endAt} then 0 else 1 end`,
+          desc(elections.createdAt)
         )
-      );
+        .limit(pageSize)
+        .offset(offsetValue),
+      db.select({ total: count() }).from(elections).where(baseCondition),
+    ]);
+
+    const totalCount = countResult?.total ?? 0;
+    const totalPages = Math.max(Math.ceil(totalCount / pageSize), 1);
+
+    return {
+      elections: rows,
+      pagination: { totalCount, totalPages, currentPage: page, pageSize },
+    };
 });
 
 

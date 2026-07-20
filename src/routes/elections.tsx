@@ -1,19 +1,26 @@
 import { getActiveElectionsFn } from "#/server/tenant-elections";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Link2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Link2 } from "lucide-react";
 import moment from "moment";
 import { useEffect, useState } from "react";
+import { z } from "zod";
 
-const electionsQueryOptions = () => ({
-  queryKey: ["elections-page"],
-  queryFn: () => getActiveElectionsFn(),
+const searchSchema = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+});
+
+const electionsQueryOptions = (page: number) => ({
+  queryKey: ["elections-page", page],
+  queryFn: () => getActiveElectionsFn({ data: { page } } as any),
 });
 
 export const Route = createFileRoute("/elections")({
   component: RouteComponent,
-  loader: async ({ context }) => {
-    return await context.queryClient.ensureQueryData(electionsQueryOptions());
+  validateSearch: searchSchema,
+  loaderDeps: ({ search }) => search,
+  loader: async ({ context, deps }) => {
+    return await context.queryClient.ensureQueryData(electionsQueryOptions(deps.page || 1));
   },
 });
 
@@ -28,9 +35,12 @@ type ModalProduct = {
 };
 
 function RouteComponent() {
-  const { data }: any = useSuspenseQuery(electionsQueryOptions());
+  const { page } = Route.useSearch();
+  const currentPage = page || 1;
+  const { data }: any = useSuspenseQuery(electionsQueryOptions(currentPage));
   const rightNow = new Date();
-  console.log(data);
+  const elections: any[] = data?.elections ?? [];
+  const totalPages: number = Math.max(data?.pagination?.totalPages ?? 1, 1);
 
   const [modalProduct, setModalProduct] = useState<ModalProduct | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -84,7 +94,7 @@ function RouteComponent() {
         <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24 animate-in fade-in duration-500 delay-150 fill-mode-both">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {/* Election 1 */}
-            {data.map((row: any, index: number) => (
+            {elections.map((row: any, index: number) => (
               <div
                 key={row?.id}
                 className="rounded-3xl bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 overflow-hidden hover:border-slate-600/40 transition-all duration-300 group shadow-lg animate-in fade-in slide-in-from-bottom-2 fill-mode-both"
@@ -168,6 +178,32 @@ function RouteComponent() {
               </div>
             ))}
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-4 mt-10">
+              <Link
+                to="/elections"
+                search={{ page: Math.max(currentPage - 1, 1) }}
+                disabled={currentPage <= 1}
+                className="flex items-center gap-1 text-sm px-4 py-2 rounded-lg border border-slate-600/30 bg-slate-600/10 text-zinc-300 hover:bg-slate-600/20 transition-all aria-disabled:opacity-30 aria-disabled:pointer-events-none"
+                aria-disabled={currentPage <= 1}
+              >
+                <ChevronLeft className="w-4 h-4" /> Previous
+              </Link>
+              <span className="text-sm text-zinc-400">
+                Page <b className="text-white">{currentPage}</b> of <b className="text-white">{totalPages}</b>
+              </span>
+              <Link
+                to="/elections"
+                search={{ page: Math.min(currentPage + 1, totalPages) }}
+                disabled={currentPage >= totalPages}
+                className="flex items-center gap-1 text-sm px-4 py-2 rounded-lg border border-slate-600/30 bg-slate-600/10 text-zinc-300 hover:bg-slate-600/20 transition-all aria-disabled:opacity-30 aria-disabled:pointer-events-none"
+                aria-disabled={currentPage >= totalPages}
+              >
+                Next <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+          )}
         </section>
 
         {/* Modal */}
