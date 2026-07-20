@@ -327,7 +327,7 @@ export default function AuthElection({ data }: any) {
 
                   {/* Credential & OTP Strategy */}
 
-                  { ["credential","otp"].includes(data?.authMode?.toLowerCase()) && (
+                  { ["credential","otp","aotp"].includes(data?.authMode?.toLowerCase()) && (
                   <form onSubmit={handleSubmit} className="space-y-4 pb-10">
                    
                     {/* Credentials Strategy */}
