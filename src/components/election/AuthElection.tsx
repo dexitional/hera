@@ -5,7 +5,7 @@ import { TokensIcon } from '@radix-ui/react-icons';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowRight, Calendar, Info, LoaderCircle, Lock, Phone, User, Users2 } from 'lucide-react';
+import { ArrowRight, BookOpen, Calendar, Info, LoaderCircle, Lock, Phone, User, Users2 } from 'lucide-react';
 import moment from 'moment';
 import { useState } from 'react';
 
@@ -520,32 +520,37 @@ export default function AuthElection({ data }: any) {
 
                     <div className="rounded-xl bg-[#6d28d9]/8 py-4 px-6 flex items-center gap-4">
                       <Info className="w-8 h-8 text-purple-400 shrink-0" />
-                      {/* <div>
-                        <h3 className="text-lg font-bold text-white">Instructions</h3>
-                        <p className="text-sm text-zinc-300">Please use OTP method to login into the system or portal credentials</p>
-                      </div> */}
                       <div>
                         <h3 className="text=base sm:text-lg italic font-bold text-white">Election Status</h3>
                         <p className="text-sm text-zinc-300">{ (rightNow < data.startAt || rightNow > data.endAt) ? "INACTIVE" : data.status == 'staged' ? 'NOT STARTED': data.status == 'started'? 'LIVE & ON-GOING' : 'CLOSED'  }</p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl bg-[#6d28d9]/8 py-4 px-6 flex items-center gap-4">
+                      <BookOpen className="w-8 h-8 text-purple-400 shrink-0" />
+                      <div>
+                        <h3 className="text=base sm:text-lg italic font-bold text-white">New to voting here?</h3>
+                        <Link
+                          to="/vote/instruction/$electionTag"
+                          params={{ electionTag: data?.tag }}
+                          className="text-sm text-purple-400 hover:text-purple-300 transition-colors font-medium"
+                        >
+                          View step-by-step instructions
+                        </Link>
                       </div>
                     </div>
                     {/* Voter lookup page only exists when the admin has show-feed enabled */}
                     { data?.showFeed && (
                     <div className="rounded-xl bg-[#6d28d9]/8 py-4 px-6 flex items-center gap-4">
                       <Users2 className="w-8 h-8 text-purple-400 shrink-0" />
-                      {/* <div>
-                        <h3 className="text-lg font-bold text-white">Instructions</h3>
-                        <p className="text-sm text-zinc-300">Please use OTP method to login into the system or portal credentials</p>
-                      </div> */}
                       <div>
-                        <h3 className="text=base sm:text-lg italic font-bold text-white">Voter Register</h3>
+                        <h3 className="text=base sm:text-lg italic font-bold text-white">Check Eligibility</h3>
                         <Link to="/vote/register/$electionTag" params={{ electionTag: data?.tag }} className="text-sm text-purple-400 hover:text-purple-300 transition-colors font-medium">
-                          Goto Register
+                          View voters register
                         </Link>
                       </div>
                     </div>
                     )}
-
               </div>
              
             </div>
