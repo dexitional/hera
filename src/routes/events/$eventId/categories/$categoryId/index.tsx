@@ -6,6 +6,7 @@ import { getPublicCategoryFn } from "#/server/tenant-events";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowLeft, Clock, Image as ImageIcon, Link2, ScanQrCode, User, Users } from "lucide-react";
 import moment from "moment";
+import { PanelSkeleton } from "#/components/ui/skeleton";
 
 const categoryQueryOptions = (categoryId: any) => ({
   queryKey: ["category-page", categoryId],
@@ -20,6 +21,7 @@ export const Route = createFileRoute(
     const categoryId = params.categoryId;
     return await context.queryClient.ensureQueryData(categoryQueryOptions(categoryId));
   },
+  pendingComponent: () => <PanelSkeleton />,
 })
 
 function RouteComponent() {

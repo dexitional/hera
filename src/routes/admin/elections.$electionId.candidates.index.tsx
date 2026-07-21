@@ -3,12 +3,12 @@ import { useState, useEffect, useRef } from "react";
 import {
   UserPlus, Search, Edit2, Trash2, CheckCircle2,
   Award, Filter, User, ChevronDown,
-  Loader2,
   ArrowLeft
 } from "lucide-react";
 import { deleteCandidateFn, getCandidatesFn } from "#/server/tenant-elections";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { TableSkeleton } from "#/components/ui/skeleton";
 
 const CANDIDATES_PAGE_SIZE = 15;
 
@@ -33,9 +33,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/candidates/")
       electionId, page: 1, pageSize: CANDIDATES_PAGE_SIZE, searchQuery: "", positionFilter: "ALL",
     }));
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <TableSkeleton />,
 });
 
 

@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 import {
   BarChart3, Award, ShieldAlert, Activity, Coins,
   RefreshCw, CheckCircle2, User, Receipt,
-  Loader2, ChevronLeft, ChevronRight, ArrowLeft
+  ChevronLeft, ChevronRight, ArrowLeft
 } from "lucide-react";
 import { getEventTelemetryFn } from "#/server/tenant-events";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { PanelSkeleton } from "#/components/ui/skeleton";
 
 const eventTelemetryQueryOptions = (eventId: any) => ({
   queryKey: ['event-telemetry', eventId],
@@ -22,9 +23,7 @@ export const Route = createFileRoute("/admin/events/$eventId/feed")({
     const eventId = params.eventId;
     await context.queryClient.ensureQueryData(eventTelemetryQueryOptions(eventId));
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <PanelSkeleton />,
 });
 
 function EventLiveFeed() {

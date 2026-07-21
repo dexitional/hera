@@ -1,7 +1,7 @@
 import EventTransactionAdminForm from "#/components/event/EventTransactionAdminForm";
 import { getContestantsFn, getEventTransactionFn } from "#/server/tenant-events";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { FormSkeleton } from "#/components/ui/skeleton";
 
 export const Route = createFileRoute("/admin/events/$eventId/transactions/$transactionId/edit")({
   component: EditTransaction,
@@ -15,9 +15,7 @@ export const Route = createFileRoute("/admin/events/$eventId/transactions/$trans
     const contestants = (result?.contestants ?? []).map((r: any) => ({ id: r.contestants.id, name: r.contestants.name, categoryName: r.categories.name }));
     return { data, contestants };
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <FormSkeleton />,
 });
 
 function EditTransaction() {

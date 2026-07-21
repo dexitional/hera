@@ -13,13 +13,13 @@ import {
   Edit2,
   Filter,
   Hash,
-  Loader2,
   Plus,
   Search,
   Trash2,
   Users,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { TableSkeleton } from "#/components/ui/skeleton";
 
 const POSITIONS_PAGE_SIZE = 15;
 
@@ -43,11 +43,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/positions/")(
       electionId, page: 1, pageSize: POSITIONS_PAGE_SIZE, searchQuery: "",
     }));
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12">
-      <Loader2 className="animate-spin text-purple-500" />
-    </div>
-  ),
+  pendingComponent: () => <TableSkeleton />,
 });
 
 function PositionsDirectory() {

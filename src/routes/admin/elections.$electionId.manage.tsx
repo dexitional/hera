@@ -17,6 +17,7 @@ import {
 import { exportElectionResultsToFormatExcelFn, extendElectionEndTimeFn, getElectionOverview, resetElectionFn, updateElectionPublicStateFn, updateElectionStatusFn } from "#/server/tenant-elections";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import moment from "moment";
+import { ManageDashboardSkeleton } from "#/components/ui/skeleton";
 
 const ELECTION_STATUSES = ['staged', 'started', 'ended'] as const;
 type ElectionStatus = typeof ELECTION_STATUSES[number];
@@ -43,9 +44,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/manage")({
     const electionId = params.electionId;
     await context.queryClient.ensureQueryData(electionsQueryOptions(electionId));
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <ManageDashboardSkeleton />,
 });
 
 function ManageElectionConsole() {

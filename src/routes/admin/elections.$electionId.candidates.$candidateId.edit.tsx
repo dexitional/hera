@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getCandidateFn, getPositionsListFn } from "#/server/tenant-elections";
-import { Loader2 } from "lucide-react";
+import { FormSkeleton } from "#/components/ui/skeleton";
 import CandidateAdminForm from "#/components/election/CandidateAdminForm";
 
 const electionsQueryOptions = (electionId: any) => ({
@@ -20,9 +20,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/candidates/$c
     const data = await getCandidateFn({ data: candidateId });
     return { data, positions }
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <FormSkeleton />,
 });
 
 function EditCandidate() {

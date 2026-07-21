@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, CalendarClock, Clock, Coins, FolderTree, Hash, User } from "lucide-react";
 import moment from "moment";
+import { PanelSkeleton } from "#/components/ui/skeleton";
 
 const eventQueryOptions = (eventId: any) => ({
   queryKey: ["event-page", eventId],
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/events/$eventId/")({
     const eventId = params.eventId;
     return await context.queryClient.ensureQueryData(eventQueryOptions(eventId));
   },
+  pendingComponent: () => <PanelSkeleton />,
 });
 
 function getEventStatus(event: any, now: Date): "LIVE" | "UPCOMING" | "ENDED" {

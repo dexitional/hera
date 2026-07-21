@@ -21,6 +21,7 @@ import {
 } from "#/server/tenant-elections";
 import * as XLSX from 'xlsx';
 import { addZeroPrefix, generateSixDigitCode, stripCountryCode } from "#/lib/utils";
+import { TableSkeleton } from "#/components/ui/skeleton";
 
 const VOTERS_PAGE_SIZE = 15;
 
@@ -45,9 +46,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/voters/")({
       electionId, page: 1, pageSize: VOTERS_PAGE_SIZE, searchQuery: "", statusFilter: "ALL",
     }));
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <TableSkeleton />,
 });
 
 

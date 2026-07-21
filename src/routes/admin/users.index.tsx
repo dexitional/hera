@@ -1,12 +1,13 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  ArrowLeft, Search, UserPlus, ShieldCheck, ShieldOff, Ban, Loader2,
+  ArrowLeft, Search, UserPlus, ShieldCheck, ShieldOff, Ban,
   CheckCircle2, XCircle, KeyRound, FolderCog, X, Shield, Copy, MailCheck
 } from "lucide-react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authClient } from "#/lib/auth-client";
 import { getAllUsersFn, setUserEmailVerifiedFn, resendVerificationEmailFn } from "#/server/tenant-admin-users";
+import { TableSkeleton } from "#/components/ui/skeleton";
 
 const USERS_PAGE_SIZE = 15;
 
@@ -37,9 +38,7 @@ export const Route = createFileRoute("/admin/users/")({
       usersQueryOptions({ page: 1, pageSize: USERS_PAGE_SIZE, searchQuery: "" })
     );
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <TableSkeleton />,
 });
 
 function UsersDirectory() {

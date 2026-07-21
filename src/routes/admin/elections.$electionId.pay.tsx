@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, CheckCircle2, CreditCard, FileText, Loader2, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, CreditCard, FileText, ShieldCheck } from "lucide-react";
 import { getElectionOverview } from "#/server/tenant-elections";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { PanelSkeleton } from "#/components/ui/skeleton";
 
 const electionsQueryOptions = (electionId: any) => ({
   queryKey: ['election-overview', electionId],
@@ -14,9 +15,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/pay")({
     const electionId = params.electionId;
     await context.queryClient.ensureQueryData(electionsQueryOptions(electionId));
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <PanelSkeleton />,
 });
 
 function ElectionPayPage() {

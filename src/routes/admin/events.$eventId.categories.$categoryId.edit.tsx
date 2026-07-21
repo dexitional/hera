@@ -1,7 +1,7 @@
 import CategoryAdminForm from "#/components/event/CategoryAdminForm";
 import { getCategoryFn } from "#/server/tenant-events";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { FormSkeleton } from "#/components/ui/skeleton";
 
 export const Route = createFileRoute("/admin/events/$eventId/categories/$categoryId/edit")({
   component: EditCategory,
@@ -10,9 +10,7 @@ export const Route = createFileRoute("/admin/events/$eventId/categories/$categor
     const data = await getCategoryFn({ data: categoryId });
     return { data };
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <FormSkeleton />,
 });
 
 function EditCategory() {

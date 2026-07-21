@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, redirect, useLocation } from '@tanstack/react-router'
+import { createFileRoute, Outlet, redirect, useRouterState } from '@tanstack/react-router'
 import DashboardHeader from '#/components/DashboardHeader';
 export const Route = createFileRoute('/admin')({
     // Reuses the root route's beforeLoad result instead of calling
@@ -21,7 +21,15 @@ function DashboardLayout() {
   // records on the same route, e.g. different electionId) remounts and
   // replays the entrance transition, instead of only genuinely different
   // route components doing so.
-  const { pathname } = useLocation();
+  //
+  // Deliberately reads `resolvedLocation`, not `location`: `location` updates
+  // the instant a navigation is dispatched (before the target route's loader
+  // has resolved), while `resolvedLocation` only updates once that route's
+  // data is actually ready and being rendered under Outlet. Keying on
+  // `location` remounted this wrapper -- and replayed the animation -- while
+  // the outgoing page (or its pendingComponent) was still on screen, which
+  // read as the transition flickering / firing on the way out.
+  const pathname = useRouterState({ select: (s) => s.resolvedLocation?.pathname ?? s.location.pathname });
   return (
     <div id="dashboard-shell" className="min-h-screen print:bg-white bg-[#18181b] text-white font-sans antialiased print:bg-white">
       { user && (<DashboardHeader user={user} />)}

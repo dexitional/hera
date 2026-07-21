@@ -2,11 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   Plus, Search, Edit2, Trash2,
-  CheckCircle, XCircle, Loader2,
+  CheckCircle, XCircle,
   ArrowLeft, User, PhoneCallIcon, Coins, Hash,
 } from "lucide-react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteEventTransactionFn, getEventTransactionsFn } from "#/server/tenant-events";
+import { TableSkeleton } from "#/components/ui/skeleton";
 
 const TRANSACTIONS_PAGE_SIZE = 15;
 
@@ -31,9 +32,7 @@ export const Route = createFileRoute("/admin/events/$eventId/transactions/")({
       eventId, page: 1, pageSize: TRANSACTIONS_PAGE_SIZE, searchQuery: "", statusFilter: "ALL",
     }));
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <TableSkeleton />,
 });
 
 function TransactionsDirectory() {

@@ -3,11 +3,12 @@ import { useState, useEffect } from "react";
 import {
   BarChart3, Users, Award, ShieldAlert, Activity,
   RefreshCw, CheckCircle2, User,
-  Loader2, Ban
+  Ban
 } from "lucide-react";
 // cspell:ignore USSD INFOBAR
 import { getUnifiedElectionTelemetry } from "#/server/tenant-elections";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { PanelSkeleton } from "#/components/ui/skeleton";
 
 const electionsQueryOptions = (electionId: any) => ({
   queryKey: ['election-telemetry', electionId ],
@@ -23,9 +24,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/feed/bak")({
     const electionId = params.electionId;
     await context.queryClient.ensureQueryData(electionsQueryOptions(electionId));
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <PanelSkeleton />,
 });
 
 function ElectionLiveFeed() {

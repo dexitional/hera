@@ -1,13 +1,13 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import moment from 'moment';
-import { 
-  Plus, Search, Edit2, Trash2, Calendar, 
-  Globe, Shield, Eye, Filter, ChevronDown, CheckCircle, Sliders, 
-  Loader2
+import {
+  Plus, Search, Edit2, Trash2, Calendar,
+  Globe, Shield, Eye, Filter, ChevronDown, CheckCircle, Sliders
 } from "lucide-react";
 import { deleteElectionFn, getElectionsFn } from "#/server/tenant-elections";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { TableSkeleton } from "#/components/ui/skeleton";
 
 
 const electionsQueryOptions = () => ({
@@ -20,10 +20,8 @@ export const Route = createFileRoute("/admin/elections/")({
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(electionsQueryOptions());
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
-}); 
+  pendingComponent: () => <TableSkeleton />,
+});
 
 function ElectionsDirectory() {
   const queryClient = useQueryClient();

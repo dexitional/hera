@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Crown,
-  Loader2,
   Printer,
   Trophy,
   Users,
@@ -10,6 +9,7 @@ import {
 import { getEventFinalResultsFn } from "#/server/tenant-events";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import moment from "moment";
+import { PanelSkeleton } from "#/components/ui/skeleton";
 
 interface ContestantResult {
   id: string;
@@ -41,11 +41,7 @@ export const Route = createFileRoute("/admin/events/$eventId/results")({
     const eventId = params.eventId;
     await context.queryClient.ensureQueryData(eventResultsQueryOptions(eventId));
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12">
-      <Loader2 className="animate-spin text-purple-500" />
-    </div>
-  ),
+  pendingComponent: () => <PanelSkeleton />,
 });
 
 function StatCard({

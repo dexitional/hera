@@ -7,6 +7,7 @@ import {
 import { exportEventResultsToExcelFn, getEventOverviewFn, updateEventActiveStateFn } from "#/server/tenant-events";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { ManageDashboardSkeleton } from "#/components/ui/skeleton";
 
 const eventOverviewQueryOptions = (eventId: any) => ({
   queryKey: ['event-overview', eventId],
@@ -22,9 +23,7 @@ export const Route = createFileRoute("/admin/events/$eventId/manage")({
     const eventId = params.eventId;
     await context.queryClient.ensureQueryData(eventOverviewQueryOptions(eventId));
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <ManageDashboardSkeleton />,
 });
 
 function ManageEventConsole() {

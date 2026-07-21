@@ -1,11 +1,12 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  ArrowLeft, Loader2, ShieldCheck, Ban, ToggleLeft, ToggleRight,
+  ArrowLeft, ShieldCheck, Ban, ToggleLeft, ToggleRight,
   Save, Calendar, Mail, User as UserIcon, ArrowUpRight, Plus
 } from "lucide-react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getUserByIdFn, getUserElectionsFn, getUserEventsFn, updateElectionAdminSettingsFn } from "#/server/tenant-admin-users";
+import { FormSkeleton } from "#/components/ui/skeleton";
 import moment from "moment";
 
 const userQueryOptions = (userId: string) => ({
@@ -38,9 +39,7 @@ export const Route = createFileRoute("/admin/users/$userId")({
       context.queryClient.ensureQueryData(userEventsQueryOptions(userId)),
     ]);
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <FormSkeleton />,
 });
 
 function ElectionBillingRow({ election, userId }: { election: any; userId: string }) {

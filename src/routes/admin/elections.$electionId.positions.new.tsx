@@ -1,7 +1,7 @@
 import PositionAdminForm from "#/components/election/PositionAdminForm";
 import { getElectionsFn } from "#/server/tenant-elections";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { FormSkeleton } from "#/components/ui/skeleton";
 
 
 export const Route = createFileRoute("/admin/elections/$electionId/positions/new")({
@@ -10,11 +10,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/positions/new
     const elections = await getElectionsFn();
     return { elections }
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12">
-      <Loader2 className="animate-spin text-purple-500" />
-    </div>
-  ),
+  pendingComponent: () => <FormSkeleton />,
 });
 
 function CreatePosition() {

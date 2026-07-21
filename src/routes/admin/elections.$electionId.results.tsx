@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   Award,
   Crown,
-  Loader2,
   OctagonX,
   Printer,
   ShieldCheck,
@@ -14,6 +13,7 @@ import {
 import { getElectionFinalResultsFn } from "#/server/tenant-elections";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import moment from "moment";
+import { PanelSkeleton } from "#/components/ui/skeleton";
 
 interface CandidateResult {
   id: number | null;
@@ -47,11 +47,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/results")({
     const electionId = params.electionId;
     await context.queryClient.ensureQueryData(electionResultsQueryOptions(electionId));
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12">
-      <Loader2 className="animate-spin text-purple-500" />
-    </div>
-  ),
+  pendingComponent: () => <PanelSkeleton />,
 });
 
 function StatCard({

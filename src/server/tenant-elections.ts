@@ -2676,12 +2676,16 @@ export const castBallotServerFn = createServerFn({
       });
 
       if (result.success) {
-        // Fire-and-forget: never blocks the voter's response, and its own
-        // internal try/catch means a mail-provider outage can't turn a
-        // successful vote into a failed one.
-        runVoteReceiptWorkflow({ voterId, electionId, selections, ip, castAt }).catch((err) => {
-          console.error('[VOTE RECEIPT WORKFLOW] dispatch failed:', err);
-        });
+        // Awaited (not fire-and-forget): the workflow already swallows every
+        // internal error and always resolves, so this can never turn a
+        // successful vote into a failed one -- but NOT awaiting it left the
+        // dispatch racing the HTTP response, with nothing guaranteeing it
+        // finished before the request ended. Any action landing in that gap
+        // (an admin reset, a dev-server module reload, the process cycling)
+        // could silently drop the in-flight send. Awaiting closes that
+        // window at the cost of the response waiting on one extra network
+        // call to the mail provider.
+        await runVoteReceiptWorkflow({ voterId, electionId, selections, ip, castAt });
       }
 
       return result;

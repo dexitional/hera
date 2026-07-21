@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Link2 } from "lucide-react";
 import moment from "moment";
 import { useEffect, useState } from "react";
 import { z } from "zod";
+import { CardGridSkeleton } from "#/components/ui/skeleton";
 
 const searchSchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
@@ -30,6 +31,15 @@ export const Route = createFileRoute("/elections")({
       // re-fetches on mount regardless (see index.tsx for the same fix).
     }
   },
+  pendingComponent: () => (
+    <div className="min-h-screen bg-[#0d1f36] text-white antialiased font-sans">
+      <main className="w-full">
+        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-16">
+          <CardGridSkeleton />
+        </section>
+      </main>
+    </div>
+  ),
 });
 
 type ModalProduct = {

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import ElectionAdminForm from "#/components/election/ElectionAdminForm";
 import { getElectionFn } from "#/server/tenant-elections";
-import { Loader2 } from "lucide-react";
+import { FormSkeleton } from "#/components/ui/skeleton";
 
 export const Route = createFileRoute("/admin/elections/$electionId/edit")({
   component: EditElection,
@@ -11,9 +11,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/edit")({
     return { data }
     // await context.queryClient.ensureQueryData(electionsQueryOptions(electionId));
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <FormSkeleton />,
 
 });
 

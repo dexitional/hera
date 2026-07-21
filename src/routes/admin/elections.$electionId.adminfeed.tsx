@@ -5,7 +5,6 @@ import {
   Ban,
   BarChart3,
   CheckCircle2,
-  Loader2,
   RefreshCw,
   ShieldAlert,
   User,
@@ -15,6 +14,7 @@ import { useEffect, useState } from "react";
 // cspell:ignore USSD INFOBAR
 import { getUnifiedElectionAdminStats } from "#/server/tenant-elections";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { PanelSkeleton } from "#/components/ui/skeleton";
 
 
 const electionsQueryOptions = (electionId: any) => ({
@@ -33,11 +33,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/adminfeed")({
       electionsQueryOptions(electionId),
     );
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12">
-      <Loader2 className="animate-spin text-purple-500" />
-    </div>
-  ),
+  pendingComponent: () => <PanelSkeleton />,
 });
 
 function ElectionLiveFeed() {

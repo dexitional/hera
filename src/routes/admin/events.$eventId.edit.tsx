@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import EventAdminForm from "#/components/event/EventAdminForm";
 import { getEventFn } from "#/server/tenant-events";
-import { Loader2 } from "lucide-react";
+import { FormSkeleton } from "#/components/ui/skeleton";
 
 export const Route = createFileRoute("/admin/events/$eventId/edit")({
   component: EditEvent,
@@ -10,9 +10,7 @@ export const Route = createFileRoute("/admin/events/$eventId/edit")({
     const data = await getEventFn({ data: eventId });
     return { data };
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <FormSkeleton />,
 });
 
 function EditEvent() {

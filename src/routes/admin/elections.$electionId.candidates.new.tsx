@@ -1,7 +1,7 @@
 import CandidateAdminForm from "#/components/election/CandidateAdminForm";
 import { getPositionsListFn } from "#/server/tenant-elections";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { FormSkeleton } from "#/components/ui/skeleton";
 
 
 const electionsQueryOptions = (electionId: any) => ({
@@ -19,11 +19,7 @@ export const Route = createFileRoute("/admin/elections/$electionId/candidates/ne
     }))
     return { positions }
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12">
-      <Loader2 className="animate-spin text-purple-500" />
-    </div>
-  ),
+  pendingComponent: () => <FormSkeleton />,
 });
 
 function CreateCandidate() {

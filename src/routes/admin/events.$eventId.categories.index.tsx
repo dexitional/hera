@@ -11,13 +11,13 @@ import {
   Edit2,
   FolderTree,
   Hash,
-  Loader2,
   Plus,
   Search,
   Trash2,
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { TableSkeleton } from "#/components/ui/skeleton";
 
 const CATEGORIES_PAGE_SIZE = 15;
 
@@ -40,11 +40,7 @@ export const Route = createFileRoute("/admin/events/$eventId/categories/")({
       eventId, page: 1, pageSize: CATEGORIES_PAGE_SIZE, searchQuery: "",
     }));
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12">
-      <Loader2 className="animate-spin text-purple-500" />
-    </div>
-  ),
+  pendingComponent: () => <TableSkeleton />,
 });
 
 function CategoriesDirectory() {

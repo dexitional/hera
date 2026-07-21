@@ -4,6 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronDown, Clock, LayoutGrid, Search, ArrowRight, CalendarDays, ImageIcon, Ticket } from "lucide-react";
 import moment from "moment";
 import { useEffect, useRef, useState } from "react";
+import { CardGridSkeleton } from "#/components/ui/skeleton";
 
 const eventsQueryOptions = () => ({
   queryKey: ["events-page"],
@@ -15,6 +16,15 @@ export const Route = createFileRoute("/events/")({
   loader: async ({ context }) => {
     return await context.queryClient.ensureQueryData(eventsQueryOptions());
   },
+  pendingComponent: () => (
+    <div className="min-h-screen bg-[#0d1f36] text-white antialiased font-sans">
+      <main className="w-full">
+        <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-16">
+          <CardGridSkeleton />
+        </section>
+      </main>
+    </div>
+  ),
 });
 
 function getEventStatus(event: any, now: Date): "LIVE" | "UPCOMING" | "ENDED" {

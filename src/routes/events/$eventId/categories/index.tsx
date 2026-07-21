@@ -4,6 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, Clock, Search, ThumbsUp, Users } from "lucide-react";
 import moment from "moment";
 import { useRef, useState } from "react";
+import { PanelSkeleton } from "#/components/ui/skeleton";
 
 function getEventStatus(event: any, now: Date): "LIVE" | "UPCOMING" | "ENDED" {
   if (!event.isActive) return "ENDED";
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/events/$eventId/categories/")({
     const eventId = params.eventId;
     return await context.queryClient.ensureQueryData(eventQueryOptions(eventId));
   },
+  pendingComponent: () => <PanelSkeleton />,
 });
 
 function RouteComponent() {

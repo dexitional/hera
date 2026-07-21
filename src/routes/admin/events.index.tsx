@@ -2,10 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import {
   Plus, Search, Edit2, Trash2, Sliders,
-  Sparkles, Filter, ChevronDown, CheckCircle, XCircle, FolderTree, Coins, Loader2, ImageOff
+  Sparkles, Filter, ChevronDown, CheckCircle, XCircle, FolderTree, Coins, ImageOff
 } from "lucide-react";
 import { deleteEventFn, getEventsFn } from "#/server/tenant-events";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { TableSkeleton } from "#/components/ui/skeleton";
 
 const eventsQueryOptions = () => ({
   queryKey: ['events-admin'],
@@ -17,9 +18,7 @@ export const Route = createFileRoute("/admin/events/")({
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(eventsQueryOptions());
   },
-  pendingComponent: () => (
-    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-purple-500" /></div>
-  ),
+  pendingComponent: () => <TableSkeleton />,
 });
 
 function EventsDirectory() {
