@@ -4,11 +4,16 @@
 // module, not a raw route file) the same way db/pg already is.
 const UNOSEND_API_URL = 'https://api.unosend.co/emails';
 
+// Throws on any failure (missing key, request error, non-2xx response)
+// instead of swallowing it -- a caller that silently no-ops on a broken mail
+// provider looks identical to a successful send, which is exactly how the
+// vote-receipt workflow lost visibility into UNOSEND_API_KEY going missing.
+// Callers that must never fail their own flow because of a mail hiccup (e.g.
+// better-auth's sendVerificationEmail) are responsible for catching this.
 export async function sendEmail(params: { to: string; subject: string; html: string }): Promise<void> {
   const apiKey = process.env.UNOSEND_API_KEY;
   if (!apiKey) {
-    console.error('sendEmail: UNOSEND_API_KEY not configured, skipping send.');
-    return;
+    throw new Error('sendEmail: UNOSEND_API_KEY is not configured.');
   }
 
   const fromName = process.env.SMTP_FROM_NAME || 'Heravote';
@@ -30,7 +35,7 @@ export async function sendEmail(params: { to: string; subject: string; html: str
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    console.error(`sendEmail: Unosend request failed (${res.status}): ${body}`);
+    throw new Error(`sendEmail: Unosend request failed (${res.status}): ${body}`);
   }
 }
 

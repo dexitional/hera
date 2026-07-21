@@ -63,11 +63,17 @@ export const auth = betterAuth({
   // Sends a verification link on signup and whenever a caller explicitly
   emailVerification: {
     sendVerificationEmail: async ({ user, url }: any) => {
-      await sendEmail({
-        to: user.email,
-        subject: "Verify your Heravote account",
-        html: verificationEmailHtml({ name: user.name, url }),
-      });
+      // sendEmail now throws on failure -- caught here so a broken mail
+      // provider can't turn into a failed signup/verification request.
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: "Verify your Heravote account",
+          html: verificationEmailHtml({ name: user.name, url }),
+        });
+      } catch (err) {
+        console.error('[AUTH] failed to send verification email:', err);
+      }
     },
     sendOnSignUp: true,
     autoSignInAfterVerification: true,

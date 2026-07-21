@@ -5,13 +5,15 @@ import { sendEmail, voteReceiptEmailHtml } from './email';
 
 type CastSelection = { positionId: string; candidateId: string | null };
 
-// Fire-and-forget after a successful castBallotServerFn commit -- never
-// awaited by the caller, and every failure here is swallowed and logged
-// rather than thrown, so a broken mail provider can never roll back or
-// surface an error on an otherwise-successful vote. Scoped to authMode
-// 'google' only: that's the one login mode where the voter's email on file
-// is guaranteed to be a real, verified inbox rather than a placeholder like
-// `${username}@vote.local` seeded by bulk import.
+// Runs after a successful castBallotServerFn commit. Every failure here is
+// caught and logged rather than thrown, so a broken mail provider (e.g.
+// UNOSEND_API_KEY missing or rejected) can never roll back or surface an
+// error on an otherwise-successful vote -- but sendEmail() itself throws on
+// failure, so the real reason still lands in the logs below instead of
+// disappearing silently. Scoped to authMode 'google' only: that's the one
+// login mode where the voter's email on file is guaranteed to be a real,
+// verified inbox rather than a placeholder like `${username}@vote.local`
+// seeded by bulk import.
 export async function runVoteReceiptWorkflow(params: {
   voterId: string;
   electionId: string;
