@@ -545,8 +545,9 @@ export default function AuthElection({ data }: any) {
                         </Link>
                       </div>
                     </div>
-                    {/* Voter lookup page only exists when the admin has show-feed enabled */}
-                    { data?.showFeed && (
+                    {/* Voter lookup page only exists when the admin has show-feed enabled, and
+                        stops being relevant once the election isn't open for voting */}
+                    { data?.showFeed && !['staged', 'ended'].includes(data?.status) && (
                     <div className="rounded-xl bg-[#6d28d9]/8 py-4 px-6 flex items-center gap-4">
                       <Users2 className="w-8 h-8 text-purple-400 shrink-0" />
                       <div>
