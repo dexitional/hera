@@ -535,7 +535,7 @@ export default function AuthElection({ data }: any) {
                     <div className="rounded-xl bg-[#6d28d9]/8 py-4 px-6 flex items-center gap-4">
                       <BookOpen className="w-8 h-8 text-purple-400 shrink-0" />
                       <div>
-                        <h3 className="text=base sm:text-lg italic font-bold text-white">New to voting here?</h3>
+                        <h3 className="text=base sm:text-lg italic font-bold text-white">Voting Instructions</h3>
                         <Link
                           to="/vote/instruction/$electionTag"
                           params={{ electionTag: data?.tag }}

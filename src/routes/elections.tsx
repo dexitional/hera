@@ -139,7 +139,7 @@ function RouteComponent() {
                   <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent"></div>
                   <div className="absolute top-4 right-4 z-10">
                     <div className={`px-3 py-0.5 ${['staged','ended'].includes(row.status) || (rightNow < row.startAt || rightNow > row.endAt) ? 'bg-zinc-300 text-zinc-700' : 'bg-purple-500 animate-pulse text-white' }  rounded-full text-xs font-black shadow-lg`}>
-                      { (rightNow < row.startAt || rightNow > row.endAt) ? "INACTIVE" : row.status == 'staged' ? 'NOT STARTED': row.status == 'started'? 'LIVE & ON-GOING' : 'CLOSED' }
+                      { (rightNow < row.startAt) ? "INACTIVE" : row.status == 'staged' ? 'NOT STARTED': row.status == 'started'? 'LIVE & ON-GOING' : 'CLOSED' }
                     </div>
                   </div>
                 </div>
