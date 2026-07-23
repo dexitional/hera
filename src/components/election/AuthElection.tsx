@@ -13,6 +13,12 @@ export default function AuthElection({ data }: any) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const rightNow = new Date();
+  // Blocks every sign-in method (credential, OTP, Google) the same way:
+  // staged (not yet open), ended, or currently outside its voting window --
+  // matching the "INACTIVE" label shown on the public /elections listing.
+  const isElectionUnavailable = ['staged', 'ended'].includes(data?.status)
+    || rightNow < new Date(data?.startAt)
+    || rightNow > new Date(data?.endAt);
   const { otp, maskPhone } = useAuthStore.getState();
   const [ msg, setMsg ]:any = useState(null);
   const [ loading, setLoading ] = useState(false)
@@ -303,8 +309,8 @@ export default function AuthElection({ data }: any) {
                   { data?.authMode?.toLowerCase() == "google" && (
                   <>
                   <div className="mb-6">
-                    <button 
-                      disabled={loading}
+                    <button
+                      disabled={ loading || isElectionUnavailable }
                       onClick={() => {
                         setLoading(true);
                         setTimeout(() =>  handleGoogleSignIn() ,2000);
@@ -415,7 +421,7 @@ export default function AuthElection({ data }: any) {
                       {/* Submit Button */}
                       <button
                         type="submit"
-                        disabled={ loading || (data.status && ['staged','ended'].includes(data.status)) }
+                        disabled={ loading || isElectionUnavailable }
                         className="relative inline-block w-full group mt-2 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                       >
                         <span className="absolute top-0 left-0 w-full h-full transition-all duration-200 ease-out transform translate-x-1.5 translate-y-1.5 bg-purple-600 border-2 border-zinc-900 group-hover:translate-x-0 group-hover:translate-y-0"></span>
@@ -460,7 +466,7 @@ export default function AuthElection({ data }: any) {
                           </div>
                           <button
                             onClick={() => verifyMutation.mutate({ data: { otp: formData.otp, electionId: formData.electionId, username: formData.username }} as any) }
-                            disabled={ loading || (data.status && ['staged','ended'].includes(data.status)) }
+                            disabled={ loading || isElectionUnavailable }
                             className="relative inline-block w-full group disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <span className="absolute top-0 left-0 w-full h-full transition-all duration-200 ease-out transform translate-x-1.5 translate-y-1.5 bg-purple-600 border-2 border-zinc-900 group-hover:translate-x-0 group-hover:translate-y-0"></span>
