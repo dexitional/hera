@@ -33,6 +33,8 @@ export async function sendEmail(params: { to: string; subject: string; html: str
     }),
   });
 
+  console.log(await res.json())
+
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`sendEmail: Unosend request failed (${res.status}): ${body}`);
