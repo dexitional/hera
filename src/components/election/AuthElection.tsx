@@ -528,7 +528,7 @@ export default function AuthElection({ data }: any) {
                       <Info className="w-8 h-8 text-purple-400 shrink-0" />
                       <div>
                         <h3 className="text=base sm:text-lg italic font-bold text-white">Election Status</h3>
-                        <p className="text-sm text-zinc-300">{ (rightNow < data.startAt || rightNow > data.endAt) ? "INACTIVE" : data.status == 'staged' ? 'NOT STARTED': data.status == 'started'? 'LIVE & ON-GOING' : 'CLOSED'  }</p>
+                        <p className="text-sm text-zinc-300">{ (rightNow < data.startAt) ? "INACTIVE" : data.status == 'staged' ? 'NOT STARTED': data.status == 'started'? 'LIVE & ON-GOING' : 'CLOSED'  }</p>
                       </div>
                     </div>
 
