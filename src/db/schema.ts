@@ -129,6 +129,10 @@ export const elections = pgTable('elections', {
   id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
   adminId: text('admin_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
   tag: text('tag').notNull(),
+  // Custom domain/subdomain that an admin has pointed at this election
+  // (e.g. via a CNAME) so voters can reach it without the default
+  // /vote/election?page= path. SMS/email broadcasts link here when set.
+  aliasUrl: text('alias_url'),
   title: text('title').notNull(),
   description: text('description').notNull(),
   startAt: timestamp('start_at', { mode: 'date' }),
@@ -137,6 +141,10 @@ export const elections = pgTable('elections', {
   billVoters: integer('bill_voters'),
   billAmount: doublePrecision('bill_amount'),
   billPaid: boolean('bill_paid').default(false).notNull(),
+  // Organization/customer name to print on invoices and receipts -- distinct
+  // from the admin's own account name, since the paying entity is often not
+  // the person who set the election up.
+  billTo: text('bill_to'),
   authMode: text('auth_mode'), 
   status: text('status').default('staged').notNull(), 
   autoStop: boolean('auto_stop').default(false).notNull(),

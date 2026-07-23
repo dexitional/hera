@@ -1,5 +1,5 @@
 import { authMiddleware } from '#/middleware/authMiddleware';
-import { addCountryCode, chunkArray, fetchWithRetry, maskPhoneNumber, prepareVotersForBulkImport, stripCountryCode, wait } from '#/lib/utils';
+import { addCountryCode, buildElectionVoteUrl, chunkArray, fetchWithRetry, maskPhoneNumber, prepareVotersForBulkImport, stripCountryCode, wait } from '#/lib/utils';
 import { createServerFn } from '@tanstack/react-start';
 import { and, asc, desc, eq, inArray, or, sql, ilike, count } from 'drizzle-orm';
 import { db } from '../db';
@@ -11,6 +11,7 @@ import { arcjetMiddleware, arcjetVoterLookupMiddleware } from '#/middleware/arcj
 import { getRequest } from '@tanstack/react-start/server';
 import { generateBallotReceiptSignature } from './ballot-signature';
 import { runVoteReceiptWorkflow } from './vote-receipt-workflow';
+import { getReminderProgress, isReminderJobRunning, runVoterReminderWorkflow } from './vote-reminder-workflow';
 
 
 // ELECTIONS FUNCTIONS
@@ -144,7 +145,9 @@ export const createElectionFn = createServerFn({ method: 'POST' })
         title: data.get("title") as string,
         adminId: targetAdminId,
         tag: data.get("tag") as string,
+        aliasUrl: (data.get("aliasUrl") as string) || null,
         billVoters: data.get("billVoters") as number,
+        billTo: (data.get("billTo") as string) || null,
         authMode: data.get("authMode") as string,
         makePublic: data.get("makePublic") as boolean || false,
         showFeed: data.get("showFeed") as boolean || false,
@@ -200,7 +203,9 @@ export const updateElectionFn = createServerFn({ method: 'POST' })
         .set({
           title: data.get("title") as string,
           tag: data.get("tag") as string,
+          aliasUrl: (data.get("aliasUrl") as string) || null,
           billVoters: data.get("billVoters") as number,
+          billTo: (data.get("billTo") as string) || null,
           authMode: data.get("authMode") as string,
           makePublic: data.get("makePublic") as boolean,
           showFeed: data.get("showFeed") as boolean,
@@ -417,6 +422,7 @@ export const getElectionOverview = createServerFn({
       billVoters: electionRecord.billVoters,
       billAmount: electionRecord.billAmount,
       billPaid: electionRecord.billPaid,
+      billTo: electionRecord.billTo,
       counts: {
         positions: positionsCountResult?.count ?? 0,
         candidates: candidatesCountResult?.count ?? 0,
@@ -2099,7 +2105,7 @@ export const inviteVoterFn = createServerFn({ method: 'GET' }).middleware([arcje
       const inviteToken = rec?.voters?.inviteToken;
       const fname = rec?.voters?.name?.split(" ")[0];
       const username = rec?.voters?.username;
-      const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${rec?.elections?.tag}`
+      const electionUrl = buildElectionVoteUrl({ tag: rec?.elections?.tag, aliasUrl: rec?.elections?.aliasUrl });
       let smsPayload: any;
       if(['otp', 'aotp'].includes(rec?.elections?.authMode?.toLowerCase())){
         smsPayload = {
@@ -2176,7 +2182,7 @@ export const inviteVoters2Fn = createServerFn({ method: 'GET' }).middleware([arc
       })
 
       // Send Invite Code via SMS
-      const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${rec[0]?.elections?.tag}`
+      const electionUrl = buildElectionVoteUrl({ tag: rec[0]?.elections?.tag, aliasUrl: rec[0]?.elections?.aliasUrl });
       const usernameLabel = rec[0]?.elections?.placeholder?.username || 'Username';
       const passwordLabel = rec[0]?.elections?.placeholder?.password || 'Password';
       const smsPayload: any = {
@@ -2245,7 +2251,7 @@ export const inviteVoters1Fn = createServerFn({ method: 'GET' }).middleware([arc
           const username = r?.voters?.username;
           
           // Send Invite Code via SMS
-          const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${rec[0]?.elections?.tag}`
+          const electionUrl = buildElectionVoteUrl({ tag: rec[0]?.elections?.tag, aliasUrl: rec[0]?.elections?.aliasUrl });
           const smsPayload: any = {
             sender: process.env.SMS_SENDER_ID,
             message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken} . Try and Visit ${electionUrl} to vote!`,
@@ -2314,8 +2320,7 @@ const smsQueueTracker = new Map<string, {
 
 async function processSmsQueueInBackground(rec: any[], electionId: string) {
   const batches = chunkArray(rec, 25); // Smooth 5-record chunks
-  const electionTag = rec[0]?.elections?.tag || '';
-  const electionUrl = `${process.env.BETTER_AUTH_URL}/vote/election?page=${electionTag}`;
+  const electionUrl = buildElectionVoteUrl({ tag: rec[0]?.elections?.tag || '', aliasUrl: rec[0]?.elections?.aliasUrl });
 
   smsQueueTracker.set(electionId, {
     total: rec.length,
@@ -2444,6 +2449,68 @@ export const inviteVotersFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ data: electionId }: any) => {
     return smsQueueTracker.get(electionId) || { isProcessing: false, total: 0, processed: 0, successful: 0, failed: 0 };
+ });
+
+
+  // Sends a credentials-free "don't forget to vote" nudge to every voter who
+  // hasn't cast a ballot yet. Validation + the pending-voter fetch happen here
+  // (so a bad request fails fast instead of silently in the background); the
+  // actual batched sending is delegated to runVoterReminderWorkflow.
+  export const sendVoterRemindersFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ data: electionId }: any) => {
+    try {
+      if (isReminderJobRunning(electionId)) {
+        return { success: false, message: "A reminder broadcast is already running for this election." };
+      }
+
+      const [election] = await db.select().from(elections).where(eq<any>(elections.id, electionId));
+      if (!election) {
+        return { success: false, message: "Election not found." };
+      }
+      if (election.status !== 'started') {
+        return { success: false, message: "Reminders can only be sent while the election is live." };
+      }
+      if (!election.endAt) {
+        return { success: false, message: "Election has no end time set." };
+      }
+
+      const pendingVoters = await db.select()
+        .from(voters)
+        .where(
+          and(
+            eq<any>(voters.electionId, electionId),
+            eq<any>(voters.hasVoted, false),
+          )
+        );
+
+      if (!pendingVoters.length) {
+        return { success: true, message: "No pending voters left to remind." };
+      }
+
+      runVoterReminderWorkflow(
+        pendingVoters,
+        { title: election.title, tag: election.tag, endAt: election.endAt, aliasUrl: election.aliasUrl },
+        electionId,
+      ).catch((err) => {
+        console.error('[VOTER REMINDER WORKFLOW] dispatch failed:', err);
+      });
+
+      return {
+        success: true,
+        message: `Reminder queue initiated. Asynchronously nudging ${pendingVoters.length} voter(s) in the background.`,
+      };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  });
+
+
+  // Polling Metrics Collector Function (reminders)
+  export const getReminderProgressFn = createServerFn({ method: 'GET' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ data: electionId }: any) => {
+    return getReminderProgress(electionId);
  });
 
 

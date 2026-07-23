@@ -7,6 +7,7 @@ import {
   Smartphone,
   MessageCircleWarning,
   PhoneCallIcon,
+  BellRing,
   ArrowLeft
 } from "lucide-react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,7 +18,9 @@ import {
   inviteVoterFn,
   inviteVotersFn,
   uploadVotersFn,
-  getSmsProgressFn
+  getSmsProgressFn,
+  sendVoterRemindersFn,
+  getReminderProgressFn
 } from "#/server/tenant-elections";
 import * as XLSX from 'xlsx';
 import { addZeroPrefix, generateSixDigitCode, stripCountryCode } from "#/lib/utils";
@@ -66,6 +69,7 @@ function VotersDirectory() {
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [isTrackingSms, setIsTrackingSms] = useState(false);
+  const [activeSmsJob, setActiveSmsJob] = useState<'invite' | 'reminder' | null>(null);
 
   // Debounce the raw search input before it drives a server request
   useEffect(() => {
@@ -95,9 +99,13 @@ function VotersDirectory() {
   };
 
   // Background Task Real-Time Progress Tracker via Server Polling Pipeline
+  // (shared between the invite and reminder broadcasts -- activeSmsJob picks
+  // which job's progress endpoint gets polled)
   const { data: queueProgress } = useQuery({
-    queryKey: ['sms-progress', electionId],
-    queryFn: () => getSmsProgressFn({ data: electionId } as any),
+    queryKey: ['sms-progress', electionId, activeSmsJob],
+    queryFn: () => activeSmsJob === 'reminder'
+      ? getReminderProgressFn({ data: electionId } as any)
+      : getSmsProgressFn({ data: electionId } as any),
     refetchInterval: (query) => {
       const data = query.state.data;
       // Arcjet's shared rate limit refills ~1 request per 6s; polling faster
@@ -140,11 +148,36 @@ function VotersDirectory() {
   const invitesMutation = useMutation({
     mutationFn: inviteVotersFn,
     onMutate: () => {
+      setActiveSmsJob('invite');
       setIsTrackingSms(true);
     },
-    onSuccess: () => {
+    onSuccess: (result: any) => {
       queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
       queryClient.invalidateQueries({ queryKey: ['sms-progress', electionId] });
+      if (!result?.success) {
+        setIsTrackingSms(false);
+        alert(result?.message || "Unable to send invites.");
+      }
+    },
+    onError: (error: any) => {
+      setIsTrackingSms(false);
+      console.error(error.message);
+    },
+  });
+
+  const remindersMutation = useMutation({
+    mutationFn: sendVoterRemindersFn,
+    onMutate: () => {
+      setActiveSmsJob('reminder');
+      setIsTrackingSms(true);
+    },
+    onSuccess: (result: any) => {
+      queryClient.invalidateQueries({ queryKey: ['voters-admin'] });
+      queryClient.invalidateQueries({ queryKey: ['sms-progress', electionId] });
+      if (!result?.success) {
+        setIsTrackingSms(false);
+        alert(result?.message || "Unable to send reminders.");
+      }
     },
     onError: (error: any) => {
       setIsTrackingSms(false);
@@ -182,6 +215,12 @@ function VotersDirectory() {
   const handleInviteVoters = () => {
     if (confirm("Send multiple invitations ?")) {
       invitesMutation.mutate({ data: electionId } as any);
+    }
+  };
+
+  const handleSendReminders = () => {
+    if (confirm("Send a voting reminder to every voter who hasn't voted yet ?")) {
+      remindersMutation.mutate({ data: electionId } as any);
     }
   };
 
@@ -294,27 +333,27 @@ function VotersDirectory() {
           </Link>
 
           {/* Dynamic Progress Panel Display Node */}
-          {(isTrackingSms || invitesMutation.isPending || (queueProgress && (queueProgress.isProcessing || queueProgress.total > 0))) && (
+          {(isTrackingSms || invitesMutation.isPending || remindersMutation.isPending || (queueProgress && (queueProgress.isProcessing || queueProgress.total > 0))) && (
             <div className="grid grid-cols-2 gap-4">
                 {/* Progress Bar Container */}
                 <div className="bg-[#0a192a]/80 border border-zinc-800 rounded-xl p-5 shadow-sm space-y-4 animate-in fade-in duration-200">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <div>
                       <h4 className="font-bold text-white text-sm md:text-base flex items-center gap-2">
-                        {(queueProgress?.isProcessing || isTrackingSms || invitesMutation.isPending) ? (
+                        {(queueProgress?.isProcessing || isTrackingSms || invitesMutation.isPending || remindersMutation.isPending) ? (
                           <>
                             <Loader2 className="animate-spin text-purple-500 w-4 h-4" />
-                            Bulk SMS Transmission Active
+                            {activeSmsJob === 'reminder' ? 'Reminder Broadcast Active' : 'Bulk SMS Transmission Active'}
                           </>
                         ) : (
                           <>
                             <CheckCircle className="text-emerald-400 w-4 h-4" />
-                            Bulk SMS Broadcast Completed
+                            {activeSmsJob === 'reminder' ? 'Reminder Broadcast Completed' : 'Bulk SMS Broadcast Completed'}
                           </>
                         )}
                       </h4>
                       <p className="text-xs text-zinc-400 mt-0.5">
-                        Crentials transmission tracking pipeline
+                        {activeSmsJob === 'reminder' ? 'Reminder transmission tracking pipeline' : 'Crentials transmission tracking pipeline'}
                       </p>
                     </div>
                     <span className="text-sm font-bold text-purple-400 bg-purple-950/40 border border-purple-900/30 px-2.5 py-1 rounded-md">
@@ -354,15 +393,15 @@ function VotersDirectory() {
        
         
         {/* ================= HEADER RIBBON CONTROLS ================= */}
-        <div className="grid grid-cols-5 gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
+        <div className="grid grid-cols-7 gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
           <div className="col-span-2">
             <h1 className="text-xl font-bold text-white tracking-tight">Voters Manager</h1>
             <p className="text-xs text-zinc-400 mt-1">
-              Manage eligibility list, trace authentication access, and send invitation codes to voters.
+              Manage voters list and send invitation codes to voters.
             </p>
           </div>
           
-          <div className="col-span-3 flex flex-col md:flex-row items-center gap-3 shrink-0">
+          <div className="col-span-5 flex flex-col md:flex-row items-center gap-3 shrink-0">
             <button
               className="flex items-center gap-2 bg-[#E3F09B] text-black text-xs font-bold hover:bg-zinc-800 hover:text-white border border-zinc-800 px-3.5 py-2 rounded-lg transition-all"
             >
@@ -373,17 +412,26 @@ function VotersDirectory() {
             {/* Send Bulk Invite */}
             <button
               onClick={handleInviteVoters}
-              className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs px-3.5 py-2 rounded-lg font-medium text-zinc-300 transition-all"
+              className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs px-3.5 py-2 rounded-lg font-medium text-zinc-300 transition-all cursor-pointer"
             >
               <Smartphone className="w-3 h-3 text-purple-400" />
               <span>Send Invites</span>
+            </button>
+
+            {/* Send Bulk Voting Reminder */}
+            <button
+              onClick={handleSendReminders}
+              className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs px-3.5 py-2 rounded-lg font-medium text-zinc-300 transition-all cursor-pointer"
+            >
+              <BellRing className="w-3 h-3 text-amber-400" />
+              <span>Send Reminders</span>
             </button>
 
 
             {/* Excel Download Action Toggle Button */}
             <button
               onClick={handleExportToExcel}
-              className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs px-3.5 py-2 rounded-lg font-medium text-zinc-300 transition-all"
+              className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs px-3.5 py-2 rounded-lg font-medium text-zinc-300 transition-all cursor-pointer"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
               <span>Export Voters</span>
@@ -392,7 +440,7 @@ function VotersDirectory() {
              {/* Excel Upload Action Toggle Button */}
              <button
               onClick={() => setIsExcelModalOpen(true)}
-              className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs px-3.5 py-2 rounded-lg font-medium text-zinc-300 transition-all"
+              className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs px-3.5 py-2 rounded-lg font-medium text-zinc-300 transition-all cursor-pointer"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
               <span>Import Voters</span>
@@ -402,7 +450,7 @@ function VotersDirectory() {
             <Link
               to="/admin/elections/$electionId/voters/new"
               params={{ electionId }}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs px-3.5 py-2 rounded-lg font-medium shadow-md transition-all"
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs px-3.5 py-2 rounded-lg font-medium shadow-md transition-all cursor-pointer"
             >
               <UserPlus className="w-4 h-4" />
               <span>Create Voter</span>

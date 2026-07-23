@@ -203,6 +203,18 @@ export function maskPhoneNumber(phone: any) {
 
 export const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Every SMS/email broadcast that links a voter to their ballot should route
+// through here so a custom aliasUrl (a domain/subdomain an admin has pointed
+// at the election) is always preferred over the default
+// /vote/election?page= path once one is set.
+export function buildElectionVoteUrl(election: { tag: string; aliasUrl?: string | null }): string {
+  if (election.aliasUrl?.trim()) {
+    const alias = election.aliasUrl.trim();
+    return /^https?:\/\//i.test(alias) ? alias : `https://${alias}`;
+  }
+  return `${process.env.BETTER_AUTH_URL}/vote/election?page=${election.tag}`;
+}
+
 export const smsQueueTracker = new Map<string, {
   total: number;
   processed: number;

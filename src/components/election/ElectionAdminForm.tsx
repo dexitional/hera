@@ -243,7 +243,32 @@ export default function ElectionAdminForm({ data, forUserId, forUserName }: any)
                                 </div>
                               </div>
                             </div>
-      
+
+                            {/* 2b. Alias URL Input Row */}
+                            <div className="px-6 py-5">
+                              <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-start">
+                                <div className="col-span-4 flex flex-col pt-1.5">
+                                  <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                                    Alias URL
+                                  </label>
+                                </div>
+                                <div className="order-1 col-span-8 w-full">
+                                  <input
+                                    type="text"
+                                    name="aliasUrl"
+                                    placeholder="e.g. vote.myorganization.com"
+                                    disabled={isSubmitting}
+                                    value={formData?.aliasUrl || ''}
+                                    onChange={handleInputChange}
+                                    className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm px-3 py-2 h-[36px] font-mono transition-all disabled:opacity-50"
+                                  />
+                                  <div className="text-zinc-500 text-xs mt-2">
+                                    Optional custom domain or subdomain pointed at this election. When set, SMS and email broadcasts link voters here instead of the default voting URL.
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
                             {/* 3. Description Field Row */}
                             <div className="px-6 py-5">
                               <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-start">
@@ -410,7 +435,31 @@ export default function ElectionAdminForm({ data, forUserId, forUserName }: any)
                               <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-start">
                                 <div className="col-span-4 flex flex-col pt-1.5">
                                   <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                                    Election Status 
+                                    Bill To
+                                  </label>
+                                </div>
+                                <div className="order-1 col-span-8 w-full">
+                                  <input
+                                    type="text"
+                                    name="billTo"
+                                    placeholder="e.g. Acme Student Union"
+                                    disabled={isSubmitting}
+                                    value={formData?.billTo || ''}
+                                    onChange={handleInputChange}
+                                    className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm px-3 py-2 h-[34px] transition-all"
+                                  />
+                                  <div className="text-zinc-500 text-xs mt-2">
+                                    Organization or customer name to print on this election's invoices and receipts.
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="px-6 py-5">
+                              <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-start">
+                                <div className="col-span-4 flex flex-col pt-1.5">
+                                  <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                                    Election Status
                                   </label>
                                 </div>
                                 <div className="order-1 col-span-8 w-full">

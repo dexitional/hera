@@ -104,16 +104,24 @@ function ElectionInvoicePage() {
           </div>
         </header>
 
-        <section className="mb-8 grid grid-cols-2 gap-6">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Billed For</p>
-            <p className="mt-1 text-sm font-bold text-zinc-900">{election.title}</p>
-            <p className="text-xs text-zinc-500">Ref: {election.tag}</p>
-            {/* <p className="text-xs text-zinc-500">Ref: {election.tag} · Election ID: {election.id}</p> */}
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Eligible Voters Billed</p>
-            <p className="mt-1 text-sm font-bold text-zinc-900">{election.billVoters ?? 0}</p>
+        <section className="mb-8">
+          {election.billTo && (
+            <div className="mb-6">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Billed To</p>
+              <p className="mt-1 text-sm font-bold text-zinc-900">{election.billTo}</p>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Billed For</p>
+              <p className="mt-1 text-sm font-bold text-zinc-900">{election.title}</p>
+              <p className="text-xs text-zinc-500">Ref: {election.tag}</p>
+              {/* <p className="text-xs text-zinc-500">Ref: {election.tag} · Election ID: {election.id}</p> */}
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Eligible Voters Billed</p>
+              <p className="mt-1 text-sm font-bold text-zinc-900">{election.billVoters ?? 0}</p>
+            </div>
           </div>
         </section>
 
