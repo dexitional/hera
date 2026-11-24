@@ -54,7 +54,7 @@ function RouteComponent() {
         <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-16">
           <div className="text-left" style={{ opacity: 1, transform: "none" }}>
             <h1
-              className="text-4xl md:text-6xl font-extrabold tracking-tight text-white mb-4 leading-tight"
+              className="text-4xl max-sm:text-3xl! md:text-6xl font-extrabold tracking-tight text-white mb-4 leading-tight"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
               Award Store
