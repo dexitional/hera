@@ -204,7 +204,13 @@ export const voters = pgTable('voters', {
   phoneNumber: text('phone_number').notNull(),
   email: text('email').notNull(),
   voteIp: text('vote_ip'),
-  inviteToken: varchar('invite_token', { length: 64 }).notNull().unique(),
+  // Legacy plaintext token. NULL once a row is converted to token_hash +
+  // token_enc (src/server/voter-token.ts, src/scripts/encrypt-voter-tokens.ts).
+  inviteToken: varchar('invite_token', { length: 64 }).unique(),
+  // HMAC-SHA256 of the token: login lookups + global uniqueness.
+  tokenHash: text('token_hash').unique(),
+  // AES-256-GCM encrypted token, for admin display / invite SMS / USSD.
+  tokenEnc: text('token_enc'),
   isVerified: boolean('is_verified').default(false).notNull(),
   hasVoted: boolean('has_voted').default(false).notNull(),
   invitedAt: timestamp('invited_at').defaultNow().notNull(),

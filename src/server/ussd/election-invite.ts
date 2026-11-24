@@ -3,6 +3,7 @@ import { db } from '../../db';
 import { elections, voters } from '../../db/schema';
 import { addCountryCode, addZeroPrefix, stripCountryCode } from '../../lib/utils';
 import type { ElectionInviteState } from './session-store';
+import { revealToken } from '../voter-token';
 
 export type UssdStepResult = {
   message: string;
@@ -87,7 +88,7 @@ export async function handleElectionInviteStep(params: {
   }
 
   return {
-    message: `Your invite code for ${activePaid.election.title} is: ${activePaid.voter.inviteToken}`,
+    message: `Your invite code for ${activePaid.election.title} is: ${revealToken(activePaid.voter)}`,
     continueSession: false,
   };
 }

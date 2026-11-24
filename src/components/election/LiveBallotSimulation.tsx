@@ -58,9 +58,9 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
 
       const response = await castBallotServerFn({
          data: {
-          voterId: voter?.id,
+          // Voter identity is carried by the httpOnly ballot session cookie
+          // set at login; no voterId/token is sent from the browser.
           electionId: voter?.electionId,
-          inviteToken: voter?.inviteToken,
           selections: formattedSelections
         }
       } as any);

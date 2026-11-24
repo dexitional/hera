@@ -1,4 +1,7 @@
+import { createHmac } from 'node:crypto';
 import Redis from 'ioredis';
+import { deleteCookie, getCookie, setCookie } from '@tanstack/react-start/server';
+import { ballotSessionKey, safeEqual } from './voter-token';
 
 // Voter-login helpers: brute-force lockout + the trimmed payload returned to
 // the browser after a successful login.
@@ -120,8 +123,9 @@ export function getClientIp(request: Request | undefined | null): string {
  * only the fields it uses -- the raw joined rows previously sent everything
  * (including other election config) to the client.
  *
- * inviteToken is still included because castBallotServerFn re-verifies it; at
- * this point the voter has proven they know it (password, OTP, or Google).
+ * The voter's token is NOT included: the right to cast a ballot is carried by
+ * the httpOnly ballot session cookie (issueBallotSession below), so the
+ * password/OTP no longer has to sit in the browser's localStorage.
  */
 export function toVoterLoginPayload(row: { voters: any; elections: any }) {
   const v = row.voters;
@@ -135,7 +139,6 @@ export function toVoterLoginPayload(row: { voters: any; elections: any }) {
       email: v.email,
       electionId: v.electionId,
       hasVoted: v.hasVoted,
-      inviteToken: v.inviteToken,
     },
     elections: {
       id: e.id,
@@ -147,4 +150,55 @@ export function toVoterLoginPayload(row: { voters: any; elections: any }) {
       imageUrl: e.imageUrl,
     },
   };
+}
+
+// ------------------------------------------------------------------
+// Ballot session
+// ------------------------------------------------------------------
+//
+// Issued after a successful voter login (credential, OTP or Google) and
+// required by castBallotServerFn, which takes the voter's identity from it
+// instead of trusting a voterId + token sent by the browser.
+//
+// Format: base64url(JSON {v: voterId, e: electionId, x: expiryMs}) + "." +
+// base64url(HMAC-SHA256). httpOnly (unreadable by page scripts), SameSite
+// Strict (never sent on cross-site requests), 60-minute lifetime.
+
+const BALLOT_COOKIE = 'hv_ballot';
+const BALLOT_SESSION_SECONDS = 60 * 60;
+
+function signBallotPayload(payload: string): string {
+  return createHmac('sha256', ballotSessionKey()).update(payload).digest('base64url');
+}
+
+export function issueBallotSession(voterId: string, electionId: string): void {
+  const payload = Buffer.from(
+    JSON.stringify({ v: voterId, e: electionId, x: Date.now() + BALLOT_SESSION_SECONDS * 1000 }),
+  ).toString('base64url');
+  setCookie(BALLOT_COOKIE, `${payload}.${signBallotPayload(payload)}`, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+    maxAge: BALLOT_SESSION_SECONDS,
+  });
+}
+
+/** The authenticated voter for this request, or null if missing/invalid/expired. */
+export function readBallotSession(): { voterId: string; electionId: string } | null {
+  const raw = getCookie(BALLOT_COOKIE);
+  if (!raw) return null;
+  const [payload, signature] = raw.split('.');
+  if (!payload || !signature || !safeEqual(signature, signBallotPayload(payload))) return null;
+  try {
+    const { v, e, x } = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (typeof v !== 'string' || typeof e !== 'string' || typeof x !== 'number' || Date.now() > x) return null;
+    return { voterId: v, electionId: e };
+  } catch {
+    return null;
+  }
+}
+
+export function clearBallotSession(): void {
+  deleteCookie(BALLOT_COOKIE, { path: '/' });
 }
