@@ -1,5 +1,5 @@
 import { authMiddleware } from '#/middleware/authMiddleware';
-import { addCountryCode, buildElectionVoteUrl, chunkArray, fetchWithRetry, maskPhoneNumber, prepareVotersForBulkImport, stripCountryCode, wait } from '#/lib/utils';
+import { addCountryCode, buildElectionVoteUrl, chunkArray, maskPhoneNumber, prepareVotersForBulkImport, stripCountryCode } from '#/lib/utils';
 import { createServerFn } from '@tanstack/react-start';
 import { and, asc, desc, eq, inArray, or, sql, ilike, count } from 'drizzle-orm';
 import { db } from '../db';
@@ -15,7 +15,9 @@ import { runVoteReceiptWorkflow } from './vote-receipt-workflow';
 import { assertCandidateAccess, assertElectionAccess, assertPositionAccess, assertVoterAccess } from './access-control';
 import { clearBallotSession, clearLoginFailures, getClientIp, isLoginLockedOut, issueBallotSession, LOCKED_OUT_MESSAGE, readBallotSession, recordLoginFailure, toVoterLoginPayload } from './voter-auth';
 import { requireToken, revealToken, tokenColumns, tokenMatches, toAdminVoter } from './voter-token';
-import { getReminderProgress, isReminderJobRunning, runVoterReminderWorkflow } from './vote-reminder-workflow';
+import { getBroadcastProgress, startBroadcast } from './jobs/sms-broadcast';
+import { getAbstentionCountsByPosition } from './election-tallies';
+import { withCache } from './cache';
 
 
 // ELECTIONS FUNCTIONS
@@ -524,6 +526,9 @@ export const getUnifiedElectionTelemetry = createServerFn({
  .middleware([arcjetMiddleware,authMiddleware])
  .handler(async ({ context, data: electionId }: any): Promise<any> => {
   await assertElectionAccess(context?.user, electionId);
+  // Live dashboards poll this every 15-30s per open tab; share one
+  // computation across viewers and PM2 processes for a few seconds.
+  return withCache(`telemetry:${electionId}`, 5, async () => {
 
   // Concurrently fetch telemetry data from your database layers
   const [
@@ -590,6 +595,7 @@ export const getUnifiedElectionTelemetry = createServerFn({
     return `${Math.floor(diffMins / 60)}h ago`;
   };
 
+  const abstentionsByPosition = await getAbstentionCountsByPosition(electionId);
   const formattedTallies: any[] = await Promise.all(
     rawPositions.map(async (pos) => {
       const positionCandidates = rawCandidateTallies
@@ -603,10 +609,7 @@ export const getUnifiedElectionTelemetry = createServerFn({
           votes: cand.voteCount,
         }));
 
-      const [abstentionTally] = await db
-        .select({ count: sql<number>`count(${electionVotes.id})::int` })
-        .from(electionVotes)
-        .where(and(eq(electionVotes.positionId, pos.id), sql`${electionVotes.candidateId} IS NULL`));
+      const abstentionTally = { count: abstentionsByPosition.get(pos.id) ?? 0 };
 
       positionCandidates.push({
         id: null,
@@ -642,6 +645,7 @@ export const getUnifiedElectionTelemetry = createServerFn({
       timestamp: formatElapsedTime(log.createdAt),
     })),
   };
+  });
 });
 
 export const getUnifiedElectionAdminStats = createServerFn({
@@ -649,6 +653,10 @@ export const getUnifiedElectionAdminStats = createServerFn({
 })
  .middleware([arcjetMiddleware, authMiddleware])
  .handler(async ({ context, data: electionId }: any): Promise<any> => {
+  await assertElectionAccess(context?.user, electionId);
+  // Live dashboards poll this every 15-30s per open tab; share one
+  // computation across viewers and PM2 processes for a few seconds.
+  return withCache(`admin-stats:${electionId}`, 5, async () => {
   const admin: any = context?.user;
 
   // Concurrently fetch telemetry data from your database layers
@@ -716,6 +724,7 @@ export const getUnifiedElectionAdminStats = createServerFn({
     return `${Math.floor(diffMins / 60)}h ago`;
   };
 
+  const abstentionsByPosition = await getAbstentionCountsByPosition(electionId);
   const formattedTallies: any[] = await Promise.all(
     rawPositions.map(async (pos) => {
       const positionCandidates = rawCandidateTallies
@@ -729,10 +738,7 @@ export const getUnifiedElectionAdminStats = createServerFn({
           votes: cand.voteCount,
         }));
 
-      const [abstentionTally] = await db
-        .select({ count: sql<number>`count(${electionVotes.id})::int` })
-        .from(electionVotes)
-        .where(and(eq(electionVotes.positionId, pos.id), sql`${electionVotes.candidateId} IS NULL`));
+      const abstentionTally = { count: abstentionsByPosition.get(pos.id) ?? 0 };
 
       positionCandidates.push({
         id: null,
@@ -768,6 +774,7 @@ export const getUnifiedElectionAdminStats = createServerFn({
       timestamp: formatElapsedTime(log.createdAt),
     })),
   };
+  });
 });
 
 
@@ -851,15 +858,13 @@ export const exportElectionResultsToExcelFn = createServerFn({ method: 'GET' })
       const talliesRows: any[] = [];
 
       // Iterate over your structure synchronously to match abstentions accurately
+      const abstentionsByPosition = await getAbstentionCountsByPosition(electionId);
       for (const pos of rawPositions) {
         // Find position candidates
         const positionCandidates = rawCandidateTallies.filter((cand) => cand.positionId === pos.id);
 
         // Fetch blank ballot tallies for the current positional layout chunk
-        const [abstentionTally] = await db
-          .select({ count: sql<number>`count(${electionVotes.id})::int` })
-          .from(electionVotes)
-          .where(and(eq(electionVotes.positionId, pos.id), sql`${electionVotes.candidateId} IS NULL`));
+        const abstentionTally = { count: abstentionsByPosition.get(pos.id) ?? 0 };
 
         const abstentionCount = abstentionTally?.count || 0;
         const totalVotesForPos = positionCandidates.reduce((sum, c) => sum + c.voteCount, 0) + abstentionCount;
@@ -1084,12 +1089,10 @@ export const exportElectionResultsToFormatExcelFn = createServerFn({ method: 'GE
       const talliesHeaders = ['Target Position', 'Candidate Name', 'Votes Counted', 'Percentage Share'];
       const talliesRows: any[] = [];
 
+      const abstentionsByPosition = await getAbstentionCountsByPosition(electionId);
       for (const pos of rawPositions) {
         const positionCandidates = rawCandidateTallies.filter((cand) => cand.positionId === pos.id);
-        const [abstentionTally] = await db
-          .select({ count: sql<number>`count(${electionVotes.id})::int` })
-          .from(electionVotes)
-          .where(and(eq(electionVotes.positionId, pos.id), sql`${electionVotes.candidateId} IS NULL`));
+        const abstentionTally = { count: abstentionsByPosition.get(pos.id) ?? 0 };
 
         const abstentionCount = abstentionTally?.count || 0;
         const totalVotesForPos = positionCandidates.reduce((sum, c) => sum + c.voteCount, 0) + abstentionCount;
@@ -1242,6 +1245,7 @@ export const getElectionFinalResultsFn = createServerFn({ method: 'GET' })
     const absentees = Math.max(registeredVoters - votedCount, 0);
     const turnoutPercentage = registeredVoters > 0 ? (votedCount / registeredVoters) * 100 : 0;
 
+    const abstentionsByPosition = await getAbstentionCountsByPosition(electionId);
     const positionResults = await Promise.all(
       rawPositions.map(async (pos, posIdx) => {
         const positionCandidates = rawCandidateTallies
@@ -1255,10 +1259,7 @@ export const getElectionFinalResultsFn = createServerFn({ method: 'GET' })
             votes: cand.voteCount,
           }));
 
-        const [abstentionTally] = await db
-          .select({ count: sql<number>`count(${electionVotes.id})::int` })
-          .from(electionVotes)
-          .where(and(eq(electionVotes.positionId, pos.id), sql`${electionVotes.candidateId} IS NULL`));
+        const abstentionTally = { count: abstentionsByPosition.get(pos.id) ?? 0 };
 
         const abstentions = abstentionTally?.count ?? 0;
         const totalVotesForPosition = positionCandidates.reduce((sum, c) => sum + c.votes, 0) + abstentions;
@@ -2449,132 +2450,31 @@ export const inviteVoters1Fn = createServerFn({ method: 'POST' }).middleware([ar
 );
 
 
-// Helper Function for Background SMS Queue Processing
-const smsQueueTracker = new Map<string, {
-  total: number;
-  processed: number;
-  successful: number;
-  failed: number;
-  isProcessing: boolean;
-}>();
-
-
-async function processSmsQueueInBackground(rec: any[], electionId: string) {
-  const batches = chunkArray(rec, 25); // Smooth 5-record chunks
-  const electionUrl = buildElectionVoteUrl({ tag: rec[0]?.elections?.tag || '', aliasUrl: rec[0]?.elections?.aliasUrl });
-
-  smsQueueTracker.set(electionId, {
-    total: rec.length,
-    processed: 0,
-    successful: 0,
-    failed: 0,
-    isProcessing: true,
-  });
-
-  for (const batch of batches) {
-    await Promise.all(
-      batch.map(async (r: any) => {
-        const stats = smsQueueTracker.get(electionId)!;
-        const phone = addCountryCode(r?.voters?.phoneNumber);
-        const inviteToken = revealToken(r?.voters);
-        const fname = r?.voters?.name?.split(" ")[0];
-        const username = r?.voters?.username;
-
-        if (!phone?.length || phone?.length < 9) {
-          stats.processed += 1;
-          stats.failed += 1;
-          smsQueueTracker.set(electionId, { ...stats });
-          return;
-        }
-
-        // Mirrors inviteVoterFn's branching -- OTP-mode elections don't have a
-        // username/password pair to hand out, just the code itself.
-        const usernameLabel = r?.elections?.placeholder?.username || 'Username';
-        const passwordLabel = r?.elections?.placeholder?.password || 'Password';
-        const message = ['otp', 'aotp'].includes(r?.elections?.authMode?.toLowerCase())
-          ? `Hello ${fname}, Your Verification OTP is ${inviteToken}. Visit ${electionUrl} to vote!`
-          : `Hello ${fname}, Please vote with ${usernameLabel}: ${username}, ${passwordLabel}: ${inviteToken}. Visit ${electionUrl} to vote!`;
-
-        const smsPayload = {
-          sender: process.env.SMS_SENDER_ID,
-          message,
-          recipients: [phone],
-        };
-
-        try {
-          const sms = await fetchWithRetry(`${process.env.SMS_API_URL}/sms/send`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'api-key': process.env.SMS_API_KEY!
-            },
-            body: JSON.stringify(smsPayload)
-          });
-
-          if (!sms.ok) throw new Error(`HTTP Gateway State Error ${sms.status}`);
-
-          const resp = await sms.json();
-          
-          if (resp && (resp.status === "success" || resp.code === "1000")) {
-            await db.update(voters)
-              .set({ isVerified: true })
-              .where(
-                and(
-                  eq<any>(voters.electionId, electionId),
-                  eq<any>(voters.phoneNumber, r?.voters?.phoneNumber)
-                )
-              );
-            stats.successful += 1;
-          } else {
-            stats.failed += 1;
-          }
-        } catch (err) {
-          stats.failed += 1;
-          console.error(`Permanent transmission failure to ${phone}:`, err);
-        } finally {
-          stats.processed += 1;
-          smsQueueTracker.set(electionId, { ...stats });
-        }
-      })
-    );
-    await wait(1000); // 1s carrier pacing step delay
-  }
-
-  const finalStats = smsQueueTracker.get(electionId);
-  if (finalStats) {
-    smsQueueTracker.set(electionId, { ...finalStats, isProcessing: false });
-  }
-}
-
 // Fixed Server Function
 export const inviteVotersFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data: electionId }: any) => {
     await assertElectionAccess(context?.user, electionId);
     try {
-      const currentJob = smsQueueTracker.get(electionId);
-      console.log("Current Job: ", currentJob);
-      if (currentJob?.isProcessing) {
-        return { success: false, message: "A broadcast is already running for this election." };
-      }
-
-      const rec = await db.select()
+      const rec = await db.select({ id: voters.id })
         .from(voters)
-        .innerJoin(elections, eq<any>(voters.electionId, elections.id))
         .where(
           and(
-            eq<any>(elections.id, electionId),
+            eq<any>(voters.electionId, electionId),
             eq<any>(voters.hasVoted, false),
-            //eq<any>(voters.isVerified, false)
           )
         );
-        console.log("Rec: ", rec);
 
       if (!rec.length) {
         return { success: true, message: "No pending unverified voters to invite." };
       }
-     
-      processSmsQueueInBackground(rec, electionId);
+
+      // Durable BullMQ queue shared by all server processes (see
+      // jobs/sms-broadcast.ts); at most one invite broadcast per election.
+      const started = await startBroadcast('invite', electionId, rec.map((r) => r.id));
+      if (!started.started) {
+        return { success: false, message: "A broadcast is already running for this election." };
+      }
 
       return {
         success: true,
@@ -2591,23 +2491,19 @@ export const inviteVotersFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data: electionId }: any) => {
     await assertElectionAccess(context?.user, electionId);
-    return smsQueueTracker.get(electionId) || { isProcessing: false, total: 0, processed: 0, successful: 0, failed: 0 };
+    return getBroadcastProgress('invite', electionId);
  });
 
 
   // Sends a credentials-free "don't forget to vote" nudge to every voter who
   // hasn't cast a ballot yet. Validation + the pending-voter fetch happen here
   // (so a bad request fails fast instead of silently in the background); the
-  // actual batched sending is delegated to runVoterReminderWorkflow.
+  // actual sending is queued on the BullMQ broadcast queue (jobs/sms-broadcast.ts).
   export const sendVoterRemindersFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data: electionId }: any) => {
     await assertElectionAccess(context?.user, electionId);
     try {
-      if (isReminderJobRunning(electionId)) {
-        return { success: false, message: "A reminder broadcast is already running for this election." };
-      }
-
       const [election] = await db.select().from(elections).where(eq<any>(elections.id, electionId));
       if (!election) {
         return { success: false, message: "Election not found." };
@@ -2619,7 +2515,7 @@ export const inviteVotersFn = createServerFn({ method: 'POST' })
         return { success: false, message: "Election has no end time set." };
       }
 
-      const pendingVoters = await db.select()
+      const pendingVoters = await db.select({ id: voters.id })
         .from(voters)
         .where(
           and(
@@ -2632,13 +2528,10 @@ export const inviteVotersFn = createServerFn({ method: 'POST' })
         return { success: true, message: "No pending voters left to remind." };
       }
 
-      runVoterReminderWorkflow(
-        pendingVoters,
-        { title: election.title, tag: election.tag, endAt: election.endAt, aliasUrl: election.aliasUrl },
-        electionId,
-      ).catch((err) => {
-        console.error('[VOTER REMINDER WORKFLOW] dispatch failed:', err);
-      });
+      const started = await startBroadcast('reminder', electionId, pendingVoters.map((v) => v.id));
+      if (!started.started) {
+        return { success: false, message: "A reminder broadcast is already running for this election." };
+      }
 
       return {
         success: true,
@@ -2655,7 +2548,7 @@ export const inviteVotersFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data: electionId }: any) => {
     await assertElectionAccess(context?.user, electionId);
-    return getReminderProgress(electionId);
+    return getBroadcastProgress('reminder', electionId);
  });
 
 

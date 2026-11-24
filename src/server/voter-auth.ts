@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import Redis from 'ioredis';
+import { fastRedis } from './redis-fast';
 import { deleteCookie, getCookie, setCookie } from '@tanstack/react-start/server';
 import { ballotSessionKey, safeEqual } from './voter-token';
 
@@ -29,21 +29,8 @@ const MAX_FAILURES_PER_IP = 5;
 const MAX_FAILURES_PER_IDENTITY = 20;
 const LOCKOUT_SECONDS = 15 * 60;
 
-// enableOfflineQueue: false -> commands fail immediately while disconnected
-// instead of queueing and hanging the login request.
-const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
-  enableOfflineQueue: false,
-  maxRetriesPerRequest: 1,
-});
-
-let lastRedisErrorLog = 0;
-redis.on('error', (err) => {
-  const now = Date.now();
-  if (now - lastRedisErrorLog > 60_000) {
-    lastRedisErrorLog = now;
-    console.error('[VOTER AUTH] Redis unavailable, login lockout disabled:', err?.message);
-  }
-});
+// Shared fail-fast client (see redis-fast.ts).
+const redis = fastRedis;
 
 function normalizeIdentity(value: unknown): string {
   return String(value ?? '').toLowerCase().replace(/\s+/g, '');

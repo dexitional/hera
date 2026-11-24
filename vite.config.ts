@@ -61,6 +61,8 @@ export default defineConfig({
       routeRules: {
         '/**': { headers: securityHeaders },
       },
+      // Starts the BullMQ SMS broadcast worker in every server process.
+      plugins: ['./src/server/plugins/jobs.ts'],
     }),
     tanstackStart(),
     tailwindcss(),
