@@ -91,7 +91,11 @@ export const auth = betterAuth({
   },
   advanced: {
     cookieOptions: {
-      sameSite: "none",
+      // "lax" (was "none"): admin pages and the API share one site (including
+      // *.heravote.com subdomains, which count as same-site), and the Google
+      // OAuth callback is a top-level GET navigation that lax still allows.
+      // "none" let any third-party site send credentialed requests (CSRF).
+      sameSite: "lax",
       secure: true,
     },
     crossSubDomainCookies: {
