@@ -10,6 +10,7 @@ import XLSX from 'xlsx-js-style';
 import { arcjetMiddleware, arcjetVoterLookupMiddleware } from '#/middleware/arcjetMiddleware';
 import { getRequest } from '@tanstack/react-start/server';
 import { generateBallotReceiptSignature } from './ballot-signature';
+import { validateBallotSelections } from './ballot-validation';
 import { runVoteReceiptWorkflow } from './vote-receipt-workflow';
 import { assertCandidateAccess, assertElectionAccess, assertPositionAccess, assertVoterAccess } from './access-control';
 import { clearLoginFailures, getClientIp, isLoginLockedOut, LOCKED_OUT_MESSAGE, recordLoginFailure, toVoterLoginPayload } from './voter-auth';
@@ -2817,11 +2818,13 @@ export const castBallotServerFn = createServerFn({
   .middleware([arcjetMiddleware])
   .handler(async ({ data }: any) => {
     const { voterId, electionId, selections, inviteToken } = data;
-    const request = getRequest();
-    const ip = request?.headers.get('x-forwarded-for')?.split(',')[0] || request?.headers.get('x-real-ip') || '127.0.0.1';
+    // cf-connecting-ip first: the leading X-Forwarded-For entry is set by the
+    // visitor and was previously trusted as-is.
+    const ip = getClientIp(getRequest());
     // Hoisted so the post-commit receipt workflow stamps the exact same
     // moment as the ballot's own receiptSignature, not a second later.
     const castAt = new Date().toISOString();
+    const validSelections: { positionId: string; candidateId: string | null }[] = [];
 
     try {
       // Execute the entire ballot block inside an atomic SQL transaction isolation container
@@ -2855,8 +2858,45 @@ export const castBallotServerFn = createServerFn({
           throw new Error("Security Alert: This voter credential index has already cast a ballot.");
         }
 
-        // 4. Batch insert the ballot selections, each stamped with a real server-generated signature
-        const ballotPayloads = selections.map((vote: any) => ({
+        // 4. The election must be open. Previously only the browser checked
+        // this, so a ballot could be cast before the start or after the end.
+        // (isActive is deliberately not enforced here -- voter login has never
+        // required it and it defaults to false.)
+        const [electionState] = await tx
+          .select({ status: elections.status, startAt: elections.startAt, endAt: elections.endAt })
+          .from(elections)
+          .where(eq<any>(elections.id, electionId));
+
+        const nowMs = Date.now();
+        if (
+          !electionState ||
+          electionState.status !== 'started' ||
+          (electionState.startAt && nowMs < electionState.startAt.getTime()) ||
+          (electionState.endAt && nowMs > electionState.endAt.getTime())
+        ) {
+          throw new Error("This election is not open for voting.");
+        }
+
+        // 5. Validate every selection against this election's real ballot.
+        // Previously the selections array was inserted verbatim, so one voter
+        // could submit hundreds of votes for one candidate, or vote for
+        // candidates belonging to another election.
+        const [ballotPositions, ballotCandidates] = await Promise.all([
+          tx
+            .select({ id: positions.id, slots: positions.slots })
+            .from(positions)
+            .where(eq<any>(positions.electionId, electionId)),
+          tx
+            .select({ id: candidates.id, positionId: candidates.positionId })
+            .from(candidates)
+            .innerJoin(positions, eq(candidates.positionId, positions.id))
+            .where(and(eq<any>(positions.electionId, electionId), eq<any>(candidates.isActive, true))),
+        ]);
+
+        validSelections.push(...validateBallotSelections(selections, ballotPositions, ballotCandidates));
+
+        // 6. Batch insert the ballot selections, each stamped with a real server-generated signature
+        const ballotPayloads = validSelections.map((vote: any) => ({
           electionId: electionId,
           positionId: vote.positionId,
           candidateId: vote.candidateId, // If null, writes gracefully to Postgres to log an intentional Abstention
@@ -2870,7 +2910,7 @@ export const castBallotServerFn = createServerFn({
 
         await tx.insert(electionVotes).values(ballotPayloads);
 
-        // 4. Close and lock the voting gate immediately
+        // 7. Close and lock the voting gate immediately
         await tx
           .update(voters)
           .set({ hasVoted: true, voteIp: ip })
@@ -2889,7 +2929,7 @@ export const castBallotServerFn = createServerFn({
         // could silently drop the in-flight send. Awaiting closes that
         // window at the cost of the response waiting on one extra network
         // call to the mail provider.
-        await runVoteReceiptWorkflow({ voterId, electionId, selections, ip, castAt });
+        await runVoteReceiptWorkflow({ voterId, electionId, selections: validSelections, ip, castAt });
       }
 
       return result;

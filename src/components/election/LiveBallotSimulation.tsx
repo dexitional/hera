@@ -68,6 +68,10 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
       if (response.success) {
         setBallotSuccess(true);
         setTimeout(() => { navigate({ to: `/elections`}) },3000)
+      } else {
+        // Server rejections (election closed, already voted, invalid ballot)
+        // were previously swallowed silently.
+        throw new Error((response as any)?.message || "Your ballot could not be submitted.");
       }
     } catch (err) {
       console.error("Ballot submission failed:", err);
