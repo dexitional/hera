@@ -7,7 +7,7 @@ import { candidates, elections, electionVotes, positions, voters, user } from '.
 import { processImageUpload } from './image-upload';
 // import * as XLSX from 'xlsx';
 import XLSX from 'xlsx-js-style';
-import { arcjetMiddleware, arcjetVoterLookupMiddleware } from '#/middleware/arcjetMiddleware';
+import { arcjetMiddleware, arcjetVoterLookupMiddleware, arcjetVoterMiddleware } from '#/middleware/arcjetMiddleware';
 import { getRequest } from '@tanstack/react-start/server';
 import { generateBallotReceiptSignature } from './ballot-signature';
 import { validateBallotSelections } from './ballot-validation';
@@ -38,7 +38,7 @@ export const getElectionFn = createServerFn({ method: 'GET' }).middleware([arcje
   }
 );
 
-export const getElectionDataFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
+export const getElectionDataFn = createServerFn({ method: 'GET' }).middleware([arcjetVoterMiddleware]).handler(
   async ({ data: electionId }: any) => {
 
     try {
@@ -1742,7 +1742,7 @@ export const getVoterFn = createServerFn({ method: 'GET' })
       .then((rows) => rows.map((r) => r.voters));
   });
 
-export const getElectionByTagFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
+export const getElectionByTagFn = createServerFn({ method: 'GET' }).middleware([arcjetVoterMiddleware]).handler(
   async ({ data: tag }: any) => {
     // Public endpoint (voter-facing pages) -- return only display/login fields.
     // Never expose publicToken, adminId or billing columns to anonymous callers.
@@ -1792,7 +1792,7 @@ export const searchVotersFn = createServerFn({ method: 'GET' }).middleware([arcj
 
 // Public aggregate counts only (registered voters + ballots cast) -- same
 // "cheap counts, no PII" shape as getHomepageStatsFn, scoped to one election.
-export const getElectionRegistrationStatsFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
+export const getElectionRegistrationStatsFn = createServerFn({ method: 'GET' }).middleware([arcjetVoterMiddleware]).handler(
   async ({ data: electionTag }: any) => {
     const [electionRecord] = await db.select({ id: elections.id }).from(elections).where(eq<any>(elections.tag, electionTag));
     if (!electionRecord) {
@@ -1915,7 +1915,7 @@ export const updateVoterFn = createServerFn({ method: 'POST' })
   // In OTP mode this step only (re)sends the code. It NEVER returns the OTP or
   // the voter record; those come back from verifyVoterOtpFn once the code has
   // been checked server-side.
-  export const verifyVoterFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
+  export const verifyVoterFn = createServerFn({ method: 'POST' }).middleware([arcjetVoterMiddleware]).handler(
     async ({ data }: any) => {
       const fail = (message?: string) => ({ success: false, data: null, ...(message ? { message } : {}) });
 
@@ -2046,7 +2046,7 @@ export const updateVoterFn = createServerFn({ method: 'POST' })
 
   // Voter login, step 2 (OTP elections only): checks the code server-side and
   // only then returns the voter record needed to cast a ballot.
-  export const verifyVoterOtpFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
+  export const verifyVoterOtpFn = createServerFn({ method: 'POST' }).middleware([arcjetVoterMiddleware]).handler(
     async ({ data }: any) => {
       const fail = (message?: string) => ({ success: false, data: null, ...(message ? { message } : {}) });
 
@@ -2097,7 +2097,7 @@ export const updateVoterFn = createServerFn({ method: 'POST' })
 
 
 export const fetchGoogleProfileFromServer = createServerFn({ method: 'POST' })
-  .middleware([arcjetMiddleware])
+  .middleware([arcjetVoterMiddleware])
   .handler(async ({ data }: any) => {
     try {
       const electionId = typeof data?.electionId === 'string' ? data.electionId : '';
@@ -2815,7 +2815,7 @@ export const deleteVoterFn = createServerFn({ method: 'POST' })
 export const castBallotServerFn = createServerFn({
   method: "POST",
 })
-  .middleware([arcjetMiddleware])
+  .middleware([arcjetVoterMiddleware])
   .handler(async ({ data }: any) => {
     const { voterId, electionId, selections, inviteToken } = data;
     // cf-connecting-ip first: the leading X-Forwarded-For entry is set by the

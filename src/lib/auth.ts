@@ -12,6 +12,17 @@ export const auth = betterAuth({
     provider: "pg",
   }),
   trustedOrigins,
+  session: {
+    // Every authMiddleware call (nearly every admin server function, plus the
+    // 15-30s dashboard polling) used to hit the session table. With the cookie
+    // cache, better-auth verifies a short-lived signed session cookie instead
+    // and only re-reads the DB once it expires. Trade-off: a ban, role change
+    // or session revocation can take up to maxAge to take effect.
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,
+    },
+  },
   user: {
     fields: {
       role: "role",

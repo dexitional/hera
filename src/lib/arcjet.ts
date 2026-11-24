@@ -42,6 +42,37 @@ export const aj = arcjet({
   ],
 } as any);
 
+// Separate client (NOT aj.withRule -- withRule only ADDS rules, so the 60/min
+// bucket would still apply) for the anonymous voter flow: election page,
+// login, OTP, ballot fetch and cast. Same shield + bot checks, but a much
+// larger per-IP allowance. Voters commonly sit behind one shared public IP
+// (campus / office Wi-Fi, mobile carrier NAT), and the shared 60/min bucket
+// would start rejecting real voters mid-election once a few dozen people on
+// the same network logged in at once. Per-voter brute-force protection is
+// handled separately by the login lockout in src/server/voter-auth.ts, so
+// this bucket only needs to stop floods. Tune with VOTER_RATE_LIMIT_PER_MIN.
+const voterRatePerMin = Number(process.env.VOTER_RATE_LIMIT_PER_MIN) || 600;
+
+export const ajVoter = arcjet({
+  key: process.env.ARCJET_KEY,
+  characteristics: ["ip.src"],
+  proxies: [cloudflare()],
+  rules: [
+    shield({ mode }),
+    detectBot({
+        mode,
+        block: ["AUTOMATED"],
+        allow: ["CATEGORY:SEARCH_ENGINE", "CATEGORY:PREVIEW"]
+    } as any),
+    tokenBucket({
+      mode,
+      refillRate: voterRatePerMin,
+      interval: 60,
+      capacity: voterRatePerMin,
+    }),
+  ],
+} as any);
+
 // Stricter bucket layered on top of the base client (shield + bot detection +
 // the shared 60/min bucket still apply) for public, unauthenticated,
 // PII-returning endpoints -- currently searchVotersFn, which hands back voter

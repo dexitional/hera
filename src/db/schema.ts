@@ -33,7 +33,9 @@ export const session = pgTable('session', {
   userAgent: text('user_agent'),
   impersonatedBy: text('impersonated_by'),
   userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
-});
+}, (t) => ({
+  userIdx: index('session_user_id_idx').on(t.userId),
+}));
 
 export const account = pgTable('account', {
   id: text('id').primaryKey(),
@@ -49,7 +51,9 @@ export const account = pgTable('account', {
   password: text('password'),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
-});
+}, (t) => ({
+  userIdx: index('account_user_id_idx').on(t.userId),
+}));
 
 export const verification = pgTable('verification', {
   id: text('id').primaryKey(),
@@ -76,7 +80,9 @@ export const events = pgTable('events', {
   isActive: boolean('is_active').default(false).notNull(),
   adminId: text('admin_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  adminIdx: index('events_admin_id_idx').on(t.adminId),
+}));
 
 export const categories = pgTable('categories', {
   id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
@@ -98,7 +104,9 @@ export const contestants = pgTable('contestants', {
   imageUrl: text('image_url'),
   code: text('code').notNull().unique(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  categoryIdx: index('contestants_category_id_idx').on(t.categoryId),
+}));
 
 export const eventTransactions = pgTable('event_transactions', {
   id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
@@ -158,7 +166,11 @@ export const elections = pgTable('elections', {
   placeholder: jsonb('placeholder').$type<{ username: string; password: string }>()
     .default({ username: 'Username', password: 'Password' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  // Every voter-facing page resolves the election by tag.
+  tagIdx: index('elections_tag_idx').on(t.tag),
+  adminIdx: index('elections_admin_id_idx').on(t.adminId),
+}));
 
 export const positions = pgTable('positions', {
   id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
@@ -167,7 +179,9 @@ export const positions = pgTable('positions', {
   order: integer('order'),
   slots: integer('slots').default(1).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  electionIdx: index('positions_election_id_idx').on(t.electionId),
+}));
 
 export const candidates = pgTable('candidates', {
   id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
@@ -178,7 +192,9 @@ export const candidates = pgTable('candidates', {
   imageUrl: text('image_url'),
   isActive: boolean('is_active').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  positionIdx: index('candidates_position_id_idx').on(t.positionId),
+}));
 
 export const voters = pgTable('voters', {
   id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
@@ -195,6 +211,11 @@ export const voters = pgTable('voters', {
 }, (t) => ({
   electionEmailUniq: unique().on(t.electionId, t.email),
   electionUsernameUniq: unique().on(t.electionId, t.username),
+  // Matches verifyVoterFn's credential lookup, LOWER(REPLACE(username, ' ', '')),
+  // which can't use the plain (election_id, username) unique index.
+  loginIdx: index('voters_election_login_idx').on(t.electionId, sql`lower(replace(${t.username}, ' ', ''))`),
+  // Turnout counts (hasVoted = true) and VOTED/PENDING filters.
+  votedIdx: index('voters_election_has_voted_idx').on(t.electionId, t.hasVoted),
 }));
 
 export const electionVotes = pgTable('election_votes', {
@@ -205,7 +226,13 @@ export const electionVotes = pgTable('election_votes', {
   receiptSignature: text('receipt_signature').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => ({
-  electionVotesPerfIdx: index('election_votes_lookup_idx').on(t.electionId, t.positionId)
+  electionVotesPerfIdx: index('election_votes_lookup_idx').on(t.electionId, t.positionId),
+  // Tally join (candidate_id = c.id AND position_id = c.position_id).
+  candidateIdx: index('election_votes_candidate_idx').on(t.candidateId, t.positionId),
+  // Per-position abstention counts (position_id = X AND candidate_id IS NULL).
+  positionCandidateIdx: index('election_votes_position_candidate_idx').on(t.positionId, t.candidateId),
+  // Live feed: latest votes for an election.
+  electionCreatedIdx: index('election_votes_election_created_idx').on(t.electionId, t.createdAt),
 }));
 
 
