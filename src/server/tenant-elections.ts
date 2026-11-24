@@ -12,6 +12,7 @@ import { getRequest } from '@tanstack/react-start/server';
 import { generateBallotReceiptSignature } from './ballot-signature';
 import { runVoteReceiptWorkflow } from './vote-receipt-workflow';
 import { assertCandidateAccess, assertElectionAccess, assertPositionAccess, assertVoterAccess } from './access-control';
+import { clearLoginFailures, getClientIp, isLoginLockedOut, LOCKED_OUT_MESSAGE, recordLoginFailure, toVoterLoginPayload } from './voter-auth';
 import { getReminderProgress, isReminderJobRunning, runVoterReminderWorkflow } from './vote-reminder-workflow';
 
 
@@ -1902,130 +1903,194 @@ export const updateVoterFn = createServerFn({ method: 'POST' })
   });
 
 
+  // Voter login, step 1.
+  //
+  // The election's authMode is ALWAYS read from the database. It used to be
+  // taken from the request, so sending authMode:'otp' to a credential election
+  // swapped the password check for a username+phone lookup -- and the response
+  // then handed back the voter's inviteToken (the only secret castBallotServerFn
+  // checks), letting anyone vote as anyone whose phone number they knew.
+  //
+  // In OTP mode this step only (re)sends the code. It NEVER returns the OTP or
+  // the voter record; those come back from verifyVoterOtpFn once the code has
+  // been checked server-side.
   export const verifyVoterFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
     async ({ data }: any) => {
+      const fail = (message?: string) => ({ success: false, data: null, ...(message ? { message } : {}) });
+
       try {
-        const phoneNumberCode = addCountryCode(data?.phone);
-        const phoneNumberNoCode = stripCountryCode(data?.phone);
-        const cleanUsername = data.username.toLowerCase().replace(/\s+/g, '');
+        const electionId = typeof data?.electionId === 'string' ? data.electionId : '';
+        const username = String(data?.username ?? '').trim();
+        if (!electionId || !username) return fail();
 
-        let [voter] = ['credential'].includes(data.authMode)
-        ? await db
-          .select()
-          .from(voters)
-          .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-          .where(
-            and(
-              // eq<any>(voters.username, data.username), 
-              eq(sql`LOWER(REPLACE(${voters.username}, ' ', ''))`, cleanUsername), 
-              eq<any>(voters.inviteToken, data.password),
-              eq<any>(elections.id, data.electionId)
-            )
-          )
-          .orderBy(asc(voters.id))
+        const [election] = await db
+          .select({ id: elections.id, authMode: elections.authMode })
+          .from(elections)
+          .where(eq<any>(elections.id, electionId));
+        if (!election) return fail();
 
-        : await db
-          .select()
-          .from(voters)
-          .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-          .where(
-            and(
-              eq<any>(voters.username, data.username),
-              eq<any>(elections.id, data.electionId),
-              or(
-                eq<any>(voters.phoneNumber, phoneNumberCode),
-                eq<any>(voters.phoneNumber, phoneNumberNoCode)
+        const authMode = (election.authMode || 'credential').toLowerCase();
+        const ip = getClientIp(getRequest());
+
+        if (await isLoginLockedOut(electionId, username, ip)) {
+          return fail(LOCKED_OUT_MESSAGE);
+        }
+
+        // ---- Username + password ------------------------------------------
+        if (authMode === 'credential') {
+          const password = String(data?.password ?? '');
+          const cleanUsername = username.toLowerCase().replace(/\s+/g, '');
+
+          const [voter] = password
+            ? await db
+                .select()
+                .from(voters)
+                .innerJoin(elections, eq<any>(voters.electionId, elections.id))
+                .where(
+                  and(
+                    eq(sql`LOWER(REPLACE(${voters.username}, ' ', ''))`, cleanUsername),
+                    eq<any>(voters.inviteToken, password),
+                    eq<any>(elections.id, electionId)
+                  )
+                )
+                .orderBy(asc(voters.id))
+            : [];
+
+          if (!voter) {
+            await recordLoginFailure(electionId, username, ip);
+            return fail();
+          }
+
+          await clearLoginFailures(electionId, username, ip);
+          return { success: true, data: toVoterLoginPayload(voter) };
+        }
+
+        // ---- Username + phone, then SMS OTP --------------------------------
+        if (authMode === 'otp' || authMode === 'aotp') {
+          const phoneNumberCode = addCountryCode(data?.phone);
+          const phoneNumberNoCode = stripCountryCode(data?.phone);
+
+          const [voter] = await db
+            .select()
+            .from(voters)
+            .innerJoin(elections, eq<any>(voters.electionId, elections.id))
+            .where(
+              and(
+                eq<any>(voters.username, username),
+                eq<any>(elections.id, electionId),
+                or(
+                  eq<any>(voters.phoneNumber, phoneNumberCode),
+                  eq<any>(voters.phoneNumber, phoneNumberNoCode)
+                )
               )
+            )
+            .orderBy(asc(voters.id));
+
+          if (!voter) {
+            await recordLoginFailure(electionId, username, ip);
+            return fail();
+          }
+
+          // Deliberately NOT clearing failures here: a correct username+phone
+          // must not reset the counter, or the OTP step could be brute-forced
+          // indefinitely by re-submitting this step between guesses.
+
+          if (voter.voters.hasVoted) {
+            return fail('Voter securely submitted a ballot!');
+          }
+
+          const phone = addCountryCode(voter.voters.phoneNumber);
+
+          // Only send when the voter hasn't already received their code (the
+          // invite SMS also delivers it and marks the voter verified).
+          if (!voter.voters.isVerified) {
+            const fname = voter.voters.name?.split(' ')[0];
+            const smsPayload: any = {
+              sender: process.env.SMS_SENDER_ID,
+              message: `Hi ${fname}, Your verification OTP is ${voter.voters.inviteToken}. Thank you`,
+              recipients: [phone],
+            };
+            const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'api-key': process.env.SMS_API_KEY
+              } as any,
+              body: JSON.stringify(smsPayload)
+            });
+
+            if (!sms.ok) {
+              const errorText = await sms.text();
+              throw new Error(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`);
+            }
+
+            await db
+              .update(voters)
+              .set({ isVerified: true })
+              .where(eq<any>(voters.id, voter.voters.id));
+          }
+
+          return { success: true, data: null, otpRequired: true, maskPhone: maskPhoneNumber(phone) };
+        }
+
+        // Google-mode elections sign in through fetchGoogleProfileFromServer.
+        return fail('Please use the sign-in method shown for this election.');
+
+      } catch (error) {
+        console.error('[verifyVoterFn]', error);
+        return fail();
+      }
+  });
+
+
+  // Voter login, step 2 (OTP elections only): checks the code server-side and
+  // only then returns the voter record needed to cast a ballot.
+  export const verifyVoterOtpFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
+    async ({ data }: any) => {
+      const fail = (message?: string) => ({ success: false, data: null, ...(message ? { message } : {}) });
+
+      try {
+        const electionId = typeof data?.electionId === 'string' ? data.electionId : '';
+        const username = String(data?.username ?? '').trim();
+        const otp = String(data?.otp ?? '').trim();
+        if (!electionId || !username || !otp) return fail();
+
+        const [election] = await db
+          .select({ authMode: elections.authMode })
+          .from(elections)
+          .where(eq<any>(elections.id, electionId));
+        const authMode = (election?.authMode || '').toLowerCase();
+        if (!election || (authMode !== 'otp' && authMode !== 'aotp')) return fail();
+
+        const ip = getClientIp(getRequest());
+        if (await isLoginLockedOut(electionId, username, ip)) {
+          return fail(LOCKED_OUT_MESSAGE);
+        }
+
+        const [voter] = await db
+          .select()
+          .from(voters)
+          .innerJoin(elections, eq<any>(voters.electionId, elections.id))
+          .where(
+            and(
+              eq<any>(voters.username, username),
+              eq<any>(voters.inviteToken, otp),
+              eq<any>(elections.id, electionId)
             )
           )
           .orderBy(asc(voters.id));
 
-        
-        if (voter){
-          
-          const inviteToken = voter?.voters?.inviteToken || '1234';
-          const isVerified = voter?.voters?.isVerified;
-          const phone = addCountryCode(voter?.voters?.phoneNumber);
-          const fname = voter?.voters?.name?.split(" ")[0];
-          // const username = voter?.voters?.username;
-              
-          // Sent OTP to voter for verification
-          if(['otp', 'aotp'].includes(data.authMode) && !isVerified){
-              const smsPayload: any = {
-                sender: process.env.SMS_SENDER_ID,
-                message: `Hi ${fname}, Your verification OTP is ${inviteToken}. This expires in 15 minutes, Thank you`,
-                recipients: [phone],
-              };
-              const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'api-key': process.env.SMS_API_KEY
-                } as any,
-                body: JSON.stringify(smsPayload)
-              });
-
-              if (!sms.ok) {
-                const errorText = await sms.text();
-                throw new Error(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`);
-              }
-
-              const resp = await sms.json();
-              console.log(resp);
-              if (resp) {
-                await db
-                  .update(voters)
-                  .set({
-                    isVerified: true,
-                    inviteToken
-                  })
-                  .where(eq<any>(voters.id, voter?.voters?.id)).returning();
-                
-                return { success: true, data: voter, otp: inviteToken, maskPhone: maskPhoneNumber(phone) }
-              }
-          
-          } else if(['otp', 'aotp'].includes(data.authMode) && isVerified){
-            return { success: true, data: voter, otp: inviteToken, maskPhone: maskPhoneNumber(phone) }
-          
-          } else {
-            return { success: true, data: voter }
-          }
+        if (!voter) {
+          await recordLoginFailure(electionId, username, ip);
+          return fail();
         }
-        
-        return { success: false, data: null }
+
+        await clearLoginFailures(electionId, username, ip);
+        return { success: true, data: toVoterLoginPayload(voter) };
 
       } catch (error) {
-        console.log(error);
-        return { success: false, data: null }
-      }
-
-  });
-
-
-  export const verifyVoterOtpFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-    async ({ data }: any) => {
-      try {
-       
-        let [voter] = await db
-          .select()
-          .from(voters)
-          .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-          .where(
-            and(
-              eq<any>(voters.username, data.username), 
-              eq<any>(voters.inviteToken, data.otp),
-              eq<any>(elections.id, data.electionId)
-            )
-          )
-          .orderBy(asc(voters.id))
-
-        if (voter)
-          return { success: true, data: voter }
-        return { success: false, data: null }
-
-      } catch (error) {
-        console.log(error);
-        return { success: false, data: null }
+        console.error('[verifyVoterOtpFn]', error);
+        return fail();
       }
   });
 
@@ -2034,6 +2099,17 @@ export const fetchGoogleProfileFromServer = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware])
   .handler(async ({ data }: any) => {
     try {
+      const electionId = typeof data?.electionId === 'string' ? data.electionId : '';
+
+      // Only elections configured for Google sign-in accept it -- otherwise a
+      // Google login would bypass a credential/OTP election's chosen method.
+      const [election] = electionId
+        ? await db.select({ authMode: elections.authMode }).from(elections).where(eq<any>(elections.id, electionId))
+        : [];
+      if (!election || (election.authMode || '').toLowerCase() !== 'google') {
+        return { success: false, data: null, message: 'Google sign-in is not enabled for this election.' };
+      }
+
       const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: {
           Authorization: `Bearer ${data.accessToken}`,
@@ -2043,29 +2119,31 @@ export const fetchGoogleProfileFromServer = createServerFn({ method: 'POST' })
       if (!response.ok) throw new Error(`Google error status: ${response.status}`);
 
       const profile = await response.json();
-      // Authenticate Voter -- scoped to the election being logged into, since
-      // the same email can legitimately be a registered voter in more than
-      // one election (uniqueness is per electionId+email, not global).
-      // Without this filter a match from a different election -- including
-      // its hasVoted flag -- could be returned instead.
+      if (!profile?.email || profile?.email_verified === false) {
+        return { success: false, data: null, message: 'Your Google account email is not verified.' };
+      }
+
+      // Scoped to the election being logged into, since the same email can
+      // legitimately be a registered voter in more than one election
+      // (uniqueness is per electionId+email, not global).
       const [voter] = await db
         .select()
         .from(voters)
         .innerJoin(elections, eq<any>(voters.electionId, elections.id))
         .where(
           and(
-            eq<any>(voters.email, profile?.email),
-            eq<any>(elections.id, data.electionId)
+            eq<any>(voters.email, profile.email),
+            eq<any>(elections.id, electionId)
           )
         )
         .orderBy(asc(voters.id));
 
-      if (voter) return { success: true, data: voter, message: null }
+      if (voter) return { success: true, data: toVoterLoginPayload(voter), message: null }
       return { success: false, data: null, message: 'Voter is not eligible for this election' }
 
     } catch (serverError: any) {
       console.error(serverError);
-      return { success: false, data: null, message: serverError?.message }
+      return { success: false, data: null, message: 'Google sign-in failed. Please try again.' }
     }
   });
 
