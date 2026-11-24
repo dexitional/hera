@@ -11,6 +11,7 @@ import { arcjetMiddleware, arcjetVoterLookupMiddleware } from '#/middleware/arcj
 import { getRequest } from '@tanstack/react-start/server';
 import { generateBallotReceiptSignature } from './ballot-signature';
 import { runVoteReceiptWorkflow } from './vote-receipt-workflow';
+import { assertCandidateAccess, assertElectionAccess, assertPositionAccess, assertVoterAccess } from './access-control';
 import { getReminderProgress, isReminderJobRunning, runVoterReminderWorkflow } from './vote-reminder-workflow';
 
 
@@ -28,8 +29,9 @@ export const getElectionsFn = createServerFn({ method: 'GET' })
     return resp;
   });
 
-export const getElectionFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: electionId }: any) => {
+export const getElectionFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware, authMiddleware]).handler(
+  async ({ context, data: electionId }: any) => {
+    await assertElectionAccess(context?.user, electionId);
     return await db.select().from(elections).where(eq<any>(elections.id, electionId));
   }
 );
@@ -517,7 +519,8 @@ export const getUnifiedElectionTelemetry = createServerFn({
   method: "GET",
 })
  .middleware([arcjetMiddleware,authMiddleware])
- .handler(async ({ data: electionId }): Promise<any> => {
+ .handler(async ({ context, data: electionId }: any): Promise<any> => {
+  await assertElectionAccess(context?.user, electionId);
 
   // Concurrently fetch telemetry data from your database layers
   const [
@@ -768,9 +771,10 @@ export const getUnifiedElectionAdminStats = createServerFn({
 /* EXPORT ELECTION RESULTS */
 
 export const exportElectionResultsToExcelFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware])
-  .handler(async ({ data }: any) => {
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
     const { electionId } = data;
+    await assertElectionAccess(context?.user, electionId);
 
     try {
       // 1. Fetch telemetry data concurrently using your identical query matrix structure
@@ -933,9 +937,10 @@ export const exportElectionResultsToExcelFn = createServerFn({ method: 'GET' })
 
 
 export const exportElectionResultsToFormatExcelFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware])
-  .handler(async ({ data }: any) => {
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
     const { electionId } = data;
+    await assertElectionAccess(context?.user, electionId);
     try {
       // Fetch telemetry data layers concurrently
       const [
@@ -1372,8 +1377,9 @@ export const getPositionsFn = createServerFn({ method: 'GET' })
     };
 });
 
-export const getPositionFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: positionId }: any) => {
+export const getPositionFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware, authMiddleware]).handler(
+  async ({ context, data: positionId }: any) => {
+    await assertPositionAccess(context?.user, positionId);
     return await db.select().from(positions).where(eq<any>(positions.id, positionId));
   }
 );
@@ -1502,8 +1508,9 @@ export const getCandidatesFn = createServerFn({ method: 'GET' })
   });
 
 
-export const getCandidateFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: candidateId }: any) => {
+export const getCandidateFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware, authMiddleware]).handler(
+  async ({ context, data: candidateId }: any) => {
+    await assertCandidateAccess(context?.user, candidateId);
     return await db.select().from(candidates).where(eq<any>(candidates.id, candidateId));
   }
 );
@@ -1643,8 +1650,9 @@ export const getVotersFn = createServerFn({ method: 'GET' })
 
 export const getVotersByElectionFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ data }: any) => {
+  .handler(async ({ context, data }: any) => {
     const electionId = data?.electionId ?? data;
+    await assertElectionAccess(context?.user, electionId);
     const page = Math.max(Number(data?.page) || 1, 1);
     const pageSize = Math.max(Number(data?.pageSize) || 15, 1);
     const searchQuery = (data?.searchQuery || "").trim();
@@ -1734,7 +1742,29 @@ export const getVoterFn = createServerFn({ method: 'GET' })
 
 export const getElectionByTagFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
   async ({ data: tag }: any) => {
-    return await db.select().from(elections).where(eq<any>(elections.tag, tag));
+    // Public endpoint (voter-facing pages) -- return only display/login fields.
+    // Never expose publicToken, adminId or billing columns to anonymous callers.
+    return await db
+      .select({
+        id: elections.id,
+        tag: elections.tag,
+        aliasUrl: elections.aliasUrl,
+        title: elections.title,
+        description: elections.description,
+        startAt: elections.startAt,
+        endAt: elections.endAt,
+        imageUrl: elections.imageUrl,
+        authMode: elections.authMode,
+        status: elections.status,
+        autoStop: elections.autoStop,
+        makePublic: elections.makePublic,
+        showFeed: elections.showFeed,
+        isActive: elections.isActive,
+        placeholder: elections.placeholder,
+        createdAt: elections.createdAt,
+      })
+      .from(elections)
+      .where(eq<any>(elections.tag, tag));
   }
 );
 
@@ -2039,11 +2069,32 @@ export const fetchGoogleProfileFromServer = createServerFn({ method: 'POST' })
     }
   });
 
-export const uploadVotersFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware]).handler(
-  async ({ data }: any) => {
-    const { voters: rows, duplicateUsernames } = prepareVotersForBulkImport(
-      Array.isArray(data) ? data : [],
-    );
+export const uploadVotersFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware, authMiddleware]).handler(
+  async ({ context, data }: any) => {
+    const inputRows: any[] = Array.isArray(data) ? data : [];
+
+    // Every row must target one election that the caller owns -- previously
+    // this endpoint was unauthenticated and trusted each row's electionId, so
+    // anyone could inject or overwrite voters in any election.
+    const electionIds = new Set(inputRows.map((r: any) => String(r?.electionId ?? '')));
+    if (electionIds.size !== 1) {
+      throw new Error("All imported voters must belong to a single election.");
+    }
+    const [targetElectionId] = [...electionIds];
+    await assertElectionAccess(context?.user, targetElectionId);
+
+    // Column whitelist: rows are spread into the insert, so without this a
+    // crafted payload could set hasVoted / isVerified / id / voteIp directly.
+    const sanitizedRows = inputRows.map((r: any) => ({
+      electionId: targetElectionId,
+      name: r?.name,
+      username: r?.username,
+      phoneNumber: r?.phoneNumber,
+      email: r?.email,
+      inviteToken: r?.inviteToken,
+    }));
+
+    const { voters: rows, duplicateUsernames } = prepareVotersForBulkImport<any>(sanitizedRows);
 
     if (rows.length === 0) {
       throw new Error("No valid voters to import. Each row needs a username.");
@@ -2090,8 +2141,9 @@ export const uploadVotersFn = createServerFn({ method: 'POST' }).middleware([arc
 );
 
 
-export const inviteVoterFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: voterId }: any) => {
+export const inviteVoterFn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware, authMiddleware]).handler(
+  async ({ context, data: voterId }: any) => {
+    await assertVoterAccess(context?.user, voterId);
     try {
 
       // Fetch Voter
@@ -2163,8 +2215,9 @@ export const inviteVoterFn = createServerFn({ method: 'GET' }).middleware([arcje
 );
 
 
-export const inviteVoters2Fn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: electionId }: any) => {
+export const inviteVoters2Fn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware, authMiddleware]).handler(
+  async ({ context, data: electionId }: any) => {
+    await assertElectionAccess(context?.user, electionId);
     try {
       // Fetch Voter
       const rec = await db.select()
@@ -2228,8 +2281,9 @@ export const inviteVoters2Fn = createServerFn({ method: 'GET' }).middleware([arc
   }
 );
 
-export const inviteVoters1Fn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: electionId }: any) => {
+export const inviteVoters1Fn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware, authMiddleware]).handler(
+  async ({ context, data: electionId }: any) => {
+    await assertElectionAccess(context?.user, electionId);
     try {
       // Fetch Voter
       const rec = await db.select()
@@ -2408,7 +2462,8 @@ async function processSmsQueueInBackground(rec: any[], electionId: string) {
 // Fixed Server Function
 export const inviteVotersFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ data: electionId }: any) => {
+  .handler(async ({ context, data: electionId }: any) => {
+    await assertElectionAccess(context?.user, electionId);
     try {
       const currentJob = smsQueueTracker.get(electionId);
       console.log("Current Job: ", currentJob);
@@ -2447,7 +2502,8 @@ export const inviteVotersFn = createServerFn({ method: 'POST' })
   // Polling Metrics Collector Function
   export const getSmsProgressFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ data: electionId }: any) => {
+  .handler(async ({ context, data: electionId }: any) => {
+    await assertElectionAccess(context?.user, electionId);
     return smsQueueTracker.get(electionId) || { isProcessing: false, total: 0, processed: 0, successful: 0, failed: 0 };
  });
 
@@ -2458,7 +2514,8 @@ export const inviteVotersFn = createServerFn({ method: 'POST' })
   // actual batched sending is delegated to runVoterReminderWorkflow.
   export const sendVoterRemindersFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ data: electionId }: any) => {
+  .handler(async ({ context, data: electionId }: any) => {
+    await assertElectionAccess(context?.user, electionId);
     try {
       if (isReminderJobRunning(electionId)) {
         return { success: false, message: "A reminder broadcast is already running for this election." };
@@ -2509,15 +2566,17 @@ export const inviteVotersFn = createServerFn({ method: 'POST' })
   // Polling Metrics Collector Function (reminders)
   export const getReminderProgressFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ data: electionId }: any) => {
+  .handler(async ({ context, data: electionId }: any) => {
+    await assertElectionAccess(context?.user, electionId);
     return getReminderProgress(electionId);
  });
 
 
 export const exportVotersToExcelFn = createServerFn({ method: 'GET' })
-   .middleware([arcjetMiddleware])
-   .handler(async ({ data }: any) => {
+   .middleware([arcjetMiddleware, authMiddleware])
+   .handler(async ({ context, data }: any) => {
     const { electionId, statusFilter } = data;
+    await assertElectionAccess(context?.user, electionId);
 
     try {
       // 1. Establish core dynamic SQL filter conditions array

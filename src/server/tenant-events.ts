@@ -8,6 +8,7 @@ import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
 import { generateContestantCode } from '#/lib/utils';
 import { creditCardVote } from './paystack-credit';
 import { processImageUpload } from './image-upload';
+import { assertCategoryAccess, assertContestantAccess, assertEventAccess } from './access-control';
 
 // ==========================================
 // EVENTS FUNCTIONS
@@ -179,8 +180,9 @@ export const getEventsFn = createServerFn({ method: 'GET' })
       .orderBy(desc(events.createdAt));
   });
 
-export const getEventFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: eventId }: any) => {
+export const getEventFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware, authMiddleware]).handler(
+  async ({ context, data: eventId }: any) => {
+    await assertEventAccess(context?.user, eventId);
     return await db.select().from(events).where(eq<any>(events.id, eventId));
   }
 );
@@ -412,8 +414,9 @@ export const getCategoriesFn = createServerFn({ method: 'GET' })
     };
   });
 
-export const getCategoryFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: categoryId }: any) => {
+export const getCategoryFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware, authMiddleware]).handler(
+  async ({ context, data: categoryId }: any) => {
+    await assertCategoryAccess(context?.user, categoryId);
     return await db.select().from(categories).where(eq<any>(categories.id, categoryId));
   }
 );
@@ -557,8 +560,9 @@ export const getContestantsFn = createServerFn({ method: 'GET' })
     };
   });
 
-export const getContestantFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware]).handler(
-  async ({ data: contestantId }: any) => {
+export const getContestantFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware, authMiddleware]).handler(
+  async ({ context, data: contestantId }: any) => {
+    await assertContestantAccess(context?.user, contestantId);
     return await db.select().from(contestants).where(eq<any>(contestants.id, contestantId));
   }
 );
