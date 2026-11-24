@@ -1626,32 +1626,6 @@ export const deleteCandidateFn = createServerFn({ method: 'POST' })
 
 // VOTERS FUNCTIONS
 
-export const getVotersListFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ context }) => {
-    // const admin = { id: '1' };
-    const admin: any = context.user.id;
-    return await db.select()
-      .from(voters)
-      .innerJoin(elections, eq<any>(positions.electionId, elections.id))
-      .where(eq<any>(elections.adminId, admin.id))
-      .orderBy(asc(positions.order), asc(positions.createdAt));
-  });
-
-export const getVotersFn = createServerFn({ method: 'GET' })
-  .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ context }) => {
-    const admin: any = context.user.id;
-
-    return await db
-      .select()
-      .from(voters)
-      .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-      .where(eq<any>(elections.adminId, admin.id))
-      .orderBy(asc(voters.id));
-  }
-  );
-
 export const getVotersByElectionFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data }: any) => {
