@@ -68,8 +68,6 @@ export default function VotePay({
           reference,
           contestantId: nominee.id,
           votes: voteCount,
-          payEmail: checkoutEmail,
-          payPhone: 'web-checkout',
         },
       } as any);
 

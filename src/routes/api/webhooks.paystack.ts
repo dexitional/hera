@@ -22,6 +22,7 @@ export const Route = createFileRoute('/api/webhooks/paystack')({
           const { createHmac, timingSafeEqual } = await import('node:crypto');
           const { creditCardVote } = await import('../../server/paystack-credit');
           const { sendSms } = await import('../../server/sms');
+          const { paystackPayerContact } = await import('../../server/paystack-payer');
 
           // Raw body must be read BEFORE any JSON parsing -- the signature is
           // computed over the exact bytes Paystack sent.
@@ -70,7 +71,6 @@ export const Route = createFileRoute('/api/webhooks/paystack')({
           const contestantId = metadata.contestantId;
           const votes = metadata.votes;
           const channel = metadata.channel === 'USSD' ? 'USSD' : 'WEB';
-          const email = data.customer?.email;
 
           if (!reference || !contestantId || !votes) {
             console.error(`Paystack webhook: missing required fields on charge.success (reference=${reference})`);
@@ -84,7 +84,7 @@ export const Route = createFileRoute('/api/webhooks/paystack')({
               reference,
               contestantId,
               votes: Number(votes),
-              payPhone: channel === 'USSD' ? metadata.phone : email,
+              payPhone: channel === 'USSD' && metadata.phone ? metadata.phone : paystackPayerContact(data),
               amountKobo: amount,
               transRef: data.id ? String(data.id) : null,
               channel,

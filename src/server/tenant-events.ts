@@ -12,6 +12,7 @@ import { assertCategoryAccess, assertContestantAccess, assertEventAccess, eventO
 import { computeRevenue } from './event-revenue';
 import { loadWithdrawnByEvent } from './event-revenue-queries';
 import { buildTransactionsWorkbook, exportFilename } from './transactions-export';
+import { paystackPayerContact } from './paystack-payer';
 
 // ==========================================
 // EVENTS FUNCTIONS
@@ -1374,7 +1375,7 @@ export const exportEventResultsToExcelFn = createServerFn({ method: 'GET' })
 export const verifyAndCastCardVoteFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware])
   .handler(async ({ data }: any) => {
-    const { reference, contestantId, votes, payEmail, payPhone } = data;
+    const { reference, contestantId, votes } = data;
 
     if (!reference || !contestantId || !votes) {
       throw new Error('Missing required payment details.');
@@ -1399,7 +1400,8 @@ export const verifyAndCastCardVoteFn = createServerFn({ method: 'POST' })
       reference,
       contestantId,
       votes: Number(votes),
-      payPhone: payPhone || payEmail || verifyResult.data.customer?.email,
+      // From Paystack's verified record, never the browser: the MoMo number, or the card used.
+      payPhone: paystackPayerContact(verifyResult.data),
       amountKobo: verifyResult.data.amount,
       transRef: verifyResult.data.id ? String(verifyResult.data.id) : null,
       channel: 'WEB',
