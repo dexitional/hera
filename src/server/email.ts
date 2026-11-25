@@ -126,6 +126,35 @@ export function verificationEmailHtml(params: { name: string; url: string }): st
   });
 }
 
+export function passwordResetEmailHtml(params: { name: string; url: string }): string {
+  const name = escapeHtml(params.name || 'there');
+  const url = escapeHtml(params.url);
+  const bodyHtml = `
+    <h2 style="margin:0 0 16px; font-family:Arial, Helvetica, sans-serif; font-size:20px; color:${BRAND.primary};">Reset your password</h2>
+    <p style="margin:0 0 12px; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:1.6; color:#18181b;">Hi ${name},</p>
+    <p style="margin:0 0 24px; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:1.6; color:#18181b;">We received a request to reset the password for your Heravote account. Choose a new password using the button below. The link works once and expires in 1 hour.</p>
+    <table role="presentation" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" bgcolor="${BRAND.primary}" style="background-color:${BRAND.primary}; border-radius:10px;">
+          <a href="${url}" style="display:inline-block; padding:14px 28px; font-family:Arial, Helvetica, sans-serif; font-size:15px; font-weight:bold; color:#ffffff; text-decoration:none;">
+            Choose a New Password
+          </a>
+        </td>
+      </tr>
+    </table>
+    <p style="margin:24px 0 0; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:1.5; color:#666;">
+      If the button doesn't work, copy and paste this link into your browser:<br/>
+      <a href="${url}" style="color:${BRAND.primary}; word-break:break-all;">${url}</a>
+    </p>
+    <p style="margin:16px 0 0; font-family:Arial, Helvetica, sans-serif; font-size:12px; color:#999;">If you didn't ask to reset your password, you can ignore this email. Your password won't change.</p>
+  `;
+
+  return renderEmailLayout({
+    preheader: 'Choose a new password for your Heravote account.',
+    bodyHtml,
+  });
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')

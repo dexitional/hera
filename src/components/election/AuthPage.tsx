@@ -216,6 +216,9 @@ export default function AuthPage({ error, redirectTo }: any) {
                         />
                         <label className="ml-2 text-zinc-400 select-none">Remember me</label>
                       </div>
+                      <a href="/auth/forgot-password" className="text-purple-400 hover:text-purple-300 transition-colors font-medium">
+                        Forgot password?
+                      </a>
                     </div>
 
                     {/* Submit Button */}

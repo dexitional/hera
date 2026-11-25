@@ -4,7 +4,7 @@ import { adminAc, userAc } from "better-auth/plugins/admin/access";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { db } from "../db"; // Your optimized Drizzle instance
-import { sendEmail, verificationEmailHtml } from "../server/email";
+import { passwordResetEmailHtml, sendEmail, verificationEmailHtml } from "../server/email";
 import { trustedOrigins } from "./trusted-origins";
 
 export const auth = betterAuth({
@@ -66,6 +66,24 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
+    // "Forgot password?" flow (/auth/forgot-password -> email -> /auth/reset-password).
+    // Tokens are single-use and expire after 1 hour; better-auth answers the
+    // request identically whether or not the email exists (no account enumeration).
+    sendResetPassword: async ({ user, url }: any) => {
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: "Reset your Heravote password",
+          html: passwordResetEmailHtml({ name: user.name, url }),
+        });
+      } catch (err) {
+        console.error('[AUTH] failed to send password reset email:', err);
+      }
+    },
+    resetPasswordTokenExpiresIn: 60 * 60,
+    // A reset (by the user or via a super admin's reset link) signs the account
+    // out everywhere, in case the old password was compromised.
+    revokeSessionsOnPasswordReset: true,
     // Unverified users are allowed to sign in -- verification instead gates
     // specific actions (see createElectionFn/createEventFn) rather than login
     // itself, since role=super accounts must never be blocked by it.

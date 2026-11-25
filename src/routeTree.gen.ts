@@ -24,6 +24,8 @@ import { Route as VoteElectionRouteImport } from './routes/vote/election'
 import { Route as VoteCastRouteImport } from './routes/vote/cast'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as AuthSigninRouteImport } from './routes/auth.signin'
+import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
+import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-password'
 import { Route as AuthErrorRouteImport } from './routes/auth.error'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminRevenueRouteImport } from './routes/admin/revenue'
@@ -155,6 +157,16 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
 const AuthSigninRoute = AuthSigninRouteImport.update({
   id: '/auth/signin',
   path: '/auth/signin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/auth/reset-password',
+  path: '/auth/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/auth/forgot-password',
+  path: '/auth/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthErrorRoute = AuthErrorRouteImport.update({
@@ -490,6 +502,8 @@ export interface FileRoutesByFullPath {
   '/admin/revenue': typeof AdminRevenueRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/error': typeof AuthErrorRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
   '/vote/cast': typeof VoteCastRoute
@@ -563,6 +577,8 @@ export interface FileRoutesByTo {
   '/admin/revenue': typeof AdminRevenueRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/error': typeof AuthErrorRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
   '/vote/cast': typeof VoteCastRoute
@@ -638,6 +654,8 @@ export interface FileRoutesById {
   '/admin/revenue': typeof AdminRevenueRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/error': typeof AuthErrorRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
   '/vote/cast': typeof VoteCastRoute
@@ -714,6 +732,8 @@ export interface FileRouteTypes {
     | '/admin/revenue'
     | '/admin/settings'
     | '/auth/error'
+    | '/auth/forgot-password'
+    | '/auth/reset-password'
     | '/auth/signin'
     | '/auth/signup'
     | '/vote/cast'
@@ -787,6 +807,8 @@ export interface FileRouteTypes {
     | '/admin/revenue'
     | '/admin/settings'
     | '/auth/error'
+    | '/auth/forgot-password'
+    | '/auth/reset-password'
     | '/auth/signin'
     | '/auth/signup'
     | '/vote/cast'
@@ -861,6 +883,8 @@ export interface FileRouteTypes {
     | '/admin/revenue'
     | '/admin/settings'
     | '/auth/error'
+    | '/auth/forgot-password'
+    | '/auth/reset-password'
     | '/auth/signin'
     | '/auth/signup'
     | '/vote/cast'
@@ -933,6 +957,8 @@ export interface RootRouteChildren {
   TicketsRoute: typeof TicketsRoute
   WelcomeRoute: typeof WelcomeRoute
   AuthErrorRoute: typeof AuthErrorRoute
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
+  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   AuthSigninRoute: typeof AuthSigninRoute
   AuthSignupRoute: typeof AuthSignupRoute
   VoteCastRoute: typeof VoteCastRoute
@@ -1054,6 +1080,20 @@ declare module '@tanstack/react-router' {
       path: '/auth/signin'
       fullPath: '/auth/signin'
       preLoaderRoute: typeof AuthSigninRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/reset-password': {
+      id: '/auth/reset-password'
+      path: '/auth/reset-password'
+      fullPath: '/auth/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/forgot-password': {
+      id: '/auth/forgot-password'
+      path: '/auth/forgot-password'
+      fullPath: '/auth/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/error': {
@@ -1605,6 +1645,8 @@ const rootRouteChildren: RootRouteChildren = {
   TicketsRoute: TicketsRoute,
   WelcomeRoute: WelcomeRoute,
   AuthErrorRoute: AuthErrorRoute,
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
+  AuthResetPasswordRoute: AuthResetPasswordRoute,
   AuthSigninRoute: AuthSigninRoute,
   AuthSignupRoute: AuthSignupRoute,
   VoteCastRoute: VoteCastRoute,

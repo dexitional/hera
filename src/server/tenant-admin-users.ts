@@ -5,6 +5,7 @@ import { elections, events, user } from '../db/schema';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
 import { authMiddleware } from '#/middleware/authMiddleware';
 import { auth } from '#/lib/auth';
+import { getRequestHeaders } from '@tanstack/react-start/server';
 
 function assertSuperAdmin(context: any) {
   const admin: any = context?.user;
@@ -209,4 +210,60 @@ export const updateElectionAdminSettingsFn = createServerFn({ method: 'POST' })
       .returning();
 
     return updated;
+  });
+
+
+// ---------------------------------------------------------------------------
+// Password management for other accounts (super admins only). A super admin's
+// own password is changed from Account Settings, so both refuse self-targets.
+// ---------------------------------------------------------------------------
+
+const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 128;
+
+export const setUserPasswordFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin = assertSuperAdmin(context);
+    const userId = String(data?.userId ?? '');
+    const newPassword = String(data?.newPassword ?? '');
+    const signOutEverywhere = data?.signOutEverywhere !== false;
+    if (!userId) throw new Error('User not found.');
+    if (userId === admin.id) throw new Error('Change your own password from Account Settings.');
+    if (newPassword.length < MIN_PASSWORD_LENGTH || newPassword.length > MAX_PASSWORD_LENGTH) {
+      throw new Error(`Password must be between ${MIN_PASSWORD_LENGTH} and ${MAX_PASSWORD_LENGTH} characters.`);
+    }
+
+    // better-auth's admin plugin: hashes the password, and creates an
+    // email/password login if the user has only signed in with Google so far.
+    const headers = getRequestHeaders();
+    // Admin-plugin endpoints: auth.ts builds its config `as any`, so the
+    // plugin's API isn't in auth.api's static type (it exists at runtime).
+    // Not setPassword/revokeSessions -- those act on the caller's own account.
+    const adminApi = auth.api as any;
+    try {
+      await adminApi.setUserPassword({ body: { userId, newPassword }, headers });
+      if (signOutEverywhere) await adminApi.revokeUserSessions({ body: { userId }, headers });
+    } catch (err: any) {
+      throw new Error(err?.body?.message || err?.message || 'Could not set the password.');
+    }
+    console.info(`[ADMIN] ${admin.email} set a new password for user ${userId}${signOutEverywhere ? ' and signed them out everywhere' : ''}`);
+    return { ok: true, signedOut: signOutEverywhere };
+  });
+
+export const sendPasswordResetLinkFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin = assertSuperAdmin(context);
+    const userId = String(data?.userId ?? '');
+    if (userId === admin.id) throw new Error('Change your own password from Account Settings.');
+    const [target] = await db.select({ id: user.id, email: user.email }).from(user).where(eq(user.id, userId));
+    if (!target) throw new Error('User not found.');
+    try {
+      await auth.api.requestPasswordReset({ body: { email: target.email, redirectTo: '/auth/reset-password' } });
+    } catch (err: any) {
+      throw new Error(err?.body?.message || err?.message || 'Could not send the reset email.');
+    }
+    console.info(`[ADMIN] ${admin.email} emailed a password reset link to user ${userId}`);
+    return { ok: true, email: target.email };
   });
