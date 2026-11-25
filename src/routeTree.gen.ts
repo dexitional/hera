@@ -18,10 +18,12 @@ import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as NomineePortalIndexRouteImport } from './routes/nominee-portal/index'
 import { Route as EventsIndexRouteImport } from './routes/events/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as VoteElectionRouteImport } from './routes/vote/election'
 import { Route as VoteCastRouteImport } from './routes/vote/cast'
+import { Route as NomineePortalProfileRouteImport } from './routes/nominee-portal/profile'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as AuthSigninRouteImport } from './routes/auth.signin'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
@@ -129,6 +131,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NomineePortalIndexRoute = NomineePortalIndexRouteImport.update({
+  id: '/nominee-portal/',
+  path: '/nominee-portal/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EventsIndexRoute = EventsIndexRouteImport.update({
   id: '/events/',
   path: '/events/',
@@ -147,6 +154,11 @@ const VoteElectionRoute = VoteElectionRouteImport.update({
 const VoteCastRoute = VoteCastRouteImport.update({
   id: '/vote/cast',
   path: '/vote/cast',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NomineePortalProfileRoute = NomineePortalProfileRouteImport.update({
+  id: '/nominee-portal/profile',
+  path: '/nominee-portal/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
@@ -506,10 +518,12 @@ export interface FileRoutesByFullPath {
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/nominee-portal/profile': typeof NomineePortalProfileRoute
   '/vote/cast': typeof VoteCastRoute
   '/vote/election': typeof VoteElectionRoute
   '/admin/': typeof AdminIndexRoute
   '/events/': typeof EventsIndexRoute
+  '/nominee-portal/': typeof NomineePortalIndexRoute
   '/admin/categories/new': typeof AdminCategoriesNewRoute
   '/admin/contestants/new': typeof AdminContestantsNewRoute
   '/admin/elections/new': typeof AdminElectionsNewRoute
@@ -581,10 +595,12 @@ export interface FileRoutesByTo {
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/nominee-portal/profile': typeof NomineePortalProfileRoute
   '/vote/cast': typeof VoteCastRoute
   '/vote/election': typeof VoteElectionRoute
   '/admin': typeof AdminIndexRoute
   '/events': typeof EventsIndexRoute
+  '/nominee-portal': typeof NomineePortalIndexRoute
   '/admin/categories/new': typeof AdminCategoriesNewRoute
   '/admin/contestants/new': typeof AdminContestantsNewRoute
   '/admin/elections/new': typeof AdminElectionsNewRoute
@@ -658,10 +674,12 @@ export interface FileRoutesById {
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/nominee-portal/profile': typeof NomineePortalProfileRoute
   '/vote/cast': typeof VoteCastRoute
   '/vote/election': typeof VoteElectionRoute
   '/admin/': typeof AdminIndexRoute
   '/events/': typeof EventsIndexRoute
+  '/nominee-portal/': typeof NomineePortalIndexRoute
   '/admin/categories/new': typeof AdminCategoriesNewRoute
   '/admin/contestants/new': typeof AdminContestantsNewRoute
   '/admin/elections/new': typeof AdminElectionsNewRoute
@@ -736,10 +754,12 @@ export interface FileRouteTypes {
     | '/auth/reset-password'
     | '/auth/signin'
     | '/auth/signup'
+    | '/nominee-portal/profile'
     | '/vote/cast'
     | '/vote/election'
     | '/admin/'
     | '/events/'
+    | '/nominee-portal/'
     | '/admin/categories/new'
     | '/admin/contestants/new'
     | '/admin/elections/new'
@@ -811,10 +831,12 @@ export interface FileRouteTypes {
     | '/auth/reset-password'
     | '/auth/signin'
     | '/auth/signup'
+    | '/nominee-portal/profile'
     | '/vote/cast'
     | '/vote/election'
     | '/admin'
     | '/events'
+    | '/nominee-portal'
     | '/admin/categories/new'
     | '/admin/contestants/new'
     | '/admin/elections/new'
@@ -887,10 +909,12 @@ export interface FileRouteTypes {
     | '/auth/reset-password'
     | '/auth/signin'
     | '/auth/signup'
+    | '/nominee-portal/profile'
     | '/vote/cast'
     | '/vote/election'
     | '/admin/'
     | '/events/'
+    | '/nominee-portal/'
     | '/admin/categories/new'
     | '/admin/contestants/new'
     | '/admin/elections/new'
@@ -961,9 +985,11 @@ export interface RootRouteChildren {
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   AuthSigninRoute: typeof AuthSigninRoute
   AuthSignupRoute: typeof AuthSignupRoute
+  NomineePortalProfileRoute: typeof NomineePortalProfileRoute
   VoteCastRoute: typeof VoteCastRoute
   VoteElectionRoute: typeof VoteElectionRoute
   EventsIndexRoute: typeof EventsIndexRoute
+  NomineePortalIndexRoute: typeof NomineePortalIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiWebhooksArkeselUssdRoute: typeof ApiWebhooksArkeselUssdRoute
   ApiWebhooksPaystackRoute: typeof ApiWebhooksPaystackRoute
@@ -1040,6 +1066,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/nominee-portal/': {
+      id: '/nominee-portal/'
+      path: '/nominee-portal'
+      fullPath: '/nominee-portal/'
+      preLoaderRoute: typeof NomineePortalIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/events/': {
       id: '/events/'
       path: '/events'
@@ -1066,6 +1099,13 @@ declare module '@tanstack/react-router' {
       path: '/vote/cast'
       fullPath: '/vote/cast'
       preLoaderRoute: typeof VoteCastRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nominee-portal/profile': {
+      id: '/nominee-portal/profile'
+      path: '/nominee-portal/profile'
+      fullPath: '/nominee-portal/profile'
+      preLoaderRoute: typeof NomineePortalProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/signup': {
@@ -1649,9 +1689,11 @@ const rootRouteChildren: RootRouteChildren = {
   AuthResetPasswordRoute: AuthResetPasswordRoute,
   AuthSigninRoute: AuthSigninRoute,
   AuthSignupRoute: AuthSignupRoute,
+  NomineePortalProfileRoute: NomineePortalProfileRoute,
   VoteCastRoute: VoteCastRoute,
   VoteElectionRoute: VoteElectionRoute,
   EventsIndexRoute: EventsIndexRoute,
+  NomineePortalIndexRoute: NomineePortalIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiWebhooksArkeselUssdRoute: ApiWebhooksArkeselUssdRoute,
   ApiWebhooksPaystackRoute: ApiWebhooksPaystackRoute,

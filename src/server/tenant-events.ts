@@ -3,7 +3,8 @@ import { createServerFn } from '@tanstack/react-start';
 import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import XLSX from 'xlsx-js-style';
 import { db } from '../db';
-import { categories, contestants, events, eventTransactions, eventWithdrawals, user } from '../db/schema';
+import { categories, contestants, events, eventTransactions, eventWithdrawals, nomineeAccess, user } from '../db/schema';
+import { normalizePhone } from '#/lib/phone';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
 import { generateContestantCode } from '#/lib/utils';
 import { creditCardVote } from './paystack-credit';
@@ -556,10 +557,22 @@ export const getContestantsFn = createServerFn({ method: 'GET' })
 
     const [rows, [countResult], categoryOptions] = await Promise.all([
       db
-        .select()
+        .select({
+          contestants,
+          categories,
+          events,
+          // Invite status only; the code itself is never sent with the list.
+          access: {
+            invitedAt: nomineeAccess.invitedAt,
+            inviteCount: nomineeAccess.inviteCount,
+            activatedAt: nomineeAccess.activatedAt,
+            lastLoginAt: nomineeAccess.lastLoginAt,
+          },
+        })
         .from(contestants)
         .innerJoin(categories, eq(contestants.categoryId, categories.id))
         .innerJoin(events, eq(categories.eventId, events.id))
+        .leftJoin(nomineeAccess, eq(nomineeAccess.contestantId, contestants.id))
         .where(queryCondition)
         .orderBy(asc(categories.name), asc(contestants.order))
         .limit(limitValue)
@@ -593,6 +606,15 @@ export const getContestantFn = createServerFn({ method: 'GET' }).middleware([arc
     return await db.select().from(contestants).where(eq<any>(contestants.id, contestantId));
   }
 );
+
+/** The nominee form's optional phone: null when blank, an error when it isn't a phone number. */
+function nomineePhoneFrom(data: FormData): string | null {
+  const raw = String(data.get('phone') ?? '').trim();
+  if (!raw) return null;
+  const phone = normalizePhone(raw);
+  if (!phone) throw new Error('Enter a valid phone number, e.g. 0241234567 or +233241234567.');
+  return phone;
+}
 
 export const createContestantFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
@@ -629,6 +651,7 @@ export const createContestantFn = createServerFn({ method: 'POST' })
             name: data.get("name") as string,
             tagline: data.get("tagline") as string,
             order: data.get("order") as any,
+            phone: nomineePhoneFrom(data),
             code: generateContestantCode(),
             ...(finalAvatarUrl && { imageUrl: finalAvatarUrl }),
           }).returning();
@@ -668,6 +691,10 @@ export const updateContestantFn = createServerFn({ method: 'POST' })
       if (!ownedContestant) {
         throw new Error('Contestant not found.');
       }
+      // The category it moves to must be the admin's too, or a nominee could
+      // be moved into another organisation's event.
+      await assertCategoryAccess(admin, data.get("categoryId"));
+      const phone = nomineePhoneFrom(data);
 
       const finalAvatarUrl = await processImageUpload(data.get("image") as File | null, {
         folder: 'contestants',
@@ -683,6 +710,7 @@ export const updateContestantFn = createServerFn({ method: 'POST' })
           name: data.get("name") as string,
           tagline: data.get("tagline") as string,
           order: data.get("order") as any,
+          phone,
           code: String(data.get("code") ?? "").toUpperCase(),
           ...(finalAvatarUrl && { imageUrl: finalAvatarUrl }),
         })

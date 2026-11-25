@@ -113,9 +113,30 @@ export const contestants = pgTable('contestants', {
   order: integer('order'),
   imageUrl: text('image_url'),
   code: text('code').notNull().unique(),
+  // The nominee's own phone (normalised, e.g. 0241234567): where their invite
+  // is sent and, with their access code, how they sign in to the portal.
+  phone: text('phone'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => ({
   categoryIdx: index('contestants_category_id_idx').on(t.categoryId),
+}));
+
+// A nominee's portal access, created when an admin first invites them. The
+// access code is permanent (until an admin resets it) and stored like voter
+// tokens: an HMAC for lookups and AES-GCM so admins can re-share it, never
+// plaintext (see server/voter-token.ts).
+export const nomineeAccess = pgTable('nominee_access', {
+  contestantId: uuid('contestant_id').primaryKey().references(() => contestants.id, { onDelete: 'cascade' }),
+  codeHash: text('code_hash').notNull(),
+  codeEnc: text('code_enc').notNull(),
+  invitedAt: timestamp('invited_at').defaultNow().notNull(),
+  invitedBy: text('invited_by').references(() => user.id, { onDelete: 'set null' }),
+  inviteCount: integer('invite_count').default(1).notNull(),
+  // Set when the nominee completes their profile for the first time.
+  activatedAt: timestamp('activated_at'),
+  lastLoginAt: timestamp('last_login_at'),
+}, (t) => ({
+  codeHashUniq: uniqueIndex('nominee_access_code_hash_uniq').on(t.codeHash),
 }));
 
 export const eventTransactions = pgTable('event_transactions', {

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { CheckCircle2, ChevronDown, User, UploadCloud, FileImage, X, AlertCircle, Hash } from "lucide-react";
+import { CheckCircle2, ChevronDown, User, UploadCloud, FileImage, X, AlertCircle, Hash, Phone } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { createContestantFn, updateContestantFn } from "#/server/tenant-events";
@@ -18,6 +18,7 @@ export default function ContestantAdminForm({ data: { data, categories, eventId 
     imageUrl: data?.imageUrl,
     order: data?.order,
     tagline: data?.tagline,
+    phone: data?.phone,
     code: data?.code,
     id: data?.id,
   });
@@ -244,6 +245,37 @@ export default function ContestantAdminForm({ data: { data, categories, eventId 
                                 className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm pl-9 pr-3 py-2 h-[36px] transition-all disabled:opacity-50"
                               />
                               <User className="absolute left-3 w-4 h-4 text-zinc-500" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Nominee Phone Input */}
+                      <div className="px-6 py-5">
+                        <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-start">
+                          <div className="col-span-4 flex flex-col pt-1.5">
+                            <label htmlFor="nominee-phone" className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                              Nominee Phone
+                            </label>
+                          </div>
+                          <div className="order-1 col-span-8 w-full">
+                            <div className="relative flex items-center sm:w-64">
+                              <input
+                                id="nominee-phone"
+                                type="tel"
+                                name="phone"
+                                inputMode="tel"
+                                autoComplete="off"
+                                placeholder="e.g. 0241234567"
+                                disabled={isSubmitting}
+                                value={formData?.phone ?? ''}
+                                onChange={handleInputChange}
+                                className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm pl-9 pr-3 py-2 h-[36px] transition-all disabled:opacity-50"
+                              />
+                              <Phone className="absolute left-3 w-4 h-4 text-zinc-500" />
+                            </div>
+                            <div className="text-zinc-500 text-xs mt-2">
+                              Optional. The nominee's own number: their portal invite and access code are sent here, and they sign in with it. Never shown publicly.
                             </div>
                           </div>
                         </div>
