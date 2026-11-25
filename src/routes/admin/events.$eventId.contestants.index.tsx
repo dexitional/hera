@@ -4,8 +4,9 @@ import {
   UserPlus, Search, Edit2, Trash2,
   Award, Filter, User, ChevronDown,
   ArrowLeft,
-  Hash,
+  Hash, KeyRound,
 } from "lucide-react";
+import { NomineeInviteDialog, type InviteTarget } from "#/components/admin/NomineeInviteDialog";
 import { deleteContestantFn, getContestantsFn } from "#/server/tenant-events";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { TableSkeleton } from "#/components/ui/skeleton";
@@ -68,8 +69,12 @@ function ContestantsDirectory() {
     order: r.contestants?.order,
     imageUrl: r.contestants?.imageUrl,
     code: r.contestants?.code,
+    phone: r.contestants?.phone ?? null,
     categoryName: r.categories?.name,
+    invitedAt: r.access?.invitedAt ?? null,
+    activatedAt: r.access?.activatedAt ?? null,
   }));
+  const [inviteTarget, setInviteTarget] = useState<InviteTarget | null>(null);
 
   const uniqueCategories = ["ALL", ...(data?.categoryNames ?? [])];
   const totalCount: number = data?.pagination?.totalCount ?? 0;
@@ -197,6 +202,7 @@ function ContestantsDirectory() {
                 <th className="px-6 py-4">Contestant Identity</th>
                 <th className="px-6 py-4">Category</th>
                 <th className="px-6 py-4">Code</th>
+                <th className="px-6 py-4">Portal</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -247,8 +253,30 @@ function ContestantsDirectory() {
                       </div>
                     </td>
 
+                    <td className="px-6 py-4 align-middle">
+                      {contestant.activatedAt ? (
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/20 border border-emerald-900/30 px-2 py-0.5 rounded-full">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Active
+                        </span>
+                      ) : contestant.invitedAt ? (
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-300 bg-amber-950/20 border border-amber-900/30 px-2 py-0.5 rounded-full">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-300" /> Invited
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-zinc-500">{contestant.phone ? "Not invited" : "No phone"}</span>
+                      )}
+                    </td>
+
                     <td className="px-6 py-4 align-middle text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setInviteTarget({ id: String(contestant.id), name: contestant.name, phone: contestant.phone, eventId })}
+                          title={contestant.invitedAt ? "Portal access: code, link, resend" : "Invite to the nominee portal"}
+                          className="inline-flex items-center gap-1 px-2 py-1.5 rounded text-[11px] font-semibold text-purple-300 hover:text-white hover:bg-zinc-800 transition-colors"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" /> {contestant.invitedAt ? "Access" : "Invite"}
+                        </button>
                         <Link
                           to="/admin/events/$eventId/contestants/$contestantId/edit"
                           params={{ eventId, contestantId: String(contestant.id) }}
@@ -271,7 +299,7 @@ function ContestantsDirectory() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="text-center py-12 text-zinc-500 text-xs border border-dashed border-zinc-900 rounded-b-xl">
+                  <td colSpan={5} className="text-center py-12 text-zinc-500 text-xs border border-dashed border-zinc-900 rounded-b-xl">
                     No contestant profiles detected matching sorting parameters.
                   </td>
                 </tr>
@@ -329,6 +357,7 @@ function ContestantsDirectory() {
         </div>
       </div>
 
+      <NomineeInviteDialog target={inviteTarget} onClose={() => setInviteTarget(null)} />
     </div>
   );
 }

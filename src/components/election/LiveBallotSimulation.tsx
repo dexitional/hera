@@ -54,7 +54,7 @@ export default function LiveBallotSimulation({ user, data: ballotPositions }: an
 
       // Check to make sure selections are made for all portfolios
       if(formattedSelections.length !== ballotPositions.length)
-        throw new Error("Please check your network connection\nReset ballot and reselect candidates.");
+        throw new Error("We couldn't submit your ballot. Please check your internet connection, then reset the ballot and select your candidates again.");
 
       const response = await castBallotServerFn({
          data: {

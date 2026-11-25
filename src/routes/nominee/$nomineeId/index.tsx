@@ -5,7 +5,8 @@ import { modalPage, useModalPageState, type ModalNominee } from '#/lib/utils'
 import { getPublicContestantFn } from '#/server/tenant-events'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Award, ArrowLeft, Image as ImageIcon, QrCode, ThumbsUp, User } from 'lucide-react'
+import { Award, ArrowLeft, Clapperboard, Download, Image as ImageIcon, QrCode, ThumbsUp, User } from 'lucide-react'
+import { MediaPlayer } from '#/components/media/MediaEmbed'
 
 const nomineeQueryOptions = (nomineeId: any) => ({
   queryKey: ["nominee-page", nomineeId],
@@ -189,6 +190,37 @@ function RouteComponent() {
                   </div>
                 </div>
               </div>
+
+              {/* Campaign media (optional): intro video and flyer */}
+              {(nominee.introVideoUrl || nominee.flyerUrl) && (
+                <div className={`grid grid-cols-1 gap-8 ${nominee.introVideoUrl && nominee.flyerUrl ? 'lg:grid-cols-2' : ''}`}>
+                  {nominee.introVideoUrl && (
+                    <div id="intro-video" className="scroll-mt-24 bg-slate-600/10 border border-slate-600/20 rounded-3xl p-5 sm:p-6 space-y-4">
+                      <h2 className="text-xl font-extrabold flex items-center gap-2" style={{ fontFamily: "Inter, sans-serif" }}>
+                        <Clapperboard className="w-5 h-5 text-purple-400" /> Meet {nominee.name.split(' ')[0]}
+                      </h2>
+                      <div className="flex justify-center">
+                        <MediaPlayer url={nominee.introVideoUrl} maxWidth={640} />
+                      </div>
+                    </div>
+                  )}
+                  {nominee.flyerUrl && (
+                    <div id="flyer" className="scroll-mt-24 bg-slate-600/10 border border-slate-600/20 rounded-3xl p-5 sm:p-6 space-y-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <h2 className="text-xl font-extrabold flex items-center gap-2" style={{ fontFamily: "Inter, sans-serif" }}>
+                          <ImageIcon className="w-5 h-5 text-purple-400" /> Campaign flyer
+                        </h2>
+                        <a href={nominee.flyerUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-slate-600/20 px-3 py-1.5 text-xs text-zinc-200 hover:bg-slate-600/30">
+                          <Download className="w-3.5 h-3.5" /> Open
+                        </a>
+                      </div>
+                      <a href={nominee.flyerUrl} target="_blank" rel="noopener noreferrer" className="block">
+                        <img src={nominee.flyerUrl} alt={`${nominee.name} campaign flyer`} loading="lazy" className="mx-auto max-h-[640px] w-auto rounded-2xl" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
             </section>
           </main>
         </div>

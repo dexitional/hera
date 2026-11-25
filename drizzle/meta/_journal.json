@@ -134,6 +134,55 @@
       "when": 1795569585657,
       "tag": "0018_event_revenue_withdrawals",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795578259718,
+      "tag": "0019_email_verification_revoked",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1795580773237,
+      "tag": "0020_nominee_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795581370248,
+      "tag": "0021_nominee_results_view",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1795595672347,
+      "tag": "0022_nominee_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1795614659758,
+      "tag": "0023_payment_refunds",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795617401913,
+      "tag": "0024_event_settlement",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795618812598,
+      "tag": "0025_nominee_media",
+      "breakpoints": true
     }
   ]
 }

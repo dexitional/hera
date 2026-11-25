@@ -47,7 +47,7 @@ export function electionOwnerScope(admin: SessionUser) {
 /** Super admins may access any election; regular admins only their own. */
 export async function assertElectionAccess(admin: SessionUser, electionId: unknown) {
   const user = requireUser(admin);
-  if (typeof electionId !== 'string' || !electionId) throw new Error('Election not found.');
+  if (typeof electionId !== 'string' || !electionId) throw new Error("We couldn't find that election. It may have been removed, or you may not have access to it.");
 
   const [row] = await db
     .select({ id: elections.id })
@@ -57,13 +57,13 @@ export async function assertElectionAccess(admin: SessionUser, electionId: unkno
         ? eq(elections.id, electionId)
         : and(eq(elections.id, electionId), eq(elections.adminId, user.id)),
     );
-  if (!row) throw new Error('Election not found.');
+  if (!row) throw new Error("We couldn't find that election. It may have been removed, or you may not have access to it.");
   return row;
 }
 
 export async function assertPositionAccess(admin: SessionUser, positionId: unknown) {
   const user = requireUser(admin);
-  if (typeof positionId !== 'string' || !positionId) throw new Error('Position not found.');
+  if (typeof positionId !== 'string' || !positionId) throw new Error("We couldn't find that position. It may have been removed, or you may not have access to it.");
 
   const [row] = await db
     .select({ id: positions.id })
@@ -74,13 +74,13 @@ export async function assertPositionAccess(admin: SessionUser, positionId: unkno
         ? eq(positions.id, positionId)
         : and(eq(positions.id, positionId), eq(elections.adminId, user.id)),
     );
-  if (!row) throw new Error('Position not found.');
+  if (!row) throw new Error("We couldn't find that position. It may have been removed, or you may not have access to it.");
   return row;
 }
 
 export async function assertCandidateAccess(admin: SessionUser, candidateId: unknown) {
   const user = requireUser(admin);
-  if (typeof candidateId !== 'string' || !candidateId) throw new Error('Candidate not found.');
+  if (typeof candidateId !== 'string' || !candidateId) throw new Error("We couldn't find that candidate. They may have been removed, or you may not have access to them.");
 
   const [row] = await db
     .select({ id: candidates.id })
@@ -92,13 +92,13 @@ export async function assertCandidateAccess(admin: SessionUser, candidateId: unk
         ? eq(candidates.id, candidateId)
         : and(eq(candidates.id, candidateId), eq(elections.adminId, user.id)),
     );
-  if (!row) throw new Error('Candidate not found.');
+  if (!row) throw new Error("We couldn't find that candidate. They may have been removed, or you may not have access to them.");
   return row;
 }
 
 export async function assertEventAccess(admin: SessionUser, eventId: unknown) {
   const user = requireUser(admin);
-  if (typeof eventId !== 'string' || !eventId) throw new Error('Event not found.');
+  if (typeof eventId !== 'string' || !eventId) throw new Error("We couldn't find that event. It may have been removed, or you may not have access to it.");
 
   const [row] = await db
     .select({ id: events.id })
@@ -108,13 +108,13 @@ export async function assertEventAccess(admin: SessionUser, eventId: unknown) {
         ? eq(events.id, eventId)
         : and(eq(events.id, eventId), eq(events.adminId, user.id)),
     );
-  if (!row) throw new Error('Event not found.');
+  if (!row) throw new Error("We couldn't find that event. It may have been removed, or you may not have access to it.");
   return row;
 }
 
 export async function assertCategoryAccess(admin: SessionUser, categoryId: unknown) {
   const user = requireUser(admin);
-  if (typeof categoryId !== 'string' || !categoryId) throw new Error('Category not found.');
+  if (typeof categoryId !== 'string' || !categoryId) throw new Error("We couldn't find that category. It may have been removed, or you may not have access to it.");
 
   const [row] = await db
     .select({ id: categories.id })
@@ -125,13 +125,13 @@ export async function assertCategoryAccess(admin: SessionUser, categoryId: unkno
         ? eq(categories.id, categoryId)
         : and(eq(categories.id, categoryId), eq(events.adminId, user.id)),
     );
-  if (!row) throw new Error('Category not found.');
+  if (!row) throw new Error("We couldn't find that category. It may have been removed, or you may not have access to it.");
   return row;
 }
 
 export async function assertContestantAccess(admin: SessionUser, contestantId: unknown) {
   const user = requireUser(admin);
-  if (typeof contestantId !== 'string' || !contestantId) throw new Error('Contestant not found.');
+  if (typeof contestantId !== 'string' || !contestantId) throw new Error("We couldn't find that nominee. They may have been removed, or you may not have access to them.");
 
   const [row] = await db
     .select({ id: contestants.id })
@@ -143,13 +143,13 @@ export async function assertContestantAccess(admin: SessionUser, contestantId: u
         ? eq(contestants.id, contestantId)
         : and(eq(contestants.id, contestantId), eq(events.adminId, user.id)),
     );
-  if (!row) throw new Error('Contestant not found.');
+  if (!row) throw new Error("We couldn't find that nominee. They may have been removed, or you may not have access to them.");
   return row;
 }
 
 export async function assertVoterAccess(admin: SessionUser, voterId: unknown) {
   const user = requireUser(admin);
-  if (typeof voterId !== 'string' || !voterId) throw new Error('Voter not found.');
+  if (typeof voterId !== 'string' || !voterId) throw new Error("We couldn't find that voter. They may have been removed, or you may not have access to them.");
 
   const [row] = await db
     .select({ id: voters.id, electionId: voters.electionId })
@@ -160,6 +160,6 @@ export async function assertVoterAccess(admin: SessionUser, voterId: unknown) {
         ? eq(voters.id, voterId)
         : and(eq(voters.id, voterId), eq(elections.adminId, user.id)),
     );
-  if (!row) throw new Error('Voter not found.');
+  if (!row) throw new Error("We couldn't find that voter. They may have been removed, or you may not have access to them.");
   return row;
 }

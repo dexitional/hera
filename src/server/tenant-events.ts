@@ -3,7 +3,10 @@ import { createServerFn } from '@tanstack/react-start';
 import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import XLSX from 'xlsx-js-style';
 import { db } from '../db';
-import { categories, contestants, events, eventTransactions, eventWithdrawals, user } from '../db/schema';
+import { categories, contestants, events, eventTransactions, eventWithdrawals, nomineeAccess, user } from '../db/schema';
+import { normalizePhone } from '#/lib/phone';
+import { parseSettlement } from '#/lib/settlement';
+import { nomineeMediaFrom } from './nominee-media';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
 import { generateContestantCode } from '#/lib/utils';
 import { creditCardVote } from './paystack-credit';
@@ -11,6 +14,8 @@ import { processImageUpload } from './image-upload';
 import { assertCategoryAccess, assertContestantAccess, assertEventAccess, eventOwnerScope, isSuperAdmin } from './access-control';
 import { computeRevenue } from './event-revenue';
 import { loadWithdrawnByEvent } from './event-revenue-queries';
+import { buildTransactionsWorkbook, exportFilename } from './transactions-export';
+import { paystackPayerContact } from './paystack-payer';
 
 // ==========================================
 // EVENTS FUNCTIONS
@@ -49,7 +54,7 @@ export const getPublicEventFn = createServerFn({ method: 'GET' })
       .where(and(eq<any>(events.id, eventId), eq<any>(events.isActive, true)));
 
     if (!eventRecord) {
-      throw new Error(`Event [${eventId}] not found or not currently active.`);
+      throw new Error("This event isn't available right now. It may have ended or not be open for voting yet.");
     }
 
     const categoryRows = await db
@@ -90,7 +95,7 @@ export const getPublicCategoryFn = createServerFn({ method: 'GET' })
       .where(and(eq<any>(categories.id, categoryId), eq<any>(events.isActive, true)));
 
     if (!row) {
-      throw new Error(`Category [${categoryId}] not found or not currently active.`);
+      throw new Error("This category isn't available right now. Its event may have ended or not be open for voting yet.");
     }
 
     const contestantRows = await db
@@ -135,7 +140,7 @@ export const getPublicContestantFn = createServerFn({ method: 'GET' })
       .where(and(eq<any>(contestants.code, code), eq<any>(events.isActive, true)));
 
     if (!row) {
-      throw new Error(`Nominee [${code}] not found or not currently active.`);
+      throw new Error(`We couldn't find an active nominee with the code ${code}. Please check the code and try again.`);
     }
 
     return {
@@ -144,6 +149,8 @@ export const getPublicContestantFn = createServerFn({ method: 'GET' })
       tagline: row.contestant.tagline,
       imageUrl: row.contestant.imageUrl,
       code: row.contestant.code,
+      flyerUrl: row.contestant.flyerUrl,
+      introVideoUrl: row.contestant.introVideoUrl,
       category: { id: row.category.id, name: row.category.name },
       event: {
         id: row.event.id,
@@ -216,6 +223,8 @@ export const createEventFn = createServerFn({ method: 'POST' })
     const targetAdminId = admin.role === 'super' && data.get("adminId")
       ? String(data.get("adminId"))
       : admin.id;
+    // Validated before the image upload, so a rejected form leaves nothing behind.
+    const settlement = parseSettlement(Object.fromEntries(data as FormData));
 
     const imageUrl = await processImageUpload(data.get("image") as File | null, {
       folder: 'events',
@@ -224,8 +233,8 @@ export const createEventFn = createServerFn({ method: 'POST' })
       fit: 'cover',
       quality: 80,
     });
-
     const [created] = await db.insert(events).values({
+      ...settlement,
       title: data.get("title") as string,
       description: data.get("description") as string,
       startAt: data.get("startAt") ? new Date(data.get("startAt") as string) : null,
@@ -246,6 +255,8 @@ export const updateEventFn = createServerFn({ method: 'POST' })
     const ownershipFilter = admin.role === 'super'
       ? eq<any>(events.id, data.get("id") as any)
       : and(eq<any>(events.id, data.get("id") as any), eventOwnerScope(admin));
+    // Validated before the image upload, so a rejected form leaves nothing behind.
+    const settlement = parseSettlement(Object.fromEntries(data as FormData));
 
     const imageUrl = await processImageUpload(data.get("image") as File | null, {
       folder: 'events',
@@ -258,6 +269,7 @@ export const updateEventFn = createServerFn({ method: 'POST' })
     const [updated] = await db
       .update(events)
       .set({
+        ...settlement,
         title: data.get("title") as string,
         description: data.get("description") as string,
         startAt: data.get("startAt") ? new Date(data.get("startAt") as string) : null,
@@ -460,7 +472,7 @@ export const createCategoryFn = createServerFn({ method: 'POST' })
             : and(eq<any>(events.id, data.eventId), eventOwnerScope(admin))
         );
       if (!ownedEvent) {
-        throw new Error('Event not found.');
+        throw new Error("We couldn't find that event. It may have been removed, or you may not have access to it.");
       }
 
       return await db.insert(categories).values({
@@ -499,7 +511,7 @@ export const updateCategoryFn = createServerFn({ method: 'POST' })
         )
         .returning({ id: categories.id, name: categories.name, description: categories.description, code: categories.code, eventId: categories.eventId, createdAt: categories.createdAt });
       if (updated.length === 0) {
-        throw new Error('Category not found.');
+        throw new Error("We couldn't find that category. It may have been removed, or you may not have access to it.");
       }
       return updated;
     } catch (error: any) {
@@ -520,7 +532,7 @@ export const deleteCategoryFn = createServerFn({ method: 'POST' })
       .innerJoin(events, eq(categories.eventId, events.id))
       .where(and(eq<any>(categories.id, categoryId), eventOwnerScope(admin)));
     if (!ownedCategory) {
-      throw new Error('Category not found.');
+      throw new Error("We couldn't find that category. It may have been removed, or you may not have access to it.");
     }
     return await db.delete(categories).where(eq<any>(categories.id, categoryId)).returning();
   });
@@ -554,10 +566,22 @@ export const getContestantsFn = createServerFn({ method: 'GET' })
 
     const [rows, [countResult], categoryOptions] = await Promise.all([
       db
-        .select()
+        .select({
+          contestants,
+          categories,
+          events,
+          // Invite status only; the code itself is never sent with the list.
+          access: {
+            invitedAt: nomineeAccess.invitedAt,
+            inviteCount: nomineeAccess.inviteCount,
+            activatedAt: nomineeAccess.activatedAt,
+            lastLoginAt: nomineeAccess.lastLoginAt,
+          },
+        })
         .from(contestants)
         .innerJoin(categories, eq(contestants.categoryId, categories.id))
         .innerJoin(events, eq(categories.eventId, events.id))
+        .leftJoin(nomineeAccess, eq(nomineeAccess.contestantId, contestants.id))
         .where(queryCondition)
         .orderBy(asc(categories.name), asc(contestants.order))
         .limit(limitValue)
@@ -592,6 +616,15 @@ export const getContestantFn = createServerFn({ method: 'GET' }).middleware([arc
   }
 );
 
+/** The nominee form's optional phone: null when blank, an error when it isn't a phone number. */
+function nomineePhoneFrom(data: FormData): string | null {
+  const raw = String(data.get('phone') ?? '').trim();
+  if (!raw) return null;
+  const phone = normalizePhone(raw);
+  if (!phone) throw new Error('Enter a valid phone number, e.g. 0241234567 or +233241234567.');
+  return phone;
+}
+
 export const createContestantFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data }: any) => {
@@ -607,9 +640,11 @@ export const createContestantFn = createServerFn({ method: 'POST' })
             : and(eq<any>(categories.id, data.get("categoryId")), eventOwnerScope(admin))
         );
       if (!ownedCategory) {
-        throw new Error('Category not found.');
+        throw new Error("We couldn't find that category. It may have been removed, or you may not have access to it.");
       }
 
+      const phone = nomineePhoneFrom(data);
+      const media = await nomineeMediaFrom(data);
       const finalAvatarUrl = await processImageUpload(data.get("image") as File | null, {
         folder: 'contestants',
         maxWidth: 800,
@@ -627,6 +662,8 @@ export const createContestantFn = createServerFn({ method: 'POST' })
             name: data.get("name") as string,
             tagline: data.get("tagline") as string,
             order: data.get("order") as any,
+            phone,
+            ...media,
             code: generateContestantCode(),
             ...(finalAvatarUrl && { imageUrl: finalAvatarUrl }),
           }).returning();
@@ -664,8 +701,13 @@ export const updateContestantFn = createServerFn({ method: 'POST' })
             : and(eq<any>(contestants.id, data.get("id")), eventOwnerScope(admin))
         );
       if (!ownedContestant) {
-        throw new Error('Contestant not found.');
+        throw new Error("We couldn't find that nominee. They may have been removed, or you may not have access to them.");
       }
+      // The category it moves to must be the admin's too, or a nominee could
+      // be moved into another organisation's event.
+      await assertCategoryAccess(admin, data.get("categoryId"));
+      const phone = nomineePhoneFrom(data);
+      const media = await nomineeMediaFrom(data);
 
       const finalAvatarUrl = await processImageUpload(data.get("image") as File | null, {
         folder: 'contestants',
@@ -681,6 +723,8 @@ export const updateContestantFn = createServerFn({ method: 'POST' })
           name: data.get("name") as string,
           tagline: data.get("tagline") as string,
           order: data.get("order") as any,
+          phone,
+          ...media,
           code: String(data.get("code") ?? "").toUpperCase(),
           ...(finalAvatarUrl && { imageUrl: finalAvatarUrl }),
         })
@@ -705,7 +749,7 @@ export const deleteContestantFn = createServerFn({ method: 'POST' })
       .innerJoin(events, eq(categories.eventId, events.id))
       .where(and(eq<any>(contestants.id, contestantId), eventOwnerScope(admin)));
     if (!ownedContestant) {
-      throw new Error('Contestant not found.');
+      throw new Error("We couldn't find that nominee. They may have been removed, or you may not have access to them.");
     }
     return await db.delete(contestants).where(eq<any>(contestants.id, contestantId)).returning();
   });
@@ -715,6 +759,90 @@ export const deleteContestantFn = createServerFn({ method: 'POST' })
 // EVENT TRANSACTION FUNCTIONS (events' equivalent of voters)
 // ==========================================
 
+/** The Vote Transactions Manager's filters, always limited to events the admin may see. */
+function transactionFilter(admin: any, eventId: string, rawSearch: unknown, rawStatus: unknown) {
+  const searchQuery = String(rawSearch ?? '').trim();
+  const conditions: any[] = [eventOwnerScope(admin), eq(events.id, eventId)];
+  if (searchQuery) {
+    const searchPattern = `%${searchQuery}%`;
+    conditions.push(
+      or(
+        ilike(contestants.name, searchPattern),
+        ilike(eventTransactions.payPhone, searchPattern),
+        ilike(eventTransactions.transRef, searchPattern),
+      )
+    );
+  }
+  if (rawStatus === 'PAID') {
+    conditions.push(eq(eventTransactions.payStatus, true));
+  } else if (rawStatus === 'PENDING') {
+    conditions.push(eq(eventTransactions.payStatus, false));
+  }
+  return and(...conditions);
+}
+
+// Excel's own limit is ~1M rows; this keeps one export's memory use sensible.
+const MAX_EXPORT_ROWS = 200_000;
+
+/**
+ * Every transaction matching the manager's current filters (all of them when
+ * unfiltered) as an .xlsx workbook, returned base64-encoded for download.
+ */
+export const exportEventTransactionsFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const eventId = data?.eventId;
+    await assertEventAccess(admin, eventId);
+    const statusFilter = data?.statusFilter === 'PAID' || data?.statusFilter === 'PENDING' ? data.statusFilter : 'ALL';
+    const searchQuery = String(data?.searchQuery ?? '').trim();
+    const where = transactionFilter(admin, eventId, searchQuery, statusFilter);
+
+    const [[{ total }], [event]] = await Promise.all([
+      db
+        .select({ total: count() })
+        .from(eventTransactions)
+        .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .innerJoin(events, eq(categories.eventId, events.id))
+        .where(where),
+      db.select({ title: events.title }).from(events).where(eq(events.id, eventId)),
+    ]);
+    if (total > MAX_EXPORT_ROWS) {
+      throw new Error(`That's ${total.toLocaleString()} transactions, more than one export can hold (${MAX_EXPORT_ROWS.toLocaleString()}). Filter by status or search, then export again.`);
+    }
+
+    const rows = await db
+      .select({
+        createdAt: eventTransactions.createdAt,
+        transRef: eventTransactions.transRef,
+        payRef: eventTransactions.payRef,
+        categoryName: categories.name,
+        contestantName: contestants.name,
+        contestantCode: contestants.code,
+        payPhone: eventTransactions.payPhone,
+        channel: eventTransactions.channel,
+        votes: eventTransactions.votes,
+        payAmount: eventTransactions.payAmount,
+        payStatus: eventTransactions.payStatus,
+        refundedAt: eventTransactions.refundedAt,
+      })
+      .from(eventTransactions)
+      .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+      .innerJoin(categories, eq(contestants.categoryId, categories.id))
+      .innerJoin(events, eq(categories.eventId, events.id))
+      .where(where)
+      .orderBy(desc(eventTransactions.createdAt));
+
+    const exportedAt = new Date();
+    const workbook = buildTransactionsWorkbook(rows, { eventTitle: event?.title ?? 'Event', statusFilter, searchQuery, exportedAt });
+    return {
+      filename: exportFilename(event?.title ?? 'event', exportedAt),
+      base64Data: XLSX.write(workbook, { type: 'base64', bookType: 'xlsx', compression: true }) as string,
+      rowCount: rows.length,
+    };
+  });
+
 export const getEventTransactionsFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data }: any) => {
@@ -722,29 +850,11 @@ export const getEventTransactionsFn = createServerFn({ method: 'GET' })
     const eventId = data?.eventId ?? data;
     const page = Math.max(Number(data?.page) || 1, 1);
     const pageSize = Math.max(Number(data?.pageSize) || 15, 1);
-    const searchQuery = (data?.searchQuery || '').trim();
-    const statusFilter = data?.statusFilter || 'ALL';
 
     const limitValue = pageSize;
     const offsetValue = (page - 1) * limitValue;
 
-    const conditions: any = [eventOwnerScope(admin), eq(events.id, eventId)];
-    if (searchQuery) {
-      const searchPattern = `%${searchQuery}%`;
-      conditions.push(
-        or(
-          ilike(contestants.name, searchPattern),
-          ilike(eventTransactions.payPhone, searchPattern),
-          ilike(eventTransactions.transRef, searchPattern),
-        )
-      );
-    }
-    if (statusFilter === 'PAID') {
-      conditions.push(eq(eventTransactions.payStatus, true));
-    } else if (statusFilter === 'PENDING') {
-      conditions.push(eq(eventTransactions.payStatus, false));
-    }
-    const queryCondition = and(...conditions);
+    const queryCondition = transactionFilter(admin, eventId, data?.searchQuery, data?.statusFilter);
 
     const [rows, [countResult]] = await Promise.all([
       db
@@ -808,7 +918,7 @@ export const createEventTransactionFn = createServerFn({ method: 'POST' })
           : and(eq<any>(contestants.id, data.contestantId), eventOwnerScope(admin))
       );
     if (!ownedContestant) {
-      throw new Error('Contestant not found.');
+      throw new Error("We couldn't find that nominee. They may have been removed, or you may not have access to them.");
     }
 
     return await db.insert(eventTransactions).values({
@@ -839,7 +949,7 @@ export const updateEventTransactionFn = createServerFn({ method: 'POST' })
           : and(eq<any>(eventTransactions.id, data.id), eventOwnerScope(admin))
       );
     if (!ownedTransaction) {
-      throw new Error('Transaction not found.');
+      throw new Error("We couldn't find that transaction. It may have been removed, or you may not have access to it.");
     }
 
     return await db
@@ -870,7 +980,7 @@ export const deleteEventTransactionFn = createServerFn({ method: 'POST' })
       .innerJoin(events, eq(categories.eventId, events.id))
       .where(and(eq<any>(eventTransactions.id, transactionId), eventOwnerScope(admin)));
     if (!ownedTransaction) {
-      throw new Error('Transaction not found.');
+      throw new Error("We couldn't find that transaction. It may have been removed, or you may not have access to it.");
     }
     return await db.delete(eventTransactions).where(eq<any>(eventTransactions.id, transactionId)).returning();
   });
@@ -1308,10 +1418,10 @@ export const exportEventResultsToExcelFn = createServerFn({ method: 'GET' })
 export const verifyAndCastCardVoteFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware])
   .handler(async ({ data }: any) => {
-    const { reference, contestantId, votes, payEmail, payPhone } = data;
+    const { reference, contestantId, votes } = data;
 
     if (!reference || !contestantId || !votes) {
-      throw new Error('Missing required payment details.');
+      throw new Error('Some payment details are missing. Please try the payment again.');
     }
 
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
@@ -1333,7 +1443,8 @@ export const verifyAndCastCardVoteFn = createServerFn({ method: 'POST' })
       reference,
       contestantId,
       votes: Number(votes),
-      payPhone: payPhone || payEmail || verifyResult.data.customer?.email,
+      // From Paystack's verified record, never the browser: the MoMo number, or the card used.
+      payPhone: paystackPayerContact(verifyResult.data),
       amountKobo: verifyResult.data.amount,
       transRef: verifyResult.data.id ? String(verifyResult.data.id) : null,
       channel: 'WEB',
@@ -1352,6 +1463,6 @@ export const verifyAndCastCardVoteFn = createServerFn({ method: 'POST' })
       case 'not_found':
         throw new Error(result.reason);
       case 'amount_mismatch':
-        throw new Error('Paid amount does not match the expected vote total.');
+        throw new Error("The amount paid doesn't match the number of votes selected, so the votes weren't added. Please contact support with your payment reference.");
     }
   });

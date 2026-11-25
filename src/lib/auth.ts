@@ -3,9 +3,12 @@ import { admin } from "better-auth/plugins";
 import { adminAc, userAc } from "better-auth/plugins/admin/access";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { eq, sql } from "drizzle-orm";
 import { db } from "../db"; // Your optimized Drizzle instance
+import { user as userTable } from "../db/schema";
 import { passwordResetEmailHtml, sendEmail, verificationEmailHtml } from "../server/email";
 import { trustedOrigins } from "./trusted-origins";
+import { googleEmailVerified } from "../server/google-verification";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -54,13 +57,22 @@ export const auth = betterAuth({
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      // better-auth trusts Google's email_verified claim by default and will
-      // silently flip our local user.emailVerified to true on every sign-in
-      // (not just the first link) -- including accounts a super admin has
-      // deliberately marked unverified. Verification must only ever happen
-      // through the explicit link-click flow, so never let the provider's
-      // claim override our own column.
-      mapProfileToUser: () => ({ emailVerified: false }),
+      // Google's signed email_verified claim proves the user owns the address,
+      // so a Google sign-up starts verified, and an existing unverified
+      // account becomes verified at its next Google sign-in (better-auth
+      // upgrades it when the claim is true). Exception: accounts a super
+      // admin deliberately marked unverified (email_verification_revoked) --
+      // for those the claim is ignored, so the admin's decision sticks until
+      // the user verifies through an emailed link.
+      mapProfileToUser: async (profile: any) => ({
+        emailVerified: await googleEmailVerified(profile, async (email) => {
+          const [existing] = await db
+            .select({ revoked: userTable.emailVerificationRevoked })
+            .from(userTable)
+            .where(eq(sql`lower(${userTable.email})`, email));
+          return existing?.revoked;
+        }),
+      }),
     },
   },
   emailAndPassword: {
@@ -119,6 +131,22 @@ export const auth = betterAuth({
     crossSubDomainCookies: {
       enabled: true,
       ... process.env.NODE_ENV == 'production' && ({ domain: ".heravote.com" }),
+    },
+  },
+  databaseHooks: {
+    user: {
+      update: {
+        // Clicking an emailed verification link proves ownership again, so it
+        // lifts a super admin's "unverified" mark (see mapProfileToUser above).
+        after: async (updated: any, ctx: any) => {
+          if (updated?.emailVerified && ctx?.path === "/verify-email") {
+            await db
+              .update(userTable)
+              .set({ emailVerificationRevoked: false })
+              .where(eq(userTable.id, updated.id));
+          }
+        },
+      },
     },
   },
   plugins: [

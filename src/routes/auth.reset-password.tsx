@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { authErrorMessage } from '#/lib/errors'
 import { useState } from 'react'
 import z from 'zod'
 import { ArrowRight, CheckCircle2, Eye, EyeOff, LoaderCircle, Lock, ShieldAlert } from 'lucide-react'
@@ -42,7 +43,7 @@ function ResetPassword() {
         setError(
           /token/i.test(error.message ?? '') || error.code === 'INVALID_TOKEN'
             ? 'This reset link has expired or was already used. Request a new one.'
-            : error.message || 'Could not reset your password. Please try again.',
+            : authErrorMessage(error, "We couldn't reset your password. Please try again."),
         )
       } else {
         setDone(true)

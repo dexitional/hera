@@ -96,6 +96,11 @@ export const getEventRevenueFn = createServerFn({ method: 'GET' })
           ownerName: user.name,
           ownerOrganization: user.organization,
           ownerEmail: user.email,
+          settlementType: events.settlementType,
+          settlementProvider: events.settlementProvider,
+          settlementBranch: events.settlementBranch,
+          settlementAccountNumber: events.settlementAccountNumber,
+          settlementAccountName: events.settlementAccountName,
         })
         .from(events)
         .innerJoin(user, eq(events.adminId, user.id))
@@ -104,7 +109,7 @@ export const getEventRevenueFn = createServerFn({ method: 'GET' })
       loadWithdrawnByEvent(db, [eventId]),
       loadWithdrawalLedger(db, eventId),
     ]);
-    if (!event) throw new Error('Event not found.');
+    if (!event) throw new Error("We couldn't find that event. It may have been removed, or you may not have access to it.");
 
     const c = collections.get(eventId);
     return {
@@ -178,7 +183,7 @@ export const voidWithdrawalFn = createServerFn({ method: 'POST' })
         .from(eventWithdrawals)
         .where(eq(eventWithdrawals.id, withdrawalId))
         .for('update');
-      if (!w) throw new Error('Withdrawal not found.');
+      if (!w) throw new Error("We couldn't find that withdrawal. It may have been removed.");
       if (w.voidedAt) throw new Error('This withdrawal has already been cancelled.');
       await tx
         .update(eventWithdrawals)

@@ -20,6 +20,12 @@ type ShareMenuProps = {
   text: string
   /** Defaults to the current page URL. */
   url?: string
+  /** Trigger styling; defaults to the nominee page's pill. */
+  buttonClassName?: string
+  /** Heading inside the menu. */
+  heading?: string
+  /** Which edge of the trigger the dropdown lines up with on wide screens. */
+  align?: 'left' | 'right'
 }
 
 type Target = {
@@ -51,7 +57,7 @@ const TARGETS: Target[] = [
   { key: 'email', label: 'Email', icon: Mail, color: 'bg-slate-500', href: (u, t, ti) => `mailto:?subject=${enc(ti)}&body=${enc(`${t}\n\n${u}`)}` },
 ]
 
-export default function ShareMenu({ title, text, url }: ShareMenuProps) {
+export default function ShareMenu({ title, text, url, buttonClassName, heading = 'Share this nominee', align = 'left' }: ShareMenuProps) {
   const [open, setOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [shareUrl, setShareUrl] = useState(url ?? '')
@@ -64,7 +70,8 @@ export default function ShareMenu({ title, text, url }: ShareMenuProps) {
 
   // Browser-only values (avoids an SSR/hydration mismatch).
   useEffect(() => {
-    if (!url) setShareUrl(window.location.href)
+    // Follows the url prop, which can arrive after the first render.
+    setShareUrl(url ?? window.location.href)
     setCanNativeShare(typeof navigator !== 'undefined' && typeof navigator.share === 'function')
     setIsTouchDevice(window.matchMedia('(pointer: coarse)').matches)
     const wide = window.matchMedia('(min-width: 640px)')
@@ -132,9 +139,9 @@ export default function ShareMenu({ title, text, url }: ShareMenuProps) {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex items-center gap-2 bg-slate-600/10 px-3 py-1.5 rounded-full hover:bg-slate-600/20 transition-colors"
+        className={buttonClassName ?? "flex items-center gap-2 bg-slate-600/10 px-3 py-1.5 rounded-full hover:bg-slate-600/20 transition-colors"}
       >
-        <Share2 className="w-4 h-4 text-purple-400" />
+        <Share2 className={buttonClassName ? "w-4 h-4" : "w-4 h-4 text-purple-400"} />
         <span>Share</span>
       </button>
 
@@ -146,9 +153,9 @@ export default function ShareMenu({ title, text, url }: ShareMenuProps) {
           // Chosen in JS rather than with sm: variants because the legacy
           // utilities pasted into styles.css (e.g. .fixed) come later in the
           // same layer and override Tailwind's responsive classes.
-          className={`${isWide ? 'absolute left-0 top-full mt-2 w-80' : 'fixed inset-x-4 bottom-4'} z-50 rounded-2xl border border-slate-600/30 bg-[#1f1f24] p-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150`}
+          className={`${isWide ? `absolute ${align === 'right' ? 'right-0' : 'left-0'} top-full mt-2 w-80` : 'fixed inset-x-4 bottom-4'} z-50 rounded-2xl border border-slate-600/30 bg-[#1f1f24] p-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150`}
         >
-          <p className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">Share this nominee</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">{heading}</p>
           <div className="grid grid-cols-4 gap-3">
             {TARGETS.map((t) => {
               const Icon = t.icon

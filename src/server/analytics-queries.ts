@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, lt, sql } from 'drizzle-orm';
 import { db } from '../db';
 import { categories, contestants, elections, electionVotes, events, eventTransactions, voters, user } from '../db/schema';
 import { electionOwnerScope, eventOwnerScope } from './access-control';
@@ -53,8 +53,8 @@ export async function loadScopedEvents(admin: Admin) {
     .where(eventOwnerScope(admin));
 }
 
-/** Successful payments per (UTC day, event) since `since`. */
-export async function loadDailyCollections(eventIds: string[], since: Date) {
+/** Successful payments per (UTC day, event) from `since` up to (not including) `until`. */
+export async function loadDailyCollections(eventIds: string[], since: Date, until?: Date) {
   if (eventIds.length === 0) return [];
   const day = sql<string>`to_char(date_trunc('day', ${eventTransactions.createdAt}), 'YYYY-MM-DD')`;
   return db
@@ -68,7 +68,12 @@ export async function loadDailyCollections(eventIds: string[], since: Date) {
     .from(eventTransactions)
     .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
     .innerJoin(categories, eq(contestants.categoryId, categories.id))
-    .where(and(eq(eventTransactions.payStatus, true), gte(eventTransactions.createdAt, since), inArray(categories.eventId, eventIds)))
+    .where(and(
+      eq(eventTransactions.payStatus, true),
+      gte(eventTransactions.createdAt, since),
+      until ? lt(eventTransactions.createdAt, until) : undefined,
+      inArray(categories.eventId, eventIds),
+    ))
     .groupBy(day, categories.eventId);
 }
 
@@ -149,19 +154,47 @@ export async function loadTurnout(electionIds: string[]) {
  * in one statement and share its created_at, so distinct (election,
  * created_at) pairs count ballots, not individual position selections.
  */
-export async function loadDailyBallots(electionIds: string[], since: Date) {
+export async function loadDailyBallots(electionIds: string[], since: Date, until?: Date) {
   if (electionIds.length === 0) return [];
   const day = sql<string>`to_char(date_trunc('day', ${electionVotes.createdAt}), 'YYYY-MM-DD')`;
   return db
     .select({ day, ballots: sql<number>`count(distinct (${electionVotes.electionId}, ${electionVotes.createdAt}))::int` })
     .from(electionVotes)
-    .where(and(gte(electionVotes.createdAt, since), inArray(electionVotes.electionId, electionIds)))
+    .where(and(
+      gte(electionVotes.createdAt, since),
+      until ? lt(electionVotes.createdAt, until) : undefined,
+      inArray(electionVotes.electionId, electionIds),
+    ))
     .groupBy(day);
 }
 
-export async function countAccounts() {
+/** Account totals, plus sign-ups in [since, now) and in the equally long window before it. */
+export async function countAccounts(since: Date, prevSince: Date) {
+  // Raw sql params skip the column's Date mapping, so bind UTC ISO strings like drizzle does.
+  const iso = (d: Date) => d.toISOString();
   const [row] = await db
-    .select({ total: count(), supers: sql<number>`count(*) filter (where ${user.role} = 'super')::int` })
+    .select({
+      total: count(),
+      supers: sql<number>`count(*) filter (where ${user.role} = 'super')::int`,
+      unverified: sql<number>`count(*) filter (where not ${user.emailVerified})::int`,
+      disabled: sql<number>`count(*) filter (where ${user.banned})::int`,
+      newInPeriod: sql<number>`count(*) filter (where ${user.createdAt} >= ${iso(since)})::int`,
+      newInPrevious: sql<number>`count(*) filter (where ${user.createdAt} >= ${iso(prevSince)} and ${user.createdAt} < ${iso(since)})::int`,
+    })
     .from(user);
-  return { total: Number(row?.total ?? 0), superAdmins: Number(row?.supers ?? 0) };
+  const num = (v: unknown) => Number(v ?? 0);
+  return {
+    total: num(row?.total),
+    superAdmins: num(row?.supers),
+    unverified: num(row?.unverified),
+    disabled: num(row?.disabled),
+    newInPeriod: num(row?.newInPeriod),
+    newInPrevious: num(row?.newInPrevious),
+  };
+}
+
+/** Percentage change from `previous` to `current`; null when there's no previous baseline. */
+export function percentChange(current: number, previous: number): number | null {
+  if (previous === 0) return current === 0 ? 0 : null;
+  return ((current - previous) / previous) * 100;
 }

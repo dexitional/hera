@@ -1,12 +1,68 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft, Banknote, CircleDollarSign, Landmark, Lock, Percent, Plus, Receipt, Wallet, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Banknote, Check, CircleDollarSign, Copy, Landmark, Lock, Percent, Plus, Receipt, Smartphone, Wallet, X } from "lucide-react";
 import { getEventRevenueFn, recordWithdrawalFn, setEventFeePercentFn, voidWithdrawalFn } from "#/server/tenant-revenue";
 import { WITHDRAWAL_METHODS, WITHDRAWAL_METHOD_LABELS, type WithdrawalMethod } from "#/server/event-revenue";
 import { ManageDashboardSkeleton } from "#/components/ui/skeleton";
 import { OwnerLine } from "#/components/admin/ScopeToggle";
 import { formatMoney, formatPercent } from "#/lib/money";
+
+function CopyValue({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      aria-label={`Copy ${label}`}
+      onClick={async () => { try { await navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* selectable */ } }}
+      className="rounded-md p-1 text-zinc-500 hover:bg-zinc-800 hover:text-white"
+    >
+      {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+    </button>
+  );
+}
+
+/** Where the organiser's share is paid out, from the event form. */
+function SettlementCard({ event, eventId }: { event: any; eventId: string }) {
+  if (!event.settlementType) {
+    return (
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-900/40 bg-amber-950/20 p-4">
+        <p className="flex items-start gap-2 text-xs text-amber-200">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+          No settlement account yet. Add the organiser's mobile money or bank details on the event form before making a payout.
+        </p>
+        <Link to="/admin/events/$eventId/edit" params={{ eventId }} className="shrink-0 text-xs font-semibold text-amber-200 underline-offset-2 hover:underline">
+          Add settlement details
+        </Link>
+      </div>
+    );
+  }
+  const momo = event.settlementType === "momo";
+  const rows: [string, string | null][] = momo
+    ? [["Network", `${event.settlementProvider} Mobile Money`], ["Wallet number", event.settlementAccountNumber], ["Registered name", event.settlementAccountName]]
+    : [["Bank", event.settlementProvider], ["Branch", event.settlementBranch], ["Account number", event.settlementAccountNumber], ["Account name", event.settlementAccountName]];
+  return (
+    <div className="rounded-xl border border-zinc-800 bg-[#0a192a]/50 p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-bold text-white flex items-center gap-2">
+          {momo ? <Smartphone className="w-4 h-4 text-purple-400" /> : <Landmark className="w-4 h-4 text-purple-400" />} Settlement account
+        </h2>
+        <Link to="/admin/events/$eventId/edit" params={{ eventId }} className="text-xs text-zinc-400 hover:text-white">Edit</Link>
+      </div>
+      <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {rows.filter(([, v]) => v).map(([k, v]) => (
+          <div key={k} className="min-w-0">
+            <dt className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{k}</dt>
+            <dd className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-zinc-100">
+              <span className={`truncate ${k.includes("number") ? "font-mono" : ""}`}>{v}</span>
+              {k.includes("number") && <CopyValue value={v!} label={k.toLowerCase()} />}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
 
 const eventRevenueQueryOptions = (eventId: string) => ({
   queryKey: ["event-revenue", eventId],
@@ -128,6 +184,8 @@ function EventRevenue() {
         <Card label="Withdrawn" value={formatMoney(revenue.withdrawn)} icon={Banknote} tone="text-amber-400" />
         <Card label="Available balance" value={formatMoney(revenue.balance)} hint="Share not yet paid out" icon={Landmark} tone="text-rose-400" emphasis />
       </div>
+
+      <SettlementCard event={event} eventId={eventId} />
 
       {canManage && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

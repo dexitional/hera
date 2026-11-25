@@ -25,7 +25,7 @@ import { voters } from '../db/schema';
 
 const ENC_PREFIX = 'v1:';
 
-let cachedKeys: { hash: Buffer; enc: Buffer; session: Buffer } | null = null;
+let cachedKeys: { hash: Buffer; enc: Buffer; session: Buffer; nomineeSession: Buffer } | null = null;
 
 function keys() {
   if (cachedKeys) return cachedKeys;
@@ -42,6 +42,7 @@ function keys() {
     hash: derive('heravote-voter-token-hash-v1'),
     enc: derive('heravote-voter-token-enc-v1'),
     session: derive('heravote-ballot-session-v1'),
+    nomineeSession: derive('heravote-nominee-session-v1'),
   };
   return cachedKeys;
 }
@@ -49,6 +50,11 @@ function keys() {
 /** Key for signing ballot session cookies (see voter-auth.ts). */
 export function ballotSessionKey(): Buffer {
   return keys().session;
+}
+
+/** Key for signing nominee portal session cookies (see nominee-access.ts). */
+export function nomineeSessionKey(): Buffer {
+  return keys().nomineeSession;
 }
 
 export function hashToken(token: string): string {
@@ -86,7 +92,7 @@ export function tokenColumns(token: string) {
 /** Rejects a missing/empty token on insert (the column used to be NOT NULL). */
 export function requireToken(token: unknown): string {
   if (typeof token !== 'string' || token.length === 0) {
-    throw new Error('Each voter needs an access token.');
+    throw new Error('Each voter needs an access code.');
   }
   return token;
 }

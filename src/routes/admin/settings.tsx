@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { authErrorMessage } from '#/lib/errors'
+import { clearAuthCache } from '#/lib/auth-cache'
 import React, { useEffect, useRef, useState } from "react";
 import {
   User, Mail, Phone, Shield, ShieldCheck, Key, Laptop, Globe,
@@ -77,7 +79,8 @@ function AdminAccountSettings() {
     queryKey: ['admin-accounts', user?.id],
     queryFn: async () => {
       const { data, error } = await authClient.listAccounts();
-      if (error) throw new Error(error.message);
+      // Keep the auth error's code so authErrorMessage can word it.
+      if (error) throw error;
       return data ?? [];
     },
     enabled: !!user,
@@ -93,7 +96,7 @@ function AdminAccountSettings() {
   const unlinkMutation = useMutation({
     mutationFn: (providerId: string) => authClient.unlinkAccount({ providerId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-accounts'] }),
-    onError: (error: any) => alert(error?.message || "Failed to unlink provider."),
+    onError: (error: any) => alert(authErrorMessage(error, "We couldn't unlink that sign-in method. Please try again.")),
   });
 
   const handleUnlinkGoogle = () => {
@@ -106,7 +109,8 @@ function AdminAccountSettings() {
     queryKey: ['admin-sessions', user?.id],
     queryFn: async () => {
       const { data, error } = await authClient.listSessions();
-      if (error) throw new Error(error.message);
+      // Keep the auth error's code so authErrorMessage can word it.
+      if (error) throw error;
       return data ?? [];
     },
     enabled: !!user,
@@ -115,7 +119,7 @@ function AdminAccountSettings() {
   const revokeSessionMutation = useMutation({
     mutationFn: (token: string) => authClient.revokeSession({ token }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-sessions'] }),
-    onError: (error: any) => alert(error?.message || "Failed to revoke session."),
+    onError: (error: any) => alert(authErrorMessage(error, "We couldn't sign out that device. Please try again.")),
   });
 
   const handleRevokeSession = (token: string) => {
@@ -126,7 +130,7 @@ function AdminAccountSettings() {
   const revokeOtherSessionsMutation = useMutation({
     mutationFn: () => authClient.revokeOtherSessions(),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-sessions'] }),
-    onError: (error: any) => alert(error?.message || "Failed to sign out other sessions."),
+    onError: (error: any) => alert(authErrorMessage(error, "We couldn't sign out your other devices. Please try again.")),
   });
 
   const handleRevokeOtherSessions = () => {
@@ -178,13 +182,16 @@ function AdminAccountSettings() {
         phone,
         ...(imageUrl ? { image: imageUrl } : {}),
       } as any);
-      if (error) throw new Error(error.message);
+      // Keep the auth error's code so authErrorMessage can word it.
+      if (error) throw error;
 
       setPendingImageFile(null);
       setPendingImagePreview(null);
       setProfileSuccess(true);
+      // The shell shows the user from the cached sign-in check; refresh it.
+      clearAuthCache();
     } catch (err: any) {
-      setUploadError(err?.message || "Failed to save profile.");
+      setUploadError(authErrorMessage(err, "We couldn't save your profile. Please try again."));
     } finally {
       setIsSavingProfile(false);
     }
@@ -213,13 +220,14 @@ function AdminAccountSettings() {
         newPassword: passwordState.newPassword,
         revokeOtherSessions: false,
       });
-      if (error) throw new Error(error.message);
+      // Keep the auth error's code so authErrorMessage can word it.
+      if (error) throw error;
 
       setPasswordSuccess(true);
       setPasswordState({ currentPassword: "", newPassword: "", confirmPassword: "" });
       queryClient.invalidateQueries({ queryKey: ['admin-sessions'] });
     } catch (err: any) {
-      setPasswordError(err?.message || "Failed to update password.");
+      setPasswordError(authErrorMessage(err, "We couldn't update your password. Please try again."));
     } finally {
       setIsUpdatingPassword(false);
     }

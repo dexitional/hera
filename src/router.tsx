@@ -1,5 +1,7 @@
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
+import { NotFoundPage, RouteErrorPage } from './components/ErrorPage'
+import { DefaultPending } from './components/RoutePending'
 
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import {
@@ -15,6 +17,15 @@ export function getRouter() {
     scrollRestoration: true,
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,
+    // Friendly screens inside the page layout when a route fails or isn't found.
+    defaultErrorComponent: RouteErrorPage,
+    defaultNotFoundComponent: NotFoundPage,
+    // Switch pages straight away: show the destination's skeleton after
+    // 50ms (instead of holding the old page for up to a second while data
+    // loads), and keep it at least 200ms once shown so it doesn't flicker.
+    defaultPendingMs: 50,
+    defaultPendingMinMs: 200,
+    defaultPendingComponent: DefaultPending,
   })
 
   setupRouterSsrQueryIntegration({ router, queryClient: context.queryClient })

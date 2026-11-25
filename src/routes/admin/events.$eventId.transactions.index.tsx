@@ -3,13 +3,26 @@ import { useEffect, useState } from "react";
 import {
   Plus, Search, Edit2, Trash2,
   CheckCircle, XCircle,
-  ArrowLeft, User, PhoneCallIcon, Coins, Hash,
+  ArrowLeft, User, PhoneCallIcon, Coins, Hash, FileSpreadsheet, Loader2, RotateCcw,
 } from "lucide-react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteEventTransactionFn, getEventTransactionsFn } from "#/server/tenant-events";
+import { deleteEventTransactionFn, exportEventTransactionsFn, getEventTransactionsFn } from "#/server/tenant-events";
 import { TableSkeleton } from "#/components/ui/skeleton";
 
 const TRANSACTIONS_PAGE_SIZE = 15;
+
+/** Saves a base64-encoded .xlsx returned by the server as a download. */
+function downloadXlsx(base64: string, filename: string) {
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 const transactionsQueryOptions = (params: {
   eventId: any;
@@ -68,6 +81,8 @@ function TransactionsDirectory() {
     votes: r.transaction?.votes,
     channel: r.transaction?.channel,
     createdAt: r.transaction?.createdAt,
+    refundedAt: r.transaction?.refundedAt,
+    refundReason: r.transaction?.refundReason,
     contestantName: r.contestant?.name,
     categoryName: r.category?.name,
   }));
@@ -90,6 +105,12 @@ function TransactionsDirectory() {
       queryClient.invalidateQueries({ queryKey: ['event-overview', eventId] });
     },
     onError: (error: any) => console.error(error.message),
+  });
+
+  const isFiltered = statusFilter !== "ALL" || debouncedSearchQuery !== "";
+  const exportMutation = useMutation({
+    mutationFn: () => exportEventTransactionsFn({ data: { eventId, statusFilter, searchQuery: debouncedSearchQuery } } as any),
+    onSuccess: (result: any) => downloadXlsx(result.base64Data, result.filename),
   });
 
   const handleDeleteTransaction = (id: any) => {
@@ -118,7 +139,18 @@ function TransactionsDirectory() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-col items-stretch sm:items-end gap-1.5 shrink-0">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => exportMutation.mutate()}
+            disabled={exportMutation.isPending || totalCount === 0}
+            title={isFiltered ? `Exports the ${totalCount.toLocaleString()} transactions matching your search and status filter` : "Exports every transaction for this event"}
+            className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-600 text-zinc-200 text-xs px-3.5 py-2 rounded-lg font-medium transition-all disabled:opacity-40 disabled:pointer-events-none"
+          >
+            {exportMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 text-emerald-400" />}
+            <span>{exportMutation.isPending ? "Preparing…" : isFiltered ? "Export filtered" : "Export to Excel"}</span>
+          </button>
           <Link
             to="/admin/events/$eventId/transactions/new"
             params={{ eventId }}
@@ -127,6 +159,12 @@ function TransactionsDirectory() {
             <Plus className="w-4 h-4" />
             <span>Record Transaction</span>
           </Link>
+        </div>
+        {exportMutation.isError && (
+          <p role="alert" className="text-[11px] text-red-400 max-w-sm sm:text-right">
+            {(exportMutation.error as any)?.message || "Export failed. Please try again."}
+          </p>
+        )}
         </div>
       </div>
 
@@ -217,7 +255,11 @@ function TransactionsDirectory() {
 
                     <td className="px-6 py-4 align-middle text-center">
                       <div className="inline-flex justify-center">
-                        {tx.payStatus ? (
+                        {tx.refundedAt ? (
+                          <span title={tx.refundReason ?? "Refunded through Paystack"} className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-red-300 bg-red-950/20 border border-red-900/30 px-2 py-0.5 rounded-full">
+                            <RotateCcw className="w-3 h-3" /> Refunded
+                          </span>
+                        ) : tx.payStatus ? (
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/20 border border-emerald-900/30 px-2 py-0.5 rounded-full">
                             <CheckCircle className="w-3 h-3" /> Paid
                           </span>

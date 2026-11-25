@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayKeys, maskContact, periodStart } from './analytics-queries';
+import { dayKeys, maskContact, percentChange, periodStart } from './analytics-queries';
 
 const now = new Date('2026-11-25T15:30:00Z');
 
@@ -34,3 +34,14 @@ describe('maskContact', () => {
     expect(maskContact('unknown')).toBe('—');
   });
 });
+
+describe('percentChange', () => {
+  it('measures growth and decline against the previous period', () => {
+    expect(percentChange(150, 100)).toBe(50)
+    expect(percentChange(50, 100)).toBe(-50)
+  })
+  it('is 0 when both periods are empty and null when only the previous one is', () => {
+    expect(percentChange(0, 0)).toBe(0)
+    expect(percentChange(10, 0)).toBeNull()
+  })
+})

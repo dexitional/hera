@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router'
-import { UserPlus, Award, Shield, User, Mail, Phone, Lock, ArrowRight } from 'lucide-react';
+import { UserPlus, Award, Shield, User, Mail, Phone, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { authErrorMessage } from '#/lib/errors';
 import { authClient } from '#/lib/auth-client';
 
 export const Route = createFileRoute('/auth/signup')({
@@ -9,7 +10,8 @@ export const Route = createFileRoute('/auth/signup')({
 
 function RouteComponent() {
 
-  const [ , setLoading ] = useState(false)
+  const [ loading, setLoading ] = useState(false)
+  const [ errorMessage, setErrorMessage ] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -30,36 +32,33 @@ function RouteComponent() {
     e.preventDefault();
     e.stopPropagation();
     
+    setErrorMessage(null);
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match!");
+      setErrorMessage("The two passwords don't match. Please re-enter them.");
       return;
     }
-    // Handle signup logic here
-    alert(JSON.stringify(formData));
-    
-    // const data:any = await authClient.signUp.email({
-    //     name: formData.name,
-    //     email: formData.email,
-    //     phone: formData.phone,
-    //     password: formData.password,
-       
-    // })
 
-    const { error }: any = await authClient.signUp.email({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        phone: formData.phone,
-    } as any);
+    setLoading(true);
+    try {
+      const { error }: any = await authClient.signUp.email({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          phone: formData.phone,
+      } as any);
 
-    if (error) {
-      console.error("Sign up failed:", error.message);
-    } else {
+      if (error) {
+        setErrorMessage(authErrorMessage(error, "We couldn't create your account right now. Please try again in a moment."));
+        return;
+      }
       // autoSignIn is on, so there's already a session -- collect the rest
       // of the onboarding details before landing in the dashboard.
       window.location.href = '/welcome';
+    } catch (err) {
+      setErrorMessage(authErrorMessage(err, "We couldn't create your account right now. Please try again in a moment."));
+    } finally {
+      setLoading(false);
     }
-
   };
 
   const handleGoogleSignUp = async(e: any) => {
@@ -73,8 +72,7 @@ function RouteComponent() {
         // Called if the sign-in process fails
         onError: (ctx: any) => {
             setLoading(false);
-            console.error("Sign in failed:", ctx.error.message);
-            alert(`Login error: ${ctx.error.message}`);
+            setErrorMessage(authErrorMessage(ctx.error, "We couldn't connect to Google. Please try again."));
         },
         // Optional: Called before the request starts
         onRequest: () => {
@@ -237,14 +235,23 @@ function RouteComponent() {
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 group-hover:text-purple-400 transition-colors w-4 h-4" />
                   </div>
 
+                  {errorMessage && (
+                    <div role="alert" className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-3 text-sm text-red-200">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+                      <span>{errorMessage}</span>
+                    </div>
+                  )}
+
                   {/* Submit Registration */}
                   <div>
                     <button 
                       type="submit" 
-                      className="w-full px-4 py-3 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-medium shadow-lg"
+                      disabled={loading}
+                      className="w-full px-4 py-3 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-medium shadow-lg disabled:opacity-60"
                     >
-                      Create Account
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                      {loading ? 'Creating your account…' : 'Create Account'}
+                      {!loading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
                     </button>
                   </div>
                 </form>

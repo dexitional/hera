@@ -94,7 +94,7 @@ export async function lockEventRevenue(tx: Executor, eventId: string, feePercent
     .from(events)
     .where(eq(events.id, eventId))
     .for('update');
-  if (!event) throw new Error('Event not found.');
+  if (!event) throw new Error("We couldn't find that event. It may have been removed, or you may not have access to it.");
   const [collections, withdrawn] = await Promise.all([loadCollectionsByEvent(tx, [eventId]), loadWithdrawnByEvent(tx, [eventId])]);
   return computeRevenue({
     gross: collections.get(eventId)?.gross ?? 0,

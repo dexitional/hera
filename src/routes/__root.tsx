@@ -2,8 +2,9 @@ import {
   HeadContent,
   Scripts,
   createRootRouteWithContext,
-  type ErrorComponentProps,
+  useRouterState,
 } from '@tanstack/react-router'
+import { ADMIN_THEME_INIT_SCRIPT } from '#/lib/admin-theme'
 import { lazy, Suspense } from 'react'
 
 // Dev-only: import.meta.env.DEV is statically false in production builds, so
@@ -17,8 +18,10 @@ import appCss from '../styles.css?url'
 import type { QueryClient } from '@tanstack/react-query'
 import Header from '#/components/Header'
 import Footer from '#/components/Footer'
-import { ErrorComponent } from '@tanstack/react-router'
+import { NotFoundPage, RouteErrorPage } from '#/components/ErrorPage'
 import { checkAuthSession } from '#/lib/auth-helper'
+import { getCachedAuth, setCachedAuth } from '#/lib/auth-cache'
+import { NavigationProgress } from '#/components/RoutePending'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 
 
@@ -58,19 +61,18 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     ],
   }),
   shellComponent: RootDocument,
-  errorComponent: ({ error }: ErrorComponentProps) => {
-    return (
-      <div style={{ padding: '2rem', fontFamily: 'sans-serif', color: 'red' }}>
-        <h2>Application Error</h2>
-        <ErrorComponent error={error} />
-      </div>
-    );
-  },
+  errorComponent: RouteErrorPage,
 
   beforeLoad: async () => {
+    // In the browser, reuse a recent answer so page changes don't wait on a
+    // server round trip (see auth-cache.ts; server functions still check).
+    const cached = getCachedAuth();
+    if (cached) return cached;
     try {
       const authState = await checkAuthSession();
-      return { user: authState?.user, authenticated: authState?.authenticated };
+      const value = { user: authState?.user, authenticated: Boolean(authState?.authenticated) };
+      setCachedAuth(value);
+      return value;
     } catch {
       // checkAuthSession is gated by arcjetMiddleware, which throws a plain
       // Error (not a Response -- that breaks seroval SSR serialization, see
@@ -84,33 +86,28 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       return { user: null, authenticated: false };
     }
   },
-  notFoundComponent: () => {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0d1f36] text-white p-6">
-        <h2 className="text-xl font-bold">404 - Page Directory Not Found</h2>
-        <p className="text-xs text-zinc-400 mt-2">The route path could not be resolved cleanly.</p>
-        <a href="/admin/elections" className="mt-4 px-4 py-2 bg-purple-600 rounded text-xs">
-          Return to Elections
-        </a>
-      </div>
-    )
-  },
+  notFoundComponent: NotFoundPage,
 
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  // The admin has its own shell (sidebar + top bar), so the public site's
+  // header and footer are not rendered there.
+  // The admin and the nominee portal are apps with their own headers.
+  const isAdmin = useRouterState({ select: (s) => /^\/(admin|nominee-portal)(\/|$)/.test(s.location.pathname) })
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT + ADMIN_THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
       <body className="__variable_f367f3 __variable_dd5b2f flex flex-col justify-between font-sans antialiased bg-[#0d1f36] min-h-screen">
-        <Header />
+        <NavigationProgress />
+        {!isAdmin && <Header />}
         <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
         {children}
         </GoogleOAuthProvider>
-        <Footer />
+        {!isAdmin && <Footer />}
         {DevtoolsPanel && (
           <Suspense fallback={null}>
             <DevtoolsPanel />

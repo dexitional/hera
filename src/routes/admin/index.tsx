@@ -1,15 +1,17 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
-  ArrowUpRight, BarChart3, Calendar, CircleDollarSign, Landmark, ListChecks, Percent,
+  ArrowUpRight, BarChart3, Calendar, CircleDollarSign, Landmark, ListChecks, Percent, Plus,
   Radio, Receipt, Sparkles, Ticket, Users, Vote,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { getDashboardAnalyticsFn } from "#/server/tenant-analytics";
 import { ManageDashboardSkeleton } from "#/components/ui/skeleton";
 import { OwnerLine } from "#/components/admin/ScopeToggle";
-import { ColumnChart, MeterRow, SegmentedBar, VIZ_STYLE } from "#/components/admin/charts";
+import { ColumnChart, MeterRow, SegmentedBar, Sparkline, VIZ_ROOT_CLASS } from "#/components/admin/charts";
 import { formatMoney } from "#/lib/money";
+import { DeltaBadge, StatTile, type Delta } from "#/components/admin/ui";
 
 const PERIODS = [7, 30, 90] as const;
 type Period = (typeof PERIODS)[number];
@@ -38,42 +40,138 @@ const shortDate = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateStri
 const dateTime = (iso: string) => new Date(iso).toLocaleString("en-GH", { dateStyle: "medium", timeStyle: "short" });
 const n = (v: number) => v.toLocaleString("en-GH");
 const plural = (count: number, one: string, many: string) => `${n(count)} ${count === 1 ? one : many}`;
+/** Same rule as the server's percentChange: null when there's no previous baseline. */
+const percentChangeClient = (current: number, previous: number) =>
+  previous === 0 ? (current === 0 ? 0 : null) : ((current - previous) / previous) * 100;
 
 // ---------------------------------------------------------------------------
 // Building blocks
 // ---------------------------------------------------------------------------
 
-function StatTile({ label, value, hint, icon: Icon, tone }: { label: string; value: string; hint?: string; icon: any; tone: string }) {
+// Accent classes are written out in full so Tailwind generates them.
+const ACCENTS = {
+  emerald: { icon: "text-emerald-400", tile: "bg-emerald-500/10 border-emerald-500/25", bar: "from-emerald-500/80" },
+  blue: { icon: "text-blue-400", tile: "bg-blue-500/10 border-blue-500/25", bar: "from-blue-500/80" },
+  rose: { icon: "text-rose-400", tile: "bg-rose-500/10 border-rose-500/25", bar: "from-rose-500/80" },
+  orange: { icon: "text-orange-400", tile: "bg-orange-500/10 border-orange-500/25", bar: "from-orange-500/80" },
+} as const;
+
+type NavStat = { label: string; value: React.ReactNode; tone?: string };
+type NavAction = { to: string; label: string; icon?: LucideIcon };
+
+/**
+ * A section's live summary that doubles as its entry point: the whole card
+ * links to the section, while the trend and quick actions sit above that link
+ * so they keep their own hover and click behaviour (no nested anchors).
+ */
+function NavCard({
+  to, icon: Icon, accent, title, subtitle, live, metricLabel, metric, delta, trend, stats, actions,
+}: {
+  to: string;
+  icon: LucideIcon;
+  accent: keyof typeof ACCENTS;
+  title: string;
+  subtitle: string;
+  /** Shows a pulsing "N live" pill when above zero. */
+  live?: { count: number; label: string };
+  metricLabel: string;
+  metric: React.ReactNode;
+  delta?: Delta;
+  trend: React.ReactNode;
+  stats: NavStat[];
+  actions?: NavAction[];
+}) {
+  const navigate = useNavigate();
+  const a = ACCENTS[accent];
   return (
-    <div className="bg-[#0a192a]/50 border border-zinc-800 p-4 rounded-xl">
-      <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider flex items-center gap-1">
-        <Icon className={`w-3.5 h-3.5 ${tone}`} /> {label}
-      </p>
-      <h3 className="text-xl font-black text-white mt-1.5 font-mono">{value}</h3>
-      {hint && <p className="text-[10px] text-zinc-500 mt-1.5">{hint}</p>}
-    </div>
+    <article className="group relative flex flex-col overflow-hidden rounded-xl border border-zinc-800 bg-[#0a192a]/50 p-5 transition duration-200 hover:-translate-y-0.5 hover:border-zinc-700 hover:shadow-xl hover:shadow-black/20 focus-within:border-zinc-600 motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+      <span aria-hidden className={`pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r ${a.bar} via-transparent to-transparent opacity-70 transition-opacity group-hover:opacity-100`} />
+
+      <header className="flex items-start gap-3">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${a.tile}`}>
+          <Icon className={`h-5 w-5 ${a.icon}`} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="flex items-center gap-1 text-sm font-bold tracking-tight text-white">
+            <span className="truncate">{title}</span>
+            <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-zinc-600 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-white" />
+          </h3>
+          <p className="truncate text-[11px] text-zinc-500">{subtitle}</p>
+        </div>
+        {live && live.count > 0 && (
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 motion-safe:animate-ping" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            </span>
+            {n(live.count)} {live.label}
+          </span>
+        )}
+      </header>
+
+      <div className="mt-5">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{metricLabel}</p>
+        <div className="mt-1 flex items-baseline gap-2">
+          <span className="font-mono text-2xl font-black tracking-tight text-white">{metric}</span>
+          {delta && <DeltaBadge delta={delta} />}
+        </div>
+      </div>
+
+      {/* Above the card link, so hovering reads the trend; a click still opens the section. */}
+      <div className="relative z-20 mt-3 cursor-pointer" onClick={() => navigate({ to: to as any })}>
+        {trend}
+      </div>
+
+      <dl className="mt-4 grid grid-cols-3 divide-x divide-zinc-800 border-t border-zinc-800 pt-3">
+        {stats.map((st) => (
+          <div key={st.label} className="min-w-0 px-2 first:pl-0 last:pr-0">
+            <dt className="truncate text-[10px] text-zinc-500">{st.label}</dt>
+            <dd className={`truncate font-mono text-xs font-bold ${st.tone ?? "text-zinc-200"}`}>{st.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      {actions && actions.length > 0 && (
+        <div className="relative z-20 mt-4 flex flex-wrap gap-2">
+          {actions.map((act) => {
+            const ActIcon = act.icon ?? Plus;
+            return (
+              <Link
+                key={act.to}
+                to={act.to as any}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+              >
+                <ActIcon className="h-3.5 w-3.5" /> {act.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      <Link
+        to={to as any}
+        aria-label={`Open ${title}`}
+        className="absolute inset-0 z-10 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-purple-500"
+      />
+    </article>
   );
 }
 
-function ModuleCard({ to, icon: Icon, tone, badge, title, text }: { to: string; icon: any; tone: string; badge: string; title: string; text: string }) {
+/** Verified share of accounts, as a single meter (Users card has no daily series). */
+function AccountsMeter({ total, unverified }: { total: number; unverified: number }) {
+  const verified = Math.max(0, total - unverified);
+  const pct = total > 0 ? (verified / total) * 100 : 0;
   return (
-    <div className="bg-[#0a192a]/50 border border-zinc-800 rounded-xl p-5 flex flex-col justify-between hover:border-zinc-700/80 transition-all group relative overflow-hidden">
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="w-10 h-10 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-            <Icon className={`w-5 h-5 ${tone}`} />
-          </div>
-          <span className="text-xs font-mono font-bold bg-zinc-900 border border-zinc-800 text-zinc-400 px-2 py-0.5 rounded">{badge}</span>
-        </div>
-        <div>
-          <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
-            <span>{title}</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-600 group-hover:text-white group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-          </h3>
-          <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">{text}</p>
+    <div className="space-y-1.5">
+      <div className="flex h-[44px] flex-col justify-center gap-2">
+        <div className="h-2 w-full rounded-full" style={{ background: "var(--viz-track)" }} role="meter" aria-label="Verified accounts" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
+          <div className="h-2 rounded-full" style={{ width: `${pct}%`, background: "var(--viz-series-1)" }} />
         </div>
       </div>
-      <Link to={to as any} className="absolute inset-0 z-10" aria-label={title} />
+      <div className="flex items-baseline justify-between gap-2 text-[10px] text-zinc-500">
+        <span>Email verified</span>
+        <span><span className="font-mono text-zinc-300">{n(verified)}</span> of {n(total)} · {pct.toFixed(0)}%</span>
+      </div>
     </div>
   );
 }
@@ -121,7 +219,12 @@ function AdminDashboard() {
   const { data, isFetching } = useQuery({ ...dashboardQueryOptions(days), placeholderData: keepPreviousData });
   if (!data) return <ManageDashboardSkeleton />;
 
-  const { counts, allTime, period, series, channels, topEvents, liveElections, recentPayments } = data as any;
+  const { counts, allTime, period, change, series, channels, topEvents, liveElections, recentPayments } = data as any;
+  const vsLabel = `vs previous ${days} days`;
+  const delta = (pct: number | null): Delta => ({ pct, label: vsLabel });
+  const dayLabels = series.map((p: any) => shortDate(p.date));
+  const accounts = counts.accounts;
+  const turnoutPct = counts.registeredVoters ? Math.round((counts.votedVoters / counts.registeredVoters) * 100) : 0;
   const scopeLabel = isSuperAdmin ? "All organisations" : "Your organisation";
   const hasEvents = counts.events > 0;
   const hasElections = counts.elections > 0;
@@ -133,7 +236,7 @@ function AdminDashboard() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8" style={VIZ_STYLE}>
+    <div className={`max-w-7xl mx-auto space-y-8 ${VIZ_ROOT_CLASS}`}>
       {/* ---------- Header ---------- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0a192a]/50 p-6 rounded-xl border border-zinc-800">
         <div>
@@ -152,19 +255,79 @@ function AdminDashboard() {
         </span>
       </div>
 
-      {/* ---------- Modules ---------- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        <ModuleCard to="/admin/events" icon={Sparkles} tone="text-emerald-400" badge={plural(counts.events, "event", "events")} title="Events Console"
-          text="Manage public voting events, categories, nominees and vote pricing." />
-        <ModuleCard to="/admin/elections" icon={Calendar} tone="text-blue-400" badge={plural(counts.elections, "election", "elections")} title="Elections Console"
-          text="Set up ballots, positions, candidates and voter registers." />
+      {/* ---------- Sections: live summaries that open each console ---------- */}
+      <div className={`grid grid-cols-1 gap-5 md:grid-cols-2 transition-opacity ${isFetching ? "opacity-60" : ""}`}>
+        <NavCard
+          to="/admin/events"
+          icon={Sparkles}
+          accent="emerald"
+          title="Events Console"
+          subtitle="Paid voting events, nominees & pricing"
+          live={{ count: counts.activeEvents, label: "live" }}
+          metricLabel={`Collected · ${days}d`}
+          metric={formatMoney(period.gross)}
+          delta={delta(change.gross)}
+          trend={<Sparkline values={series.map((p: any) => p.gross)} labels={dayLabels} formatValue={formatMoney} ariaLabel={`Event collections per day, last ${days} days`} />}
+          stats={[
+            { label: "Events", value: n(counts.events) },
+            { label: `Votes · ${days}d`, value: n(period.votes) },
+            { label: `Payments · ${days}d`, value: n(period.payments) },
+          ]}
+          actions={[{ to: "/admin/events/new", label: "New event" }]}
+        />
+        <NavCard
+          to="/admin/elections"
+          icon={Calendar}
+          accent="blue"
+          title="Elections Console"
+          subtitle="Ballots, positions & voter registers"
+          live={{ count: counts.liveElections, label: "live" }}
+          metricLabel={`Ballots cast · ${days}d`}
+          metric={n(period.ballots)}
+          delta={delta(change.ballots)}
+          trend={<Sparkline values={series.map((p: any) => p.ballots)} labels={dayLabels} formatValue={n} ariaLabel={`Ballots cast per day, last ${days} days`} />}
+          stats={[
+            { label: "Elections", value: n(counts.elections) },
+            { label: "Voters", value: n(counts.registeredVoters) },
+            { label: "Turnout", value: `${turnoutPct}%` },
+          ]}
+          actions={[{ to: "/admin/elections/new", label: "New election" }]}
+        />
         {isSuperAdmin && (
-          <ModuleCard to="/admin/revenue" icon={Landmark} tone="text-rose-400" badge={`${formatMoney(allTime.balance)} owed`} title="Revenue & Withdrawals"
-            text="Platform fees, organiser balances and the withdrawal ledger for every event." />
+          <NavCard
+            to="/admin/revenue"
+            icon={Landmark}
+            accent="rose"
+            title="Revenue & Withdrawals"
+            subtitle="Fees, organiser balances & payouts"
+            metricLabel={`Platform fees · ${days}d`}
+            metric={formatMoney(period.fee)}
+            delta={delta(change.fee)}
+            trend={<Sparkline values={series.map((p: any) => p.fee)} labels={dayLabels} formatValue={formatMoney} ariaLabel={`Platform fees per day, last ${days} days`} />}
+            stats={[
+              { label: "Owed", value: compactMoney(allTime.balance), tone: allTime.balance > 0 ? "text-rose-300" : undefined },
+              { label: "Paid out", value: compactMoney(allTime.withdrawn) },
+              { label: "Fees all time", value: compactMoney(allTime.fee) },
+            ]}
+          />
         )}
-        {isSuperAdmin && (
-          <ModuleCard to="/admin/users" icon={Users} tone="text-orange-400" badge={plural(counts.accounts?.total ?? 0, "account", "accounts")} title="Users Registry"
-            text="Manage admin accounts, verify or disable access, and reset credentials." />
+        {isSuperAdmin && accounts && (
+          <NavCard
+            to="/admin/users"
+            icon={Users}
+            accent="orange"
+            title="Users Registry"
+            subtitle="Admin accounts, access & credentials"
+            metricLabel={`New accounts · ${days}d`}
+            metric={n(accounts.newInPeriod)}
+            delta={delta(percentChangeClient(accounts.newInPeriod, accounts.newInPrevious))}
+            trend={<AccountsMeter total={accounts.total} unverified={accounts.unverified} />}
+            stats={[
+              { label: "Accounts", value: n(accounts.total) },
+              { label: "Super admins", value: n(accounts.superAdmins) },
+              { label: "Disabled", value: n(accounts.disabled), tone: accounts.disabled > 0 ? "text-amber-300" : undefined },
+            ]}
+          />
         )}
       </div>
 
@@ -191,14 +354,14 @@ function AdminDashboard() {
       <div className={`space-y-6 transition-opacity ${isFetching ? "opacity-60" : "opacity-100"}`} aria-busy={isFetching}>
         {/* ---------- Headline figures ---------- */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatTile label={`Collected · ${days}d`} value={formatMoney(period.gross)} hint={`${formatMoney(allTime.gross)} all time`} icon={CircleDollarSign} tone="text-emerald-500" />
+          <StatTile label={`Collected · ${days}d`} value={formatMoney(period.gross)} delta={delta(change.gross)} hint={`${formatMoney(allTime.gross)} all time`} icon={CircleDollarSign} tone="text-emerald-500" />
           {isSuperAdmin ? (
-            <StatTile label={`Platform fees · ${days}d`} value={formatMoney(period.fee)} hint={`${formatMoney(allTime.fee)} all time`} icon={Percent} tone="text-purple-400" />
+            <StatTile label={`Platform fees · ${days}d`} value={formatMoney(period.fee)} delta={delta(change.fee)} hint={`${formatMoney(allTime.fee)} all time`} icon={Percent} tone="text-purple-400" />
           ) : (
             <StatTile label="Your balance" value={formatMoney(allTime.balance)} hint={`${formatMoney(allTime.withdrawn)} paid out so far`} icon={Landmark} tone="text-rose-400" />
           )}
-          <StatTile label={`Votes bought · ${days}d`} value={n(period.votes)} hint={`${n(period.payments)} payments`} icon={Ticket} tone="text-sky-400" />
-          <StatTile label={`Ballots cast · ${days}d`} value={n(period.ballots)} hint={`${n(counts.votedVoters)} of ${n(counts.registeredVoters)} voters overall`} icon={Vote} tone="text-blue-400" />
+          <StatTile label={`Votes bought · ${days}d`} value={n(period.votes)} delta={delta(change.votes)} hint={`${n(period.payments)} payments`} icon={Ticket} tone="text-sky-400" />
+          <StatTile label={`Ballots cast · ${days}d`} value={n(period.ballots)} delta={delta(change.ballots)} hint={`${n(counts.votedVoters)} of ${n(counts.registeredVoters)} voters overall`} icon={Vote} tone="text-blue-400" />
           <StatTile label="Live now" value={`${counts.liveElections + counts.activeEvents}`} hint={`${plural(counts.liveElections, "election", "elections")} · ${plural(counts.activeEvents, "event", "events")}`} icon={Radio} tone="text-amber-400" />
         </div>
 
