@@ -15,6 +15,7 @@ import {
   loadScopedElections,
   loadScopedEvents,
   loadTurnout,
+  percentChange,
   periodStart,
 } from './analytics-queries';
 
@@ -29,13 +30,15 @@ export const getDashboardAnalyticsFn = createServerFn({ method: 'GET' })
     // Allowed periods mirror the dashboard's 7 / 30 / 90 day presets.
     const days = [7, 30, 90].includes(Number(data?.days)) ? Number(data.days) : 30;
     const since = periodStart(days);
+    // The equally long window just before, for "vs previous period" deltas.
+    const prevSince = new Date(since.getTime() - days * 86_400_000);
 
     const [scopedEvents, scopedElections] = await Promise.all([loadScopedEvents(admin), loadScopedElections(admin)]);
     const eventIds = scopedEvents.map((e) => e.id);
     const electionIds = scopedElections.map((e) => e.id);
     const feeByEvent = new Map(scopedEvents.map((e) => [e.id, e.platformFeePercent]));
 
-    const [collections, withdrawn, daily, channels, recentPayments, turnout, dailyBallots, accounts] = await Promise.all([
+    const [collections, withdrawn, daily, channels, recentPayments, turnout, dailyBallots, accounts, prevDaily, prevBallots] = await Promise.all([
       loadCollectionsByEvent(db, eventIds),
       loadWithdrawnByEvent(db, eventIds),
       loadDailyCollections(eventIds, since),
@@ -43,7 +46,9 @@ export const getDashboardAnalyticsFn = createServerFn({ method: 'GET' })
       loadRecentPayments(eventIds, 10),
       loadTurnout(electionIds),
       loadDailyBallots(electionIds, since),
-      superAdmin ? countAccounts() : Promise.resolve(null),
+      superAdmin ? countAccounts(since, prevSince) : Promise.resolve(null),
+      loadDailyCollections(eventIds, prevSince, since),
+      loadDailyBallots(electionIds, prevSince, since),
     ]);
 
     // ---- all-time money, summed per event so each event's own fee % applies
@@ -88,6 +93,28 @@ export const getDashboardAnalyticsFn = createServerFn({ method: 'GET' })
       (t, p) => ({ gross: round2(t.gross + p.gross), fee: round2(t.fee + p.fee), votes: t.votes + p.votes, payments: t.payments + p.payments, ballots: t.ballots + p.ballots }),
       { gross: 0, fee: 0, votes: 0, payments: 0, ballots: 0 },
     );
+
+    // ---- previous period totals and changes
+    const previous = prevDaily.reduce(
+      (t, row) => {
+        const gross = Number(row.gross) || 0;
+        return {
+          gross: round2(t.gross + gross),
+          fee: round2(t.fee + computeRevenue({ gross, feePercent: feeByEvent.get(row.eventId) ?? 0, withdrawn: 0 }).fee),
+          votes: t.votes + (Number(row.votes) || 0),
+          payments: t.payments + (Number(row.payments) || 0),
+          ballots: t.ballots,
+        };
+      },
+      { gross: 0, fee: 0, votes: 0, payments: 0, ballots: prevBallots.reduce((n, r) => n + (Number(r.ballots) || 0), 0) },
+    );
+    const change = {
+      gross: percentChange(period.gross, previous.gross),
+      fee: percentChange(period.fee, previous.fee),
+      votes: percentChange(period.votes, previous.votes),
+      payments: percentChange(period.payments, previous.payments),
+      ballots: percentChange(period.ballots, previous.ballots),
+    };
 
     // ---- top events in the period
     const eventById = new Map(scopedEvents.map((e) => [e.id, e]));
@@ -136,6 +163,8 @@ export const getDashboardAnalyticsFn = createServerFn({ method: 'GET' })
       },
       allTime,
       period,
+      previous,
+      change,
       series: seriesList,
       channels: channels
         .map((c) => ({ channel: c.channel || 'WEB', gross: round2(Number(c.gross) || 0), payments: Number(c.payments) || 0 }))

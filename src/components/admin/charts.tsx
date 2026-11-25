@@ -1,19 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 
 // Dashboard chart primitives (plain SVG/HTML, no chart library).
 //
-// Colours are the validated dark-mode steps of the reference palette, checked
-// against the dashboard's card surface (#0f1925) with the dataviz validator:
-//   --viz-series-1 #3987e5 (blue)  --viz-series-2 #d95926 (orange)
-//   all checks pass: lightness band, chroma, CVD dE 26.8, normal-vision dE 31.8,
-//   contrast >= 3:1. The admin UI is dark-only, so only dark steps are defined.
-export const VIZ_STYLE = {
-  '--viz-series-1': '#3987e5',
-  '--viz-series-2': '#d95926',
-  '--viz-track': '#1f2b3a',
-  '--viz-grid': '#1c2633',
-  '--viz-surface': '#0f1925',
-} as React.CSSProperties
+// Colours come from CSS variables on a .viz-root ancestor, defined per theme
+// in src/styles/admin-theme.css and validated with the dataviz palette
+// validator against each surface (dark #0f1925, light #ffffff):
+//   --viz-series-1 (blue), --viz-series-2 (orange), --viz-track, --viz-grid, --viz-axis.
+export const VIZ_ROOT_CLASS = 'viz-root'
 
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
@@ -148,7 +141,7 @@ export function ColumnChart({
               </g>
             )
           })}
-          <line x1={padLeft} x2={width - padRight} y1={padTop + plotH} y2={padTop + plotH} stroke="#334155" strokeWidth={1} />
+          <line x1={padLeft} x2={width - padRight} y1={padTop + plotH} y2={padTop + plotH} stroke="var(--viz-axis)" strokeWidth={1} />
         </svg>
       )}
       {activeDatum && (
@@ -247,6 +240,104 @@ export function MeterRow({
       </div>
       <div className="h-2 w-full rounded-full" style={{ background: 'var(--viz-track)' }} role="meter" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
         <div className="h-2 rounded-full" style={{ width: `${pct}%`, background: 'var(--viz-series-1)' }} />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Compact single-series trend (no axes) with a readout line underneath:
+ * the date range at rest, the hovered/focused day's value otherwise. Arrow
+ * keys step through days when focused. One hue; the surrounding card names it.
+ */
+export function Sparkline({
+  values,
+  labels,
+  formatValue,
+  ariaLabel,
+  height = 44,
+  emptyText = 'No activity in this period',
+}: {
+  values: number[]
+  /** One label per value, e.g. "25 Nov". */
+  labels: string[]
+  formatValue: (v: number) => string
+  ariaLabel: string
+  height?: number
+  emptyText?: string
+}) {
+  const [wrapRef, width] = useElementWidth<HTMLDivElement>()
+  const [active, setActive] = useState<number | null>(null)
+  const gradientId = useId()
+  const pad = 4
+  const max = Math.max(0, ...values)
+  const total = values.reduce((t, v) => t + v, 0)
+  const x = (i: number) => (values.length > 1 ? pad + (i * (width - pad * 2)) / (values.length - 1) : width / 2)
+  const y = (v: number) => pad + (height - pad * 2) * (1 - (max > 0 ? v / max : 0))
+  const line = values.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')
+  const area = values.length ? `${line} L${x(values.length - 1).toFixed(1)},${height} L${x(0).toFixed(1)},${height} Z` : ''
+  const last = values.length - 1
+  const focus = active ?? last
+
+  const pick = (clientX: number, el: Element) => {
+    if (values.length === 0) return
+    const left = el.getBoundingClientRect().left
+    const i = Math.round(((clientX - left - pad) / Math.max(1, width - pad * 2)) * (values.length - 1))
+    setActive(Math.min(last, Math.max(0, i)))
+  }
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+    e.preventDefault()
+    setActive((a) => Math.min(last, Math.max(0, (a ?? last) + (e.key === 'ArrowRight' ? 1 : -1))))
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <div ref={wrapRef} className="relative w-full" style={{ height }}>
+        {width > 0 && values.length > 0 && (
+          <svg
+            width={width}
+            height={height}
+            role="img"
+            aria-label={`${ariaLabel}: ${formatValue(total)} in total, peak ${formatValue(max)}`}
+            tabIndex={0}
+            onPointerMove={(e) => pick(e.clientX, e.currentTarget)}
+            onPointerLeave={() => setActive(null)}
+            onFocus={() => setActive(last)}
+            onBlur={() => setActive(null)}
+            onKeyDown={onKey}
+            className="block overflow-visible rounded outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60"
+          >
+            <defs>
+              <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="var(--viz-series-1)" stopOpacity={0.28} />
+                <stop offset="100%" stopColor="var(--viz-series-1)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <line x1={0} x2={width} y1={height - 0.5} y2={height - 0.5} stroke="var(--viz-grid)" strokeWidth={1} />
+            {max > 0 && <path d={area} fill={`url(#${gradientId})`} />}
+            <path d={line} fill="none" stroke="var(--viz-series-1)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" opacity={max > 0 ? 1 : 0.4} />
+            {active !== null && <line x1={x(active)} x2={x(active)} y1={0} y2={height} stroke="var(--viz-axis)" strokeWidth={1} />}
+            {max > 0 && (
+              <circle cx={x(focus)} cy={y(values[focus])} r={4} fill="var(--viz-series-1)" stroke="var(--viz-surface)" strokeWidth={2} />
+            )}
+          </svg>
+        )}
+      </div>
+      <div className="flex items-baseline justify-between gap-2 text-[10px]" aria-live="polite">
+        {active !== null ? (
+          <>
+            <span className="text-zinc-400">{labels[active]}</span>
+            <span className="font-mono font-semibold text-zinc-200">{formatValue(values[active])}</span>
+          </>
+        ) : max > 0 ? (
+          <>
+            <span className="text-zinc-500">{labels[0]} – {labels[last]}</span>
+            <span className="text-zinc-500">peak <span className="font-mono text-zinc-300">{formatValue(max)}</span></span>
+          </>
+        ) : (
+          <span className="text-zinc-500">{emptyText}</span>
+        )}
       </div>
     </div>
   )

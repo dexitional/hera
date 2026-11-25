@@ -1,5 +1,7 @@
 import { createFileRoute, Outlet, redirect, useRouterState } from '@tanstack/react-router'
-import DashboardHeader from '#/components/DashboardHeader';
+import { AdminShell } from '#/components/admin/shell/AdminShell'
+import adminThemeCss from '#/styles/admin-theme.css?url'
+
 export const Route = createFileRoute('/admin')({
     // Reuses the root route's beforeLoad result instead of calling
     // checkAuthSession() again -- that serverFn is gated by Arcjet's
@@ -11,6 +13,8 @@ export const Route = createFileRoute('/admin')({
           user: context.user,
         };
     },
+    // Admin-only light theme (re-points Tailwind colour variables; see the file).
+    head: () => ({ links: [{ rel: 'stylesheet', href: adminThemeCss }] }),
     component: DashboardLayout,
 })
 
@@ -31,14 +35,10 @@ function DashboardLayout() {
   // read as the transition flickering / firing on the way out.
   const pathname = useRouterState({ select: (s) => s.resolvedLocation?.pathname ?? s.location.pathname });
   return (
-    <div id="dashboard-shell" className="min-h-screen print:bg-white bg-[#18181b] text-white font-sans antialiased print:bg-white">
-      { user && (<DashboardHeader user={user} />)}
-      <div id="dashboard-content" className="w-full min-h-screen bg-[#0a192a]/30 text-zinc-200 font-sans p-6 print:bg-white print:p-0">
-        <div key={pathname} className="animate-in fade-in slide-in-from-bottom-1 duration-300">
-          <Outlet />
-        </div>
+    <AdminShell user={user}>
+      <div key={pathname} className="animate-in fade-in slide-in-from-bottom-1 duration-300">
+        <Outlet />
       </div>
-    </div>
+    </AdminShell>
   );
-
 }

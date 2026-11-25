@@ -2,8 +2,10 @@ import {
   HeadContent,
   Scripts,
   createRootRouteWithContext,
+  useRouterState,
   type ErrorComponentProps,
 } from '@tanstack/react-router'
+import { ADMIN_THEME_INIT_SCRIPT } from '#/lib/admin-theme'
 import { lazy, Suspense } from 'react'
 
 // Dev-only: import.meta.env.DEV is statically false in production builds, so
@@ -99,18 +101,21 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  // The admin has its own shell (sidebar + top bar), so the public site's
+  // header and footer are not rendered there.
+  const isAdmin = useRouterState({ select: (s) => s.location.pathname.startsWith('/admin') })
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT + ADMIN_THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
       <body className="__variable_f367f3 __variable_dd5b2f flex flex-col justify-between font-sans antialiased bg-[#0d1f36] min-h-screen">
-        <Header />
+        {!isAdmin && <Header />}
         <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
         {children}
         </GoogleOAuthProvider>
-        <Footer />
+        {!isAdmin && <Footer />}
         {DevtoolsPanel && (
           <Suspense fallback={null}>
             <DevtoolsPanel />
