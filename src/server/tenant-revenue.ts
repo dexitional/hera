@@ -96,6 +96,11 @@ export const getEventRevenueFn = createServerFn({ method: 'GET' })
           ownerName: user.name,
           ownerOrganization: user.organization,
           ownerEmail: user.email,
+          settlementType: events.settlementType,
+          settlementProvider: events.settlementProvider,
+          settlementBranch: events.settlementBranch,
+          settlementAccountNumber: events.settlementAccountNumber,
+          settlementAccountName: events.settlementAccountName,
         })
         .from(events)
         .innerJoin(user, eq(events.adminId, user.id))

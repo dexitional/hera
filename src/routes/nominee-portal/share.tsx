@@ -1,6 +1,8 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy, Download, ImageIcon, Loader2, MessageCircle, QrCode, Share2, Smartphone } from "lucide-react";
+import { Check, Clapperboard, Copy, Download, ExternalLink, ImageIcon, Loader2, MessageCircle, QrCode, Share2, Smartphone, Sparkles } from "lucide-react";
+import { parseMediaUrl } from "#/lib/media-embed";
+import { MediaPlayer } from "#/components/media/MediaEmbed";
 import ShareMenu from "#/components/ShareMenu";
 import { USSD_SHORTCODE } from "#/lib/utils";
 import { getNomineeMeFn, getNomineePhotoFn } from "#/server/nominee-portal";
@@ -97,70 +99,134 @@ async function drawPoster(canvas: HTMLCanvasElement, o: {
   let y = pad;
   ctx.textBaseline = "top";
 
-  // Kicker and event.
-  ctx.fillStyle = t.accent;
-  ctx.font = `800 34px Inter, system-ui, sans-serif`;
-  ctx.fillText("VOTE FOR ME", pad, y);
-  y += 52;
-  ctx.fillStyle = "rgba(255,255,255,0.75)";
-  const ev = wrapText(ctx, o.event, w - pad * 2, 32, 24, 1, 600);
-  ctx.fillText(ev.lines[0], pad, y);
-  y += ev.size + 40;
-
-  // Photo, name and category: sized to the space, then centred vertically
-  // between the event line and the footer card (tall formats would
-  // otherwise leave an empty band).
-  const footer = o.format === "square" ? 230 : 300;
-  const footerTop = h - pad - (footer - 60);
-  const nm = wrapText(ctx, o.name, w - pad * 2, 84, 48, 2, 900);
-  const nameH = nm.lines.length * nm.size * 1.08;
-  const cat = wrapText(ctx, o.category.toUpperCase(), w - pad * 2, 34, 22, 2, 700);
-  const catH = cat.lines.length * cat.size * 1.2;
-  const textH = 44 + nameH + 12 + catH;
-  const region = footerTop - 40 - y;
-  const photoSize = Math.max(240, Math.min(w - pad * 2, region - textH));
-  y += Math.max(0, (region - photoSize - textH) / 2);
-
-  const px = (w - photoSize) / 2;
+  // Headline: a big, heavy, slanted "VOTE FOR ME" in the theme's accent
+  // gradient, with a drop shadow, glow, fine outline and a swoosh underline.
+  const headline = "VOTE FOR ME";
+  let headSize = o.format === "square" ? 112 : 136;
+  const headFont = (size: number) => `italic 900 ${size}px Inter, "Arial Black", "Segoe UI", system-ui, sans-serif`;
+  ctx.font = headFont(headSize);
+  while (ctx.measureText(headline).width > w - pad * 2 - 20 && headSize > 60) { headSize -= 4; ctx.font = headFont(headSize); }
+  const headW = ctx.measureText(headline).width;
   ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.45)";
-  ctx.shadowBlur = 50;
-  roundRect(ctx, px, y, photoSize, photoSize, 48);
-  ctx.fillStyle = "#1f2b3a";
-  ctx.fill();
-  ctx.restore();
-  ctx.save();
-  roundRect(ctx, px, y, photoSize, photoSize, 48);
-  ctx.clip();
-  if (o.photo) {
-    const s = Math.max(photoSize / o.photo.width, photoSize / o.photo.height);
-    const dw = o.photo.width * s, dh = o.photo.height * s;
-    ctx.drawImage(o.photo, px + (photoSize - dw) / 2, y + (photoSize - dh) / 2, dw, dh);
-  } else {
-    ctx.fillStyle = t.accent;
-    ctx.font = `900 ${photoSize * 0.35}px Inter, system-ui, sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(o.name.split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase(), w / 2, y + photoSize / 2);
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-  }
-  ctx.restore();
+  ctx.translate(w / 2, y + headSize / 2);
+  ctx.rotate(-0.04);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillText(headline, 7, 10);
+  const fill = ctx.createLinearGradient(-headW / 2, -headSize / 2, headW / 2, headSize / 2);
+  fill.addColorStop(0, "#ffffff");
+  fill.addColorStop(0.45, t.accent);
+  fill.addColorStop(1, "#ffffff");
+  ctx.shadowColor = t.glow;
+  ctx.shadowBlur = 48;
+  ctx.fillStyle = fill;
+  ctx.fillText(headline, 0, 0);
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = "rgba(255,255,255,0.55)";
+  ctx.strokeText(headline, 0, 0);
+  // Swoosh underline
+  ctx.beginPath();
+  ctx.moveTo(-headW * 0.42, headSize * 0.62);
+  ctx.quadraticCurveTo(0, headSize * 0.78, headW * 0.42, headSize * 0.56);
+  ctx.lineWidth = 10;
+  ctx.lineCap = "round";
   ctx.strokeStyle = t.accent;
-  ctx.lineWidth = 6;
-  roundRect(ctx, px, y, photoSize, photoSize, 48);
   ctx.stroke();
-  y += photoSize + 44;
+  ctx.restore();
+  y += headSize * 1.35;
 
   ctx.textAlign = "center";
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `900 ${nm.size}px Inter, "Segoe UI", system-ui, sans-serif`;
-  for (const line of nm.lines) { ctx.fillText(line, w / 2, y); y += nm.size * 1.08; }
-  y += 12;
-  ctx.fillStyle = t.accent;
-  ctx.font = `700 ${cat.size}px Inter, "Segoe UI", system-ui, sans-serif`;
-  for (const line of cat.lines) { ctx.fillText(line, w / 2, y); y += cat.size * 1.2; }
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  const ev = wrapText(ctx, o.event, w - pad * 2, 34, 24, 1, 600);
+  ctx.fillText(ev.lines[0], w / 2, y);
   ctx.textAlign = "left";
+  y += ev.size + 36;
+
+  // Photo, name and category, laid out in the space between the event line
+  // and the footer card so nothing can overlap:
+  //   square        -> photo left, name + category right (too little height to stack)
+  //   post / story  -> stacked; the name's type and the photo shrink together
+  //                    until the block fits, then it's centred vertically.
+  const footer = o.format === "square" ? 300 : 400;
+  const footerTop = h - pad - (footer - 60);
+  const regionTop = y;
+  const regionH = footerTop - 36 - regionTop;
+  const font = (weight: number, size: number) => `${weight} ${size}px Inter, "Segoe UI", system-ui, sans-serif`;
+
+  const drawPhoto = (px: number, py: number, size: number) => {
+    const r = Math.min(48, size * 0.14);
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.45)";
+    ctx.shadowBlur = 50;
+    roundRect(ctx, px, py, size, size, r);
+    ctx.fillStyle = "#1f2b3a";
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    roundRect(ctx, px, py, size, size, r);
+    ctx.clip();
+    if (o.photo) {
+      const sc = Math.max(size / o.photo.width, size / o.photo.height);
+      const dw = o.photo.width * sc, dh = o.photo.height * sc;
+      ctx.drawImage(o.photo, px + (size - dw) / 2, py + (size - dh) / 2, dw, dh);
+    } else {
+      ctx.fillStyle = t.accent;
+      ctx.font = font(900, size * 0.35);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(o.name.split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase(), px + size / 2, py + size / 2);
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+    }
+    ctx.restore();
+    ctx.strokeStyle = t.accent;
+    ctx.lineWidth = 6;
+    roundRect(ctx, px, py, size, size, r);
+    ctx.stroke();
+  };
+
+  if (o.format === "square") {
+    const photoSize = Math.min(regionH, (w - pad * 2) * 0.42);
+    const textX = pad + photoSize + 44;
+    const textW = w - pad - textX;
+    const nm = wrapText(ctx, o.name, textW, 72, 34, 3, 900);
+    const cat = wrapText(ctx, o.category.toUpperCase(), textW, 30, 18, 3, 700);
+    const blockH = nm.lines.length * nm.size * 1.1 + 18 + cat.lines.length * cat.size * 1.25;
+    drawPhoto(pad, regionTop + (regionH - photoSize) / 2, photoSize);
+    let ty = regionTop + Math.max(0, (regionH - blockH) / 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = font(900, nm.size);
+    for (const line of nm.lines) { ctx.fillText(line, textX, ty); ty += nm.size * 1.1; }
+    ty += 18;
+    ctx.fillStyle = t.accent;
+    ctx.font = font(700, cat.size);
+    for (const line of cat.lines) { ctx.fillText(line, textX, ty); ty += cat.size * 1.25; }
+  } else {
+    const minPhoto = o.format === "story" ? 460 : 360;
+    let nm = wrapText(ctx, o.name, w - pad * 2, 84, 48, 2, 900);
+    let cat = wrapText(ctx, o.category.toUpperCase(), w - pad * 2, 34, 22, 2, 700);
+    const textH = () => 40 + nm.lines.length * nm.size * 1.08 + 12 + cat.lines.length * cat.size * 1.2;
+    // Shrink the type a step at a time while the photo would be too small.
+    for (let max = 84; regionH - textH() < minPhoto && max > 40; max -= 6) {
+      nm = wrapText(ctx, o.name, w - pad * 2, max, Math.min(40, max), 2, 900);
+      cat = wrapText(ctx, o.category.toUpperCase(), w - pad * 2, Math.max(20, Math.round(max * 0.4)), 18, 2, 700);
+    }
+    const photoSize = Math.max(160, Math.min(w - pad * 2, regionH - textH()));
+    let ty = regionTop + Math.max(0, (regionH - photoSize - textH()) / 2);
+    drawPhoto((w - photoSize) / 2, ty, photoSize);
+    ty += photoSize + 40;
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = font(900, nm.size);
+    for (const line of nm.lines) { ctx.fillText(line, w / 2, ty); ty += nm.size * 1.08; }
+    ty += 12;
+    ctx.fillStyle = t.accent;
+    ctx.font = font(700, cat.size);
+    for (const line of cat.lines) { ctx.fillText(line, w / 2, ty); ty += cat.size * 1.2; }
+    ctx.textAlign = "left";
+  }
 
   // Footer card: code, how to vote, QR.
   const fy = footerTop;
@@ -178,16 +244,32 @@ async function drawPoster(canvas: HTMLCanvasElement, o: {
     ctx.fill();
     ctx.drawImage(o.qr, w - pad - 24 - qrSize + 8, fy + 32, qrSize - 16, qrSize - 16);
   }
-  const tx = pad + 36;
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.font = `700 24px Inter, system-ui, sans-serif`;
-  ctx.fillText("VOTING CODE", tx, fy + 30);
+  // Left column: voting code, then a bright USSD band that reads at a glance.
+  const tx = pad + 32;
+  const colW = w - pad * 2 - qrSize - 24 - 32 - 28;
+  ctx.fillStyle = "rgba(255,255,255,0.65)";
+  ctx.font = `800 ${Math.round(fh * 0.075)}px Inter, system-ui, sans-serif`;
+  ctx.fillText("VOTING CODE", tx, fy + 26);
   ctx.fillStyle = "#ffffff";
-  ctx.font = `900 ${Math.min(92, fh * 0.42)}px "SF Mono", Menlo, Consolas, monospace`;
-  ctx.fillText(o.code, tx, fy + 62);
-  ctx.fillStyle = "rgba(255,255,255,0.75)";
-  ctx.font = `600 24px Inter, system-ui, sans-serif`;
-  ctx.fillText(`Scan the QR or dial ${USSD_SHORTCODE}`, tx, fy + fh - 44);
+  // Square has the shortest card: a slightly smaller code leaves the USSD band room to read.
+  const codeSize = Math.round(fh * (o.format === "square" ? 0.24 : 0.3));
+  ctx.font = `900 ${codeSize}px "SF Mono", Menlo, Consolas, monospace`;
+  ctx.fillText(o.code, tx, fy + 26 + fh * 0.1);
+
+  const bandY = fy + 26 + fh * 0.1 + codeSize + 14;
+  const bandH = fy + fh - 24 - bandY;
+  ctx.fillStyle = t.accent;
+  roundRect(ctx, tx - 8, bandY, colW, bandH, 20);
+  ctx.fill();
+  ctx.fillStyle = "rgba(0,0,0,0.65)";
+  ctx.font = `800 ${Math.round(bandH * 0.22)}px Inter, system-ui, sans-serif`;
+  ctx.fillText("NO DATA? DIAL", tx + 10, bandY + bandH * 0.12);
+  let ussdSize = Math.round(bandH * 0.55);
+  const ussdFont = (size: number) => `900 ${size}px "SF Mono", Menlo, Consolas, monospace`;
+  ctx.font = ussdFont(ussdSize);
+  while (ctx.measureText(USSD_SHORTCODE).width > colW - 36 && ussdSize > 24) { ussdSize -= 2; ctx.font = ussdFont(ussdSize); }
+  ctx.fillStyle = "#0b1a2e";
+  ctx.fillText(USSD_SHORTCODE, tx + 10, bandY + bandH * 0.38);
 }
 
 function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
@@ -200,6 +282,107 @@ function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) 
     >
       {done ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />} {done ? "Copied" : label}
     </button>
+  );
+}
+
+/** The nominee's uploaded flyer and intro video, ready to send to voters. */
+function CampaignMediaCard({ me, url, canShareFiles }: { me: any; url: string; canShareFiles: boolean }) {
+  const flyer: string | null = me.contestant.flyerUrl;
+  const video: string | null = me.contestant.introVideoUrl;
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const isLinkVideo = video ? parseMediaUrl(video)?.kind === "iframe" : false;
+  // Uploaded videos are shared as the voting page, opened at the video.
+  const videoShareUrl = video ? (isLinkVideo ? video : url ? `${url}#intro-video` : video) : "";
+  const flyerPageUrl = url ? `${url}#flyer` : "";
+  const name = me.contestant.name;
+
+  const flyerFile = async () => {
+    const { dataUrl } = (await getNomineePhotoFn({ data: { which: "flyer" } } as any)) as any;
+    if (!dataUrl) throw new Error("We couldn't load your flyer just now. Please try again.");
+    const blob = await (await fetch(dataUrl)).blob();
+    return new File([blob], `heravote-${me.contestant.code.toLowerCase()}-flyer.${blob.type.split("/")[1] ?? "webp"}`, { type: blob.type });
+  };
+  const shareFlyer = async () => {
+    setBusy(true); setNote(null);
+    try {
+      const file = await flyerFile();
+      await navigator.share({ files: [file], text: `Vote for ${name}! Code ${me.contestant.code}: ${url}` });
+    } catch (e: any) {
+      if (e?.name !== "AbortError") setNote(e?.message || "Sharing didn't work on this device. Download the flyer instead.");
+    } finally { setBusy(false); }
+  };
+  const downloadFlyer = async () => {
+    setBusy(true); setNote(null);
+    try {
+      const file = await flyerFile();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(file);
+      a.download = file.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    } catch (e: any) {
+      setNote(e?.message || "We couldn't download your flyer just now.");
+    } finally { setBusy(false); }
+  };
+
+  if (!flyer && !video) {
+    return (
+      <section className={`${PANEL} flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between`}>
+        <p className="flex items-start gap-2 text-sm text-zinc-300">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-purple-300" />
+          Add a campaign flyer or an intro video to your profile, and you'll be able to share them with voters from here.
+        </p>
+        <Link to="/nominee-portal/profile" className="shrink-0 rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-500">Add media</Link>
+      </section>
+    );
+  }
+
+  const button = "inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-200 hover:bg-white/10 disabled:opacity-50";
+  return (
+    <section className={`${PANEL} space-y-4 p-5`}>
+      <h2 className="flex items-center gap-2 text-sm font-bold text-white"><Sparkles className="h-4 w-4 text-purple-300" /> Your campaign media</h2>
+      <div className={`grid gap-5 ${flyer && video ? "lg:grid-cols-2" : ""}`}>
+        {flyer && (
+          <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-400"><ImageIcon className="h-3.5 w-3.5" /> Flyer</p>
+            <img src={flyer} alt={`${name} campaign flyer`} className="mx-auto max-h-80 w-auto rounded-lg" />
+            <div className="flex flex-wrap gap-2">
+              {canShareFiles && (
+                <button type="button" onClick={shareFlyer} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-2 text-xs font-semibold text-white hover:bg-purple-500 disabled:opacity-50">
+                  {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />} Share flyer image
+                </button>
+              )}
+              <button type="button" onClick={downloadFlyer} disabled={busy} className={button}><Download className="h-3.5 w-3.5" /> Download</button>
+              <a href={`https://wa.me/?text=${encodeURIComponent(`See my campaign flyer and vote for me (${me.contestant.code}): ${flyerPageUrl}`)}`} target="_blank" rel="noopener noreferrer" className={button}>
+                <MessageCircle className="h-3.5 w-3.5 text-[#7ee2a8]" /> WhatsApp
+              </a>
+              <ShareMenu title={`${name}: campaign flyer`} text={`See my campaign flyer and vote for me! Code ${me.contestant.code}`} url={flyerPageUrl || undefined} heading="Share your flyer" align="right" buttonClassName={button} />
+            </div>
+          </div>
+        )}
+        {video && (
+          <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-400"><Clapperboard className="h-3.5 w-3.5" /> Intro video</p>
+            <MediaPlayer url={video} maxWidth={520} />
+            <div className="flex flex-wrap gap-2">
+              <a href={`https://wa.me/?text=${encodeURIComponent(`Watch my intro video and vote for me (${me.contestant.code}): ${videoShareUrl}`)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366]/15 px-3 py-2 text-xs font-semibold text-[#7ee2a8] hover:bg-[#25D366]/25">
+                <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+              </a>
+              <ShareMenu title={`${name}: intro video`} text={`Watch my intro video and vote for me! Code ${me.contestant.code}`} url={videoShareUrl || undefined} heading="Share your video" align="right" buttonClassName={button} />
+              <CopyButton text={videoShareUrl} label="Copy link" />
+              {!isLinkVideo && (
+                <a href={video} target="_blank" rel="noopener noreferrer" download className={button}><ExternalLink className="h-3.5 w-3.5" /> Open video file</a>
+              )}
+            </div>
+            <p className="text-xs text-zinc-500">
+              {isLinkVideo ? "Shares the original video link." : "Shares your voting page, opened right at your video."}
+            </p>
+          </div>
+        )}
+      </div>
+      {note && <p role="alert" className="text-xs text-amber-300">{note}</p>}
+    </section>
   );
 }
 
@@ -221,7 +404,7 @@ function ShareKit() {
     setOrigin(o);
     let cancelled = false;
     (async () => {
-      const [{ dataUrl }, QR] = await Promise.all([getNomineePhotoFn() as Promise<any>, import("qrcode")]);
+      const [{ dataUrl }, QR] = await Promise.all([getNomineePhotoFn({ data: { which: "photo" } } as any) as Promise<any>, import("qrcode")]);
       const qrUrl = await QR.toDataURL(`${o}/nominee/${code}`, { margin: 1, width: 640, errorCorrectionLevel: "M", color: { dark: "#0b1a2e", light: "#ffffff" } });
       const [photo, qr] = await Promise.all([dataUrl ? loadImage(dataUrl).catch(() => null) : null, loadImage(qrUrl)]);
       if (!cancelled) setAssets({ photo, qr, qrUrl });
@@ -273,6 +456,8 @@ function ShareKit() {
         <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">Share kit</h1>
         <p className="mt-1 text-zinc-300">Everything you need to bring in votes: a ready-made poster, your QR code and captions.</p>
       </div>
+
+      <CampaignMediaCard me={me} url={url} canShareFiles={canShareFiles} />
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
         {/* Poster studio */}
@@ -358,10 +543,16 @@ function ShareKit() {
               <span className="select-all truncate font-mono text-xs text-zinc-300">{url.replace(/^https?:\/\//, "")}</span>
               <CopyButton text={url} label="Copy link" />
             </div>
-            <div className="mt-3 flex items-start gap-3 rounded-xl border border-white/10 bg-black/25 px-3 py-3">
-              <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-purple-300" />
-              <p className="text-xs leading-relaxed text-zinc-300">
-                No data? Voters can dial <span className="font-mono font-bold text-white">{USSD_SHORTCODE}</span> and enter <span className="font-mono font-bold text-white">{code}</span>.
+            <div className="mt-4 overflow-hidden rounded-2xl border border-purple-400/40 bg-gradient-to-br from-purple-500/25 via-purple-500/10 to-transparent p-4">
+              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-purple-200">
+                <Smartphone className="h-4 w-4" /> No data? Vote by USSD
+              </p>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+                <span className="select-all font-mono text-4xl font-black tracking-wider text-white sm:text-5xl">{USSD_SHORTCODE}</span>
+                <CopyButton text={USSD_SHORTCODE} label="Copy" />
+              </div>
+              <p className="mt-2 text-sm text-zinc-200">
+                Dial it on any phone, then enter <span className="rounded-md bg-white/10 px-1.5 py-0.5 font-mono font-bold text-white">{code}</span> to vote for you.
               </p>
             </div>
           </section>

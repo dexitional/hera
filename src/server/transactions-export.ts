@@ -15,6 +15,8 @@ export type ExportTransaction = {
   votes: number;
   payAmount: number | null;
   payStatus: boolean;
+  /** Set when Paystack reported the payment refunded or charged back. */
+  refundedAt?: Date | null;
 };
 
 export type ExportMeta = {
@@ -78,7 +80,7 @@ export function buildTransactionsWorkbook(rows: ExportTransaction[], meta: Expor
     headers.map((h) => text(h, HEADER_STYLE)),
     ...rows.map((t) => [
       num(excelDate(t.createdAt), DATE_FORMAT),
-      text(t.payStatus ? 'Paid' : 'Pending'),
+      text(t.refundedAt ? 'Refunded' : t.payStatus ? 'Paid' : 'Pending'),
       text(t.categoryName),
       text(t.contestantName),
       text(t.contestantCode),
@@ -119,7 +121,8 @@ export function buildTransactionsWorkbook(rows: ExportTransaction[], meta: Expor
     [text('Filters', LABEL_STYLE), text(filterText)],
     [text('Transactions', LABEL_STYLE), num(rows.length, COUNT_FORMAT)],
     [text('Paid', LABEL_STYLE), num(paid.length, COUNT_FORMAT)],
-    [text('Pending', LABEL_STYLE), num(rows.length - paid.length, COUNT_FORMAT)],
+    [text('Pending', LABEL_STYLE), num(rows.filter((t) => !t.payStatus && !t.refundedAt).length, COUNT_FORMAT)],
+    [text('Refunded', LABEL_STYLE), num(rows.filter((t) => t.refundedAt).length, COUNT_FORMAT)],
     [text('Paid votes', LABEL_STYLE), num(sum(paid, (t) => t.votes), COUNT_FORMAT)],
     [text('Paid amount', LABEL_STYLE), num(sum(paid, (t) => t.payAmount ?? 0), MONEY_FORMAT)],
     [],

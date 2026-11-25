@@ -4,6 +4,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { createContestantFn, updateContestantFn } from "#/server/tenant-events";
 import { convertToFormData } from "#/lib/utils";
+import { NomineeMediaFields } from "#/components/media/NomineeMediaFields";
+import { toUserMessage } from "#/lib/errors";
 
 export default function ContestantAdminForm({ data: { data, categories, eventId } }: any) {
   const queryClient = useQueryClient();
@@ -19,6 +21,7 @@ export default function ContestantAdminForm({ data: { data, categories, eventId 
     order: data?.order,
     tagline: data?.tagline,
     phone: data?.phone,
+    introVideoUrl: data?.introVideoUrl ?? undefined,
     code: data?.code,
     id: data?.id,
   });
@@ -119,7 +122,7 @@ export default function ContestantAdminForm({ data: { data, categories, eventId 
       setSubmitSuccess(true);
       setTimeout(() => navigate({ to: `/admin/events/${eventId}/contestants` }), 1500);
     } catch (err: any) {
-      setErrorMessage(err?.message || "Failed to save contestant.");
+      setErrorMessage(toUserMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -416,6 +419,26 @@ export default function ContestantAdminForm({ data: { data, categories, eventId 
                               </div>
                             )}
 
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Campaign media: flyer + intro video */}
+                      <div className="px-6 py-5">
+                        <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-start">
+                          <div className="col-span-4 flex flex-col pt-1.5">
+                            <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                              Campaign Media
+                            </label>
+                            <span className="text-zinc-500 text-xs mt-1 leading-relaxed">Shown on the nominee's public voting page. Nominees can also update these from their portal.</span>
+                          </div>
+                          <div className="order-1 col-span-8 w-full">
+                            <NomineeMediaFields
+                              flyerUrl={data?.flyerUrl}
+                              introVideoUrl={data?.introVideoUrl}
+                              disabled={isSubmitting}
+                              onChange={(change) => setFormData((prev: any) => ({ ...prev, ...change }))}
+                            />
                           </div>
                         </div>
                       </div>

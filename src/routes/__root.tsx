@@ -20,6 +20,8 @@ import Header from '#/components/Header'
 import Footer from '#/components/Footer'
 import { NotFoundPage, RouteErrorPage } from '#/components/ErrorPage'
 import { checkAuthSession } from '#/lib/auth-helper'
+import { getCachedAuth, setCachedAuth } from '#/lib/auth-cache'
+import { NavigationProgress } from '#/components/RoutePending'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 
 
@@ -62,9 +64,15 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   errorComponent: RouteErrorPage,
 
   beforeLoad: async () => {
+    // In the browser, reuse a recent answer so page changes don't wait on a
+    // server round trip (see auth-cache.ts; server functions still check).
+    const cached = getCachedAuth();
+    if (cached) return cached;
     try {
       const authState = await checkAuthSession();
-      return { user: authState?.user, authenticated: authState?.authenticated };
+      const value = { user: authState?.user, authenticated: Boolean(authState?.authenticated) };
+      setCachedAuth(value);
+      return value;
     } catch {
       // checkAuthSession is gated by arcjetMiddleware, which throws a plain
       // Error (not a Response -- that breaks seroval SSR serialization, see
@@ -94,6 +102,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="__variable_f367f3 __variable_dd5b2f flex flex-col justify-between font-sans antialiased bg-[#0d1f36] min-h-screen">
+        <NavigationProgress />
         {!isAdmin && <Header />}
         <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
         {children}

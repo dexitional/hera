@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 export type ChatMessage = {
   id: string
   body: string | null
+  imageUrl: string | null
   deleted: boolean
   pinned: boolean
   createdAt: string

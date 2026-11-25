@@ -13,6 +13,7 @@ import {
 } from './nominee-access';
 import { getClientIp } from './voter-auth';
 import { processImageUpload } from './image-upload';
+import { nomineeMediaFrom } from './nominee-media';
 import { asResultsView, loadCategoryStandings, loadOwnVotes, NOMINEE_RESULTS_VIEWS } from './nominee-dashboard';
 import { maskPhone, toSmsRecipient } from '#/lib/phone';
 
@@ -157,7 +158,7 @@ export const getNomineeMeFn = createServerFn({ method: 'GET' }).handler(async ()
   const n = await currentNominee();
   if (!n) return null;
   return {
-    contestant: { id: n.contestant.id, name: n.contestant.name, tagline: n.contestant.tagline, imageUrl: n.contestant.imageUrl, code: n.contestant.code, phone: n.contestant.phone },
+    contestant: { id: n.contestant.id, name: n.contestant.name, tagline: n.contestant.tagline, imageUrl: n.contestant.imageUrl, flyerUrl: n.contestant.flyerUrl, introVideoUrl: n.contestant.introVideoUrl, code: n.contestant.code, phone: n.contestant.phone },
     category: n.category,
     event: {
       id: n.event.id,
@@ -197,11 +198,12 @@ export const updateNomineeProfileFn = createServerFn({ method: 'POST' })
       quality: 75,
     });
     if (!imageUrl && !n.contestant.imageUrl) throw new Error('Please add a photo of yourself.');
+    const media = await nomineeMediaFrom(data);
 
     await db.transaction(async (tx) => {
       await tx
         .update(contestants)
-        .set({ name, tagline, ...(imageUrl && { imageUrl }) })
+        .set({ name, tagline, ...media, ...(imageUrl && { imageUrl }) })
         .where(eq(contestants.id, n.contestant.id));
       if (!n.access.activatedAt) {
         await tx.update(nomineeAccess).set({ activatedAt: new Date() }).where(eq(nomineeAccess.contestantId, n.contestant.id));
@@ -291,14 +293,15 @@ export const setNomineeResultsViewFn = createServerFn({ method: 'POST' })
 const MAX_PHOTO_BYTES = 6 * 1024 * 1024;
 
 /**
- * The signed-in nominee's own photo as a data URL, so the browser can draw
- * it on the campaign poster canvas (a cross-origin storage URL would taint
- * the canvas and block the download). Only ever fetches the URL stored on
- * the nominee's own record.
+ * The signed-in nominee's own photo (or, with which: 'flyer', their flyer)
+ * as a data URL, so the browser can draw it on the poster canvas or share it
+ * as an image file (a cross-origin storage URL would taint the canvas and
+ * can't be fetched as a file). Only ever fetches a URL stored on the
+ * nominee's own record.
  */
-export const getNomineePhotoFn = createServerFn({ method: 'GET' }).handler(async () => {
+export const getNomineePhotoFn = createServerFn({ method: 'GET' }).handler(async ({ data }: any) => {
   const n = await requireNominee();
-  const url = n.contestant.imageUrl;
+  const url = data?.which === 'flyer' ? n.contestant.flyerUrl : n.contestant.imageUrl;
   if (!url || !/^https?:\/\//i.test(url)) return { dataUrl: null };
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });

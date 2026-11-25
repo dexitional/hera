@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ArrowDown, Loader2, Lock, Megaphone, MicOff, MoreVertical, Pin, PinOff, SendHorizontal, ShieldCheck, Trash2 } from 'lucide-react'
+import { ArrowDown, ImagePlus, Loader2, Lock, Megaphone, MicOff, MoreVertical, Pin, PinOff, SendHorizontal, ShieldCheck, Trash2, X } from 'lucide-react'
+import { RichMedia, RichText } from '#/components/media/MediaEmbed'
 import type { ChatMessage } from './useChatRoom'
 
 // One chat surface for both sides of the nominee group chat. Written with the
@@ -7,6 +8,7 @@ import type { ChatMessage } from './useChatRoom'
 // is always dark.
 
 const MAX_LENGTH = 1000
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024
 const GROUP_GAP_MS = 5 * 60_000
 
 const dayLabel = (iso: string) => {
@@ -44,7 +46,7 @@ export type ChatRoomProps = {
   canPost: boolean
   /** Shown in place of the composer when posting isn't allowed. */
   blockedReason?: string
-  onSend: (body: string, options: { announce: boolean }) => Promise<void>
+  onSend: (body: string, options: { announce: boolean; image: File | null }) => Promise<void>
   /** Delete is offered on messages this returns true for. */
   canDelete: (m: ChatMessage) => boolean
   onDelete: (m: ChatMessage) => Promise<void>
@@ -71,6 +73,23 @@ export function ChatRoom({
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
   const [menuFor, setMenuFor] = useState<string | null>(null)
+  const [photo, setPhoto] = useState<{ file: File; url: string } | null>(null)
+  const photoInput = useRef<HTMLInputElement>(null)
+
+  useEffect(() => () => { if (photo) URL.revokeObjectURL(photo.url) }, [photo])
+
+  const pickPhoto = (file?: File) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) return setSendError('Only photos can be attached. Paste a link to share a video.')
+    if (file.size > MAX_PHOTO_BYTES) return setSendError('That photo is over 10 MB. Please choose a smaller one.')
+    setSendError(null)
+    setPhoto({ file, url: URL.createObjectURL(file) })
+    textarea.current?.focus()
+  }
+  const clearPhoto = () => {
+    setPhoto(null)
+    if (photoInput.current) photoInput.current.value = ''
+  }
   const lastCount = useRef(0)
 
   const pinned = messages.filter((m) => m.pinned)
@@ -115,13 +134,14 @@ export function ChatRoom({
 
   const send = async () => {
     const body = draft.trim()
-    if (!body || sending) return
+    if ((!body && !photo) || sending) return
     setSending(true)
     setSendError(null)
     try {
-      await onSend(body, { announce })
+      await onSend(body, { announce, image: photo?.file ?? null })
       setDraft('')
       setAnnounce(false)
+      clearPhoto()
       atBottom.current = true
       requestAnimationFrame(autosize)
     } catch (e: any) {
@@ -175,8 +195,13 @@ export function ChatRoom({
                     : 'rounded-bl-md border border-zinc-800 bg-zinc-900 text-zinc-100'
               }`}
             >
+              {m.imageUrl && (
+                <a href={m.imageUrl} target="_blank" rel="noopener noreferrer" className="-mx-1.5 -mt-0.5 mb-1.5 block overflow-hidden rounded-xl">
+                  <img src={m.imageUrl} alt="Shared photo" loading="lazy" className="max-h-72 w-full max-w-[320px] object-cover" />
+                </a>
+              )}
               {m.pinned && <Pin className="mr-1 inline h-3 w-3 -translate-y-px opacity-70" aria-label="Pinned" />}
-              {m.body}
+              {m.body && <RichText text={m.body} />}
               <span className={`ml-2 inline-block translate-y-0.5 text-[10px] ${isMine ? 'text-white/70' : 'text-zinc-500'}`}>{time(m.createdAt)}</span>
             </div>
             {showMenu && (
@@ -223,6 +248,7 @@ export function ChatRoom({
               </div>
             )}
           </div>
+          {m.body && <div className="w-full max-w-[340px]"><RichMedia text={m.body} maxWidth={340} /></div>}
         </div>
       </div>,
     )
@@ -236,7 +262,7 @@ export function ChatRoom({
           {pinned.slice(-3).map((m) => (
             <div key={m.id} className="flex items-start gap-2 text-xs">
               <Megaphone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-300" />
-              <p className="line-clamp-2 text-zinc-200"><span className="font-semibold text-amber-300">{m.author.name}: </span>{m.body}</p>
+              <p className="line-clamp-2 text-zinc-200"><span className="font-semibold text-amber-300">{m.author.name}: </span>{m.body || 'Photo'}</p>
             </div>
           ))}
         </div>
@@ -268,7 +294,24 @@ export function ChatRoom({
       <div className="border-t border-zinc-800 p-3">
         {canPost ? (
           <form onSubmit={(e) => { e.preventDefault(); void send() }} className="space-y-2">
+            {photo && (
+              <div className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 p-2">
+                <img src={photo.url} alt="Photo to send" className="h-14 w-14 rounded-lg object-cover" />
+                <span className="min-w-0 flex-1 truncate text-xs text-zinc-400">{photo.file.name}</span>
+                <button type="button" onClick={clearPhoto} aria-label="Remove photo" className="rounded-md p-1 text-zinc-400 hover:bg-zinc-800 hover:text-white"><X className="h-4 w-4" /></button>
+              </div>
+            )}
             <div className="flex items-end gap-2">
+              <input ref={photoInput} type="file" accept="image/*" className="hidden" onChange={(e) => pickPhoto(e.target.files?.[0])} />
+              <button
+                type="button"
+                onClick={() => photoInput.current?.click()}
+                aria-label="Attach a photo"
+                title="Attach a photo"
+                className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white"
+              >
+                <ImagePlus className="h-4 w-4" />
+              </button>
               <textarea
                 ref={textarea}
                 rows={1}
@@ -284,7 +327,7 @@ export function ChatRoom({
               />
               <button
                 type="submit"
-                disabled={!draft.trim() || sending}
+                disabled={(!draft.trim() && !photo) || sending}
                 aria-label="Send message"
                 className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl bg-purple-600 text-white transition-colors hover:bg-purple-500 disabled:opacity-40"
               >
@@ -298,7 +341,7 @@ export function ChatRoom({
                   Pin as announcement
                 </label>
               ) : (
-                <span>Enter to send · Shift+Enter for a new line</span>
+                <span>Enter to send · Paste YouTube, Facebook, Instagram or TikTok links to play them here</span>
               )}
               {draft.length > MAX_LENGTH - 200 && <span className={draft.length >= MAX_LENGTH ? 'text-red-400' : ''}>{draft.length}/{MAX_LENGTH}</span>}
             </div>

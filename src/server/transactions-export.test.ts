@@ -40,7 +40,8 @@ describe('buildTransactionsWorkbook', () => {
     const find = (label: string) => rows.find((r) => r[0] === label)?.[1];
     expect(find('Transactions')).toBe(4);
     expect(find('Paid')).toBe(3);
-    expect(find('Pending')).toBe(1);
+    expect(find('Pending')).toBe(1)
+    expect(find('Refunded')).toBe(0);
     expect(find('Paid votes')).toBe(52);
     expect(find('Paid amount')).toBe(26);
     const header = rows.findIndex((r) => r[0] === 'Category');

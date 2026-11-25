@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, Loader2 } from "lucide-react";
 import { getNomineeMeFn, updateNomineeProfileFn } from "#/server/nominee-portal";
 import { PANEL } from "#/components/nominee/NomineeDashboard";
+import { NomineeMediaFields, type NomineeMediaChange } from "#/components/media/NomineeMediaFields";
 
 export const Route = createFileRoute("/nominee-portal/profile")({
   loader: async () => {
@@ -28,6 +29,8 @@ function NomineeProfile() {
   const [name, setName] = useState(me.contestant.name ?? "");
   const [tagline, setTagline] = useState(me.contestant.tagline ?? "");
   const [photo, setPhoto] = useState<File | null>(null);
+  // Only what the nominee changed is sent; untouched media stays as it is.
+  const [media, setMedia] = useState<NomineeMediaChange>({});
   const [preview, setPreview] = useState<string | null>(me.contestant.imageUrl ?? null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -53,6 +56,10 @@ function NomineeProfile() {
       fd.append("name", name);
       fd.append("tagline", tagline);
       if (photo) fd.append("image", photo);
+      if (media.flyer) fd.append("flyer", media.flyer);
+      if (media.removeFlyer) fd.append("removeFlyer", "true");
+      if (media.introVideoFile) fd.append("introVideoFile", media.introVideoFile);
+      else if (media.introVideoUrl !== undefined) fd.append("introVideoUrl", media.introVideoUrl);
       await updateNomineeProfileFn({ data: fd } as any);
       await router.navigate({ to: "/nominee-portal", search: { code: undefined } });
     } catch (err: any) {
@@ -111,6 +118,16 @@ function NomineeProfile() {
             </span>
             <input required maxLength={MAX_TAGLINE} placeholder="A short line about you" value={tagline} onChange={(e) => setTagline(e.target.value)} className={input} />
           </label>
+
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <p className="mb-3 text-sm font-semibold text-white">Campaign media <span className="font-normal text-zinc-500">· optional</span></p>
+            <NomineeMediaFields
+              flyerUrl={me.contestant.flyerUrl}
+              introVideoUrl={me.contestant.introVideoUrl}
+              disabled={busy}
+              onChange={(change) => setMedia((m) => ({ ...m, ...change }))}
+            />
+          </div>
 
           <p className="text-xs text-zinc-500">
             Your category, voting code ({me.contestant.code}) and phone number are managed by the organiser.

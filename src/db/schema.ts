@@ -94,12 +94,21 @@ export const events = pgTable('events', {
   nomineeResultsView: text('nominee_results_view').default('own').notNull(),
   // Nominee group chat: when locked, only the event's admins can post.
   nomineeChatLocked: boolean('nominee_chat_locked').default(false).notNull(),
+  // Where the organiser's share is paid out (see lib/settlement.ts):
+  //   momo -> provider = network (MTN / Telecel / AirtelTigo), number = wallet
+  //   bank -> provider = bank name, branch, number = account number
+  settlementType: text('settlement_type'),
+  settlementProvider: text('settlement_provider'),
+  settlementBranch: text('settlement_branch'),
+  settlementAccountNumber: text('settlement_account_number'),
+  settlementAccountName: text('settlement_account_name'),
   adminId: text('admin_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => ({
   adminIdx: index('events_admin_id_idx').on(t.adminId),
   feePercentRange: check('events_platform_fee_percent_range', sql`${t.platformFeePercent} >= 0 and ${t.platformFeePercent} <= 100`),
   nomineeResultsViewValues: check('events_nominee_results_view_values', sql`${t.nomineeResultsView} in ('hidden', 'own', 'standings')`),
+  settlementTypeValues: check('events_settlement_type_values', sql`${t.settlementType} is null or ${t.settlementType} in ('momo', 'bank')`),
 }));
 
 export const categories = pgTable('categories', {
@@ -124,6 +133,11 @@ export const contestants = pgTable('contestants', {
   // The nominee's own phone (normalised, e.g. 0241234567): where their invite
   // is sent and, with their access code, how they sign in to the portal.
   phone: text('phone'),
+  // Optional campaign media, shown on the public nominee page: a flyer image
+  // (our storage) and an intro video, either a link to YouTube / Facebook /
+  // Instagram / TikTok / Vimeo or a video file uploaded to our storage.
+  flyerUrl: text('flyer_url'),
+  introVideoUrl: text('intro_video_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => ({
   categoryIdx: index('contestants_category_id_idx').on(t.categoryId),
@@ -162,6 +176,8 @@ export const nomineeChatMessages = pgTable('nominee_chat_messages', {
   adminId: text('admin_id').references(() => user.id, { onDelete: 'set null' }),
   authorType: text('author_type').notNull(),
   body: text('body'),
+  // A photo attached from the device (our storage); links in the body are embedded by the client.
+  imageUrl: text('image_url'),
   pinned: boolean('pinned').default(false).notNull(),
   deletedAt: timestamp('deleted_at', { precision: 3 }),
   deletedBy: text('deleted_by'),
@@ -184,6 +200,11 @@ export const eventTransactions = pgTable('event_transactions', {
   votes: integer('votes').default(0).notNull(),
   channel: text('channel').notNull(), 
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  // Set when Paystack reports the payment refunded or a chargeback lost
+  // (webhook). The row also gets pay_status = false, so its votes and
+  // revenue stop counting; these record when and why for the admin.
+  refundedAt: timestamp('refunded_at'),
+  refundReason: text('refund_reason'),
 }, (t) => ({
   voterPhoneIdx: index('trans_voter_phone_idx').on(t.payPhone),
   contestantVotesIdx: index('event_contestant_idx').on(t.contestantId),

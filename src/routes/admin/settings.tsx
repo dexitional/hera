@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { authErrorMessage } from '#/lib/errors'
+import { clearAuthCache } from '#/lib/auth-cache'
 import React, { useEffect, useRef, useState } from "react";
 import {
   User, Mail, Phone, Shield, ShieldCheck, Key, Laptop, Globe,
@@ -187,6 +188,8 @@ function AdminAccountSettings() {
       setPendingImageFile(null);
       setPendingImagePreview(null);
       setProfileSuccess(true);
+      // The shell shows the user from the cached sign-in check; refresh it.
+      clearAuthCache();
     } catch (err: any) {
       setUploadError(authErrorMessage(err, "We couldn't save your profile. Please try again."));
     } finally {

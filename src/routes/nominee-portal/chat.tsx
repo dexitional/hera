@@ -53,7 +53,7 @@ function NomineeChat() {
             blockedReason={
               !state ? "Connecting…" : state.locked ? "The organiser has locked this chat. Only organisers can post right now." : "The organiser has paused your messages in this chat."
             }
-            onSend={async (body) => { await postNomineeChatFn({ data: { body } } as any); await room.refresh(); }}
+            onSend={async (body, { image }) => { const fd = new FormData(); fd.append("body", body); if (image) fd.append("image", image); await postNomineeChatFn({ data: fd } as any); await room.refresh(); }}
             canDelete={(m) => m.author.type === "nominee" && m.author.contestantId === myId}
             onDelete={async (m) => { await deleteOwnNomineeChatFn({ data: { id: m.id } } as any); await room.refresh(); }}
             placeholder="Message all nominees…"

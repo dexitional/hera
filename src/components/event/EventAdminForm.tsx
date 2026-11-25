@@ -1,5 +1,7 @@
 import React, { useRef, useState } from "react";
-import { CheckCircle2, Coins, ToggleLeft, Calendar, UploadCloud, FileImage, X, AlertCircle, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Coins, ToggleLeft, Calendar, UploadCloud, FileImage, X, AlertCircle, ShieldCheck, Landmark, Smartphone, Wallet } from "lucide-react";
+import { GHANA_BANKS, MOMO_NETWORKS } from "#/lib/settlement";
+import { toUserMessage } from "#/lib/errors";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createEventFn, updateEventFn } from "#/server/tenant-events";
 import { useNavigate } from "@tanstack/react-router";
@@ -15,6 +17,7 @@ export default function EventAdminForm({ data, forUserId, forUserName }: any) {
   const [formData, setFormData] = useState<any>(data ?? { isActive: true });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isEditMode = data != null;
 
   // Local state tracking for the image before bucket dispatch
@@ -57,7 +60,6 @@ export default function EventAdminForm({ data, forUserId, forUserName }: any) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events-admin'] });
     },
-    onError: (error) => alert(error.message),
   });
 
   const editMutation = useMutation({
@@ -65,12 +67,21 @@ export default function EventAdminForm({ data, forUserId, forUserName }: any) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events-admin'] });
     },
-    onError: (error) => console.error(error.message),
   });
+
+  const setSettlementType = (type: string | null) => {
+    // The provider means a network for MoMo and a bank otherwise, so it resets.
+    setFormData((prev: any) => ({
+      ...prev,
+      settlementType: type,
+      ...(prev.settlementType !== type ? { settlementProvider: null, settlementBranch: null } : {}),
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage(null);
     try {
       const newFormData = convertToFormData({
         ...formData,
@@ -78,10 +89,11 @@ export default function EventAdminForm({ data, forUserId, forUserName }: any) {
         // inside another tenant's workspace.
         ...(!isEditMode && forUserId ? { adminId: forUserId } : {}),
       });
+      // Wait for the save: success is only shown once the server accepted it.
       if (isEditMode) {
-        editMutation.mutate({ data: newFormData } as any);
+        await editMutation.mutateAsync({ data: newFormData } as any);
       } else {
-        createMutation.mutate({ data: newFormData } as any);
+        await createMutation.mutateAsync({ data: newFormData } as any);
       }
       setSubmitSuccess(true);
       setTimeout(() => {
@@ -92,7 +104,7 @@ export default function EventAdminForm({ data, forUserId, forUserName }: any) {
         }
       }, 2000);
     } catch (err) {
-      console.error(err);
+      setErrorMessage(toUserMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -321,7 +333,111 @@ export default function EventAdminForm({ data, forUserId, forUserName }: any) {
                         </div>
                       </div>
 
-                      {/* 5. Active Toggle Row */}
+                      {/* 5. Settlement Row */}
+                      <div className="px-6 py-5">
+                        <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-start">
+                          <div className="col-span-4 flex flex-col pt-1.5">
+                            <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                              <Wallet className="w-3.5 h-3.5 text-zinc-500" /> Settlement Account
+                            </label>
+                            <span className="text-zinc-500 text-xs mt-1 leading-relaxed">Where your share of the vote revenue is paid out.</span>
+                          </div>
+                          <div className="order-1 col-span-8 w-full space-y-3">
+                            <div role="radiogroup" aria-label="Settlement type" className="grid grid-cols-3 gap-1 rounded-lg border border-zinc-800 bg-[#0a192a]/50 p-1">
+                              {([
+                                { value: null, label: "Not set", icon: X },
+                                { value: "momo", label: "Mobile money", icon: Smartphone },
+                                { value: "bank", label: "Bank account", icon: Landmark },
+                              ] as const).map((o) => {
+                                const active = (formData?.settlementType ?? null) === o.value;
+                                return (
+                                  <button
+                                    key={o.label}
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={active}
+                                    disabled={isSubmitting}
+                                    onClick={() => setSettlementType(o.value)}
+                                    className={`flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-semibold transition-colors ${active ? "bg-purple-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-900"}`}
+                                  >
+                                    <o.icon className="w-3.5 h-3.5" /> {o.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {formData?.settlementType === "momo" && (
+                              <div className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900/30 p-3">
+                                <div>
+                                  <span className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Network</span>
+                                  <div role="radiogroup" aria-label="Mobile money network" className="flex flex-wrap gap-2">
+                                    {MOMO_NETWORKS.map((net) => (
+                                      <button
+                                        key={net}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={formData?.settlementProvider === net}
+                                        onClick={() => setFormData((prev: any) => ({ ...prev, settlementProvider: net }))}
+                                        className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${formData?.settlementProvider === net ? "border-purple-500 bg-purple-500/10 text-white" : "border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"}`}
+                                      >
+                                        {net}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  <label className="block">
+                                    <span className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Wallet number</span>
+                                    <input type="tel" inputMode="tel" name="settlementAccountNumber" required placeholder="0241234567" disabled={isSubmitting}
+                                      value={formData?.settlementAccountNumber ?? ""} onChange={handleInputChange} className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm px-3 py-2 h-[36px] transition-all disabled:opacity-50 font-mono" />
+                                  </label>
+                                  <label className="block">
+                                    <span className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Registered name</span>
+                                    <input type="text" name="settlementAccountName" required placeholder="Name on the wallet" disabled={isSubmitting}
+                                      value={formData?.settlementAccountName ?? ""} onChange={handleInputChange} className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm px-3 py-2 h-[36px] transition-all disabled:opacity-50" />
+                                  </label>
+                                </div>
+                              </div>
+                            )}
+
+                            {formData?.settlementType === "bank" && (
+                              <div className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900/30 p-3">
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  <label className="block">
+                                    <span className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Bank</span>
+                                    <input type="text" name="settlementProvider" list="ghana-banks" required placeholder="e.g. GCB Bank" disabled={isSubmitting}
+                                      value={formData?.settlementProvider ?? ""} onChange={handleInputChange} className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm px-3 py-2 h-[36px] transition-all disabled:opacity-50" />
+                                    <datalist id="ghana-banks">{GHANA_BANKS.map((b) => <option key={b} value={b} />)}</datalist>
+                                  </label>
+                                  <label className="block">
+                                    <span className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Branch <span className="normal-case font-normal">(optional)</span></span>
+                                    <input type="text" name="settlementBranch" placeholder="e.g. Cape Coast" disabled={isSubmitting}
+                                      value={formData?.settlementBranch ?? ""} onChange={handleInputChange} className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm px-3 py-2 h-[36px] transition-all disabled:opacity-50" />
+                                  </label>
+                                  <label className="block">
+                                    <span className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Account number</span>
+                                    <input type="text" inputMode="numeric" name="settlementAccountNumber" required placeholder="Account number" disabled={isSubmitting}
+                                      value={formData?.settlementAccountNumber ?? ""} onChange={handleInputChange} className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm px-3 py-2 h-[36px] transition-all disabled:opacity-50 font-mono" />
+                                  </label>
+                                  <label className="block">
+                                    <span className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Account name</span>
+                                    <input type="text" name="settlementAccountName" required placeholder="Name on the account" disabled={isSubmitting}
+                                      value={formData?.settlementAccountName ?? ""} onChange={handleInputChange} className="flex w-full rounded-md border border-zinc-700 bg-[#0a192a]/50 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm px-3 py-2 h-[36px] transition-all disabled:opacity-50" />
+                                  </label>
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="text-zinc-500 text-xs">
+                              {formData?.settlementType
+                                ? "Double-check these details: payouts are sent exactly here."
+                                : "Optional for now, but needed before any payout can be made."}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 6. Active Toggle Row */}
                       <div className="px-6 py-5 bg-[#0a192a]/50/20">
                         <div className="relative text-sm flex flex-col gap-2 md:grid md:grid-cols-12 items-left">
                           <div className="col-span-4 flex items-center gap-1.5">
@@ -344,6 +460,12 @@ export default function EventAdminForm({ data, forUserId, forUserName }: any) {
                       </div>
 
                     </div>
+
+                    {errorMessage && (
+                      <div role="alert" className="px-6 py-3 bg-red-950/20 border-t border-red-900/30 text-red-400 text-xs flex items-start gap-2">
+                        <AlertCircle className="w-3.5 h-3.5 mt-px shrink-0" /> {errorMessage}
+                      </div>
+                    )}
 
                     {/* Form Submission Action Footer */}
                     <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end">

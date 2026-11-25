@@ -5,6 +5,8 @@ import XLSX from 'xlsx-js-style';
 import { db } from '../db';
 import { categories, contestants, events, eventTransactions, eventWithdrawals, nomineeAccess, user } from '../db/schema';
 import { normalizePhone } from '#/lib/phone';
+import { parseSettlement } from '#/lib/settlement';
+import { nomineeMediaFrom } from './nominee-media';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
 import { generateContestantCode } from '#/lib/utils';
 import { creditCardVote } from './paystack-credit';
@@ -147,6 +149,8 @@ export const getPublicContestantFn = createServerFn({ method: 'GET' })
       tagline: row.contestant.tagline,
       imageUrl: row.contestant.imageUrl,
       code: row.contestant.code,
+      flyerUrl: row.contestant.flyerUrl,
+      introVideoUrl: row.contestant.introVideoUrl,
       category: { id: row.category.id, name: row.category.name },
       event: {
         id: row.event.id,
@@ -219,6 +223,8 @@ export const createEventFn = createServerFn({ method: 'POST' })
     const targetAdminId = admin.role === 'super' && data.get("adminId")
       ? String(data.get("adminId"))
       : admin.id;
+    // Validated before the image upload, so a rejected form leaves nothing behind.
+    const settlement = parseSettlement(Object.fromEntries(data as FormData));
 
     const imageUrl = await processImageUpload(data.get("image") as File | null, {
       folder: 'events',
@@ -227,8 +233,8 @@ export const createEventFn = createServerFn({ method: 'POST' })
       fit: 'cover',
       quality: 80,
     });
-
     const [created] = await db.insert(events).values({
+      ...settlement,
       title: data.get("title") as string,
       description: data.get("description") as string,
       startAt: data.get("startAt") ? new Date(data.get("startAt") as string) : null,
@@ -249,6 +255,8 @@ export const updateEventFn = createServerFn({ method: 'POST' })
     const ownershipFilter = admin.role === 'super'
       ? eq<any>(events.id, data.get("id") as any)
       : and(eq<any>(events.id, data.get("id") as any), eventOwnerScope(admin));
+    // Validated before the image upload, so a rejected form leaves nothing behind.
+    const settlement = parseSettlement(Object.fromEntries(data as FormData));
 
     const imageUrl = await processImageUpload(data.get("image") as File | null, {
       folder: 'events',
@@ -261,6 +269,7 @@ export const updateEventFn = createServerFn({ method: 'POST' })
     const [updated] = await db
       .update(events)
       .set({
+        ...settlement,
         title: data.get("title") as string,
         description: data.get("description") as string,
         startAt: data.get("startAt") ? new Date(data.get("startAt") as string) : null,
@@ -634,6 +643,8 @@ export const createContestantFn = createServerFn({ method: 'POST' })
         throw new Error("We couldn't find that category. It may have been removed, or you may not have access to it.");
       }
 
+      const phone = nomineePhoneFrom(data);
+      const media = await nomineeMediaFrom(data);
       const finalAvatarUrl = await processImageUpload(data.get("image") as File | null, {
         folder: 'contestants',
         maxWidth: 800,
@@ -651,7 +662,8 @@ export const createContestantFn = createServerFn({ method: 'POST' })
             name: data.get("name") as string,
             tagline: data.get("tagline") as string,
             order: data.get("order") as any,
-            phone: nomineePhoneFrom(data),
+            phone,
+            ...media,
             code: generateContestantCode(),
             ...(finalAvatarUrl && { imageUrl: finalAvatarUrl }),
           }).returning();
@@ -695,6 +707,7 @@ export const updateContestantFn = createServerFn({ method: 'POST' })
       // be moved into another organisation's event.
       await assertCategoryAccess(admin, data.get("categoryId"));
       const phone = nomineePhoneFrom(data);
+      const media = await nomineeMediaFrom(data);
 
       const finalAvatarUrl = await processImageUpload(data.get("image") as File | null, {
         folder: 'contestants',
@@ -711,6 +724,7 @@ export const updateContestantFn = createServerFn({ method: 'POST' })
           tagline: data.get("tagline") as string,
           order: data.get("order") as any,
           phone,
+          ...media,
           code: String(data.get("code") ?? "").toUpperCase(),
           ...(finalAvatarUrl && { imageUrl: finalAvatarUrl }),
         })
@@ -811,6 +825,7 @@ export const exportEventTransactionsFn = createServerFn({ method: 'POST' })
         votes: eventTransactions.votes,
         payAmount: eventTransactions.payAmount,
         payStatus: eventTransactions.payStatus,
+        refundedAt: eventTransactions.refundedAt,
       })
       .from(eventTransactions)
       .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))

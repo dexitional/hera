@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { mergeMessages, sortMessages, type ChatMessage } from './useChatRoom'
 
 const msg = (id: string, createdAt: string, over: Partial<ChatMessage> = {}): ChatMessage => ({
-  id, body: id, deleted: false, pinned: false, createdAt, updatedAt: createdAt,
+  id, body: id, imageUrl: null, deleted: false, pinned: false, createdAt, updatedAt: createdAt,
   author: { type: 'nominee', contestantId: 'c1', name: 'A', imageUrl: null, category: null }, ...over,
 })
 

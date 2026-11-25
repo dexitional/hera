@@ -84,6 +84,8 @@ async function loadNominee(contestantId: string) {
         name: contestants.name,
         tagline: contestants.tagline,
         imageUrl: contestants.imageUrl,
+        flyerUrl: contestants.flyerUrl,
+        introVideoUrl: contestants.introVideoUrl,
         code: contestants.code,
         phone: contestants.phone,
         categoryId: contestants.categoryId,

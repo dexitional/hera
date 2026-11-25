@@ -6,6 +6,7 @@ import { authMiddleware } from '#/middleware/authMiddleware';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
 import { assertEventAccess } from './access-control';
 import { requireNominee } from './nominee-access';
+import { processImageUpload } from './image-upload';
 import {
   allowChatPost, cleanMessageBody, findChatMessage, loadChatMembers, loadChatMessages, loadChatState,
   loadChatSummary, nextCursor, SLOW_DOWN_MESSAGE,
@@ -17,6 +18,18 @@ import {
 // The polling reads skip arcjetMiddleware on purpose: they need a valid
 // session, run one indexed query, and a whole venue of nominees behind one
 // IP would otherwise exhaust the shared per-IP bucket. Writes keep it.
+
+/** Post payloads arrive as FormData (with an optional photo) or plain JSON. */
+function readPost(data: any): { body: unknown; image: File | null; get: (k: string) => unknown } {
+  if (data instanceof FormData) {
+    const image = data.get('image');
+    return { body: data.get('body'), image: image instanceof File && image.size > 0 ? image : null, get: (k) => data.get(k) };
+  }
+  return { body: data?.body, image: null, get: (k) => data?.[k] };
+}
+
+const uploadChatImage = (file: File | null) =>
+  processImageUpload(file, { folder: 'chat', maxWidth: 1600, maxHeight: 1600, quality: 80 });
 
 const parseSince = (v: unknown): Date | null => {
   if (typeof v !== 'string' || !v) return null;
@@ -54,16 +67,18 @@ export const postNomineeChatFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware])
   .handler(async ({ data }: any) => {
     const n = await requireNominee();
-    const body = cleanMessageBody(data?.body);
-    if (!body) throw new Error('Type a message first.');
+    const post = readPost(data);
+    const body = cleanMessageBody(post.body);
+    if (!body && !post.image) throw new Error('Type a message or attach a photo first.');
     const state = await loadChatState(n.event.id, n.contestant.id);
     if (state.locked) throw new Error('The organiser has locked this chat. Only organisers can post right now.');
     if (state.muted) throw new Error('The organiser has paused your messages in this chat.');
     if (!(await allowChatPost(`n:${n.contestant.id}`))) throw new Error(SLOW_DOWN_MESSAGE);
+    const imageUrl = (await uploadChatImage(post.image)) ?? null;
     const now = new Date();
     const [row] = await db
       .insert(nomineeChatMessages)
-      .values({ eventId: n.event.id, contestantId: n.contestant.id, authorType: 'nominee', body, createdAt: now, updatedAt: now })
+      .values({ eventId: n.event.id, contestantId: n.contestant.id, authorType: 'nominee', body, imageUrl, createdAt: now, updatedAt: now })
       .returning({ id: nomineeChatMessages.id });
     return { id: row.id };
   });
@@ -79,7 +94,7 @@ export const deleteOwnNomineeChatFn = createServerFn({ method: 'POST' })
       const now = new Date();
       await db
         .update(nomineeChatMessages)
-        .set({ deletedAt: now, deletedBy: `nominee:${n.contestant.id}`, body: null, pinned: false, updatedAt: now })
+        .set({ deletedAt: now, deletedBy: `nominee:${n.contestant.id}`, body: null, imageUrl: null, pinned: false, updatedAt: now })
         .where(eq(nomineeChatMessages.id, msg.id));
     }
     return { ok: true };
@@ -116,15 +131,18 @@ export const postAdminNomineeChatFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data }: any) => {
     const admin: any = context?.user;
-    const eventId = data?.eventId;
+    const post = readPost(data);
+    const eventId = String(post.get('eventId') ?? '');
     await assertEventAccess(admin, eventId);
-    const body = cleanMessageBody(data?.body);
-    if (!body) throw new Error('Type a message first.');
+    const body = cleanMessageBody(post.body);
+    if (!body && !post.image) throw new Error('Type a message or attach a photo first.');
     if (!(await allowChatPost(`a:${admin.id}`))) throw new Error(SLOW_DOWN_MESSAGE);
+    const imageUrl = (await uploadChatImage(post.image)) ?? null;
+    const pin = post.get('pin');
     const now = new Date();
     const [row] = await db
       .insert(nomineeChatMessages)
-      .values({ eventId, adminId: admin.id, authorType: 'admin', body, pinned: Boolean(data?.pin), createdAt: now, updatedAt: now })
+      .values({ eventId, adminId: admin.id, authorType: 'admin', body, imageUrl, pinned: pin === true || pin === 'true', createdAt: now, updatedAt: now })
       .returning({ id: nomineeChatMessages.id });
     return { id: row.id };
   });
@@ -149,7 +167,7 @@ export const moderateNomineeChatFn = createServerFn({ method: 'POST' })
         .update(nomineeChatMessages)
         .set(
           action === 'delete'
-            ? { deletedAt: now, deletedBy: `admin:${admin.id}`, body: null, pinned: false, updatedAt: now }
+            ? { deletedAt: now, deletedBy: `admin:${admin.id}`, body: null, imageUrl: null, pinned: false, updatedAt: now }
             : { pinned: action === 'pin', updatedAt: now },
         )
         .where(eq(nomineeChatMessages.id, msg.id));

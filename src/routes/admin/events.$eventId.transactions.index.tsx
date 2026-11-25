@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Plus, Search, Edit2, Trash2,
   CheckCircle, XCircle,
-  ArrowLeft, User, PhoneCallIcon, Coins, Hash, FileSpreadsheet, Loader2,
+  ArrowLeft, User, PhoneCallIcon, Coins, Hash, FileSpreadsheet, Loader2, RotateCcw,
 } from "lucide-react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteEventTransactionFn, exportEventTransactionsFn, getEventTransactionsFn } from "#/server/tenant-events";
@@ -81,6 +81,8 @@ function TransactionsDirectory() {
     votes: r.transaction?.votes,
     channel: r.transaction?.channel,
     createdAt: r.transaction?.createdAt,
+    refundedAt: r.transaction?.refundedAt,
+    refundReason: r.transaction?.refundReason,
     contestantName: r.contestant?.name,
     categoryName: r.category?.name,
   }));
@@ -253,7 +255,11 @@ function TransactionsDirectory() {
 
                     <td className="px-6 py-4 align-middle text-center">
                       <div className="inline-flex justify-center">
-                        {tx.payStatus ? (
+                        {tx.refundedAt ? (
+                          <span title={tx.refundReason ?? "Refunded through Paystack"} className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-red-300 bg-red-950/20 border border-red-900/30 px-2 py-0.5 rounded-full">
+                            <RotateCcw className="w-3 h-3" /> Refunded
+                          </span>
+                        ) : tx.payStatus ? (
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/20 border border-emerald-900/30 px-2 py-0.5 rounded-full">
                             <CheckCircle className="w-3 h-3" /> Paid
                           </span>

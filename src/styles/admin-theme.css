@@ -178,3 +178,7 @@ html.admin-light .viz-root {
   --viz-series-1: #2a78d6; --viz-series-2: #eb6834;
   --viz-track: #e4e7ec; --viz-grid: #eef0f3; --viz-axis: #cbd5e1; --viz-surface: #ffffff;
 }
+
+/* Hand-written (not generated): skeleton blocks use a faint white tint that
+   vanishes on white, so give them a faint dark tint in the light theme. */
+html.admin-light .animate-pulse.bg-white\/5 { background-color: rgb(16 24 40 / 0.07); }

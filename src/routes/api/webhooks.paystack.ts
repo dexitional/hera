@@ -59,6 +59,27 @@ export const Route = createFileRoute('/api/webhooks/paystack')({
             return new Response('Invalid payload', { status: 400 });
           }
 
+          // Refunds and lost chargebacks: retire the payment so its votes
+          // and revenue stop counting.
+          if (event?.event === 'refund.processed' || event?.event === 'charge.dispute.resolve') {
+            const { reversalFromEvent, retirePayment } = await import('../../server/paystack-refunds');
+            const reversal = reversalFromEvent(event);
+            if (!reversal) return new Response('Ignored', { status: 200 });
+            try {
+              const result = await retirePayment(reversal);
+              if (result.status === 'retired') {
+                console.warn(`Paystack webhook: payment retired (reference=${reversal.reference}): ${reversal.reason}`);
+              } else if (result.status === 'not_found') {
+                console.error(`Paystack webhook: ${event.event} for unknown payment (reference=${reversal.reference})`);
+              }
+              return new Response('OK', { status: 200 });
+            } catch (retireError) {
+              // Transient failure (e.g. DB unreachable): 5xx so Paystack retries.
+              console.error(`Paystack webhook: failed to retire payment (reference=${reversal.reference}):`, retireError);
+              return new Response('Internal error', { status: 500 });
+            }
+          }
+
           if (event?.event !== 'charge.success') {
             // No-op for any other event type -- acknowledge so Paystack doesn't retry.
             return new Response('Ignored', { status: 200 });

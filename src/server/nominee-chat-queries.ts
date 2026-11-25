@@ -33,6 +33,7 @@ export function cleanMessageBody(input: unknown): string | null {
 export type ChatMessage = {
   id: string;
   body: string | null;
+  imageUrl: string | null;
   deleted: boolean;
   pinned: boolean;
   createdAt: string;
@@ -51,6 +52,7 @@ function baseQuery() {
     .select({
       id: nomineeChatMessages.id,
       body: nomineeChatMessages.body,
+      imageUrl: nomineeChatMessages.imageUrl,
       deletedAt: nomineeChatMessages.deletedAt,
       pinned: nomineeChatMessages.pinned,
       createdAt: nomineeChatMessages.createdAt,
@@ -77,6 +79,7 @@ function toMessage(r: Row): ChatMessage {
   return {
     id: r.id,
     body: deleted ? null : r.body,
+    imageUrl: deleted ? null : r.imageUrl,
     deleted,
     pinned: !deleted && r.pinned,
     createdAt: r.createdAt.toISOString(),

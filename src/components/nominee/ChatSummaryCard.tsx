@@ -29,7 +29,7 @@ export function ChatSummaryCard({ contestantId }: { contestantId: string }) {
       {latest ? (
         <p className="mt-3 line-clamp-2 text-sm text-zinc-300">
           <span className={`font-semibold ${latest.author.type === 'admin' ? 'text-amber-300' : 'text-zinc-100'}`}>{latest.author.name}: </span>
-          {latest.body}
+          {latest.body || 'Shared a photo'}
         </p>
       ) : (
         <p className="mt-3 text-sm text-zinc-400">Talk with the other nominees and organisers. Raise questions or concerns.</p>

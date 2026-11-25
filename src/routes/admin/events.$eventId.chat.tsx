@@ -69,7 +69,7 @@ function AdminNomineeChat() {
             error={room.error}
             mine={(m) => m.author.type === "admin"}
             canPost
-            onSend={async (body, { announce }) => { await postAdminNomineeChatFn({ data: { eventId, body, pin: announce } } as any); await room.refresh(); }}
+            onSend={async (body, { announce, image }) => { const fd = new FormData(); fd.append("eventId", eventId); fd.append("body", body); if (announce) fd.append("pin", "true"); if (image) fd.append("image", image); await postAdminNomineeChatFn({ data: fd } as any); await room.refresh(); }}
             canDelete={() => true}
             onDelete={(m) => moderate(`del-${m.id}`, { action: "delete", messageId: m.id })}
             onPin={(m, pinned) => moderate(`pin-${m.id}`, { action: pinned ? "pin" : "unpin", messageId: m.id })}
