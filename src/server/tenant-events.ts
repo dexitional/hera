@@ -11,6 +11,7 @@ import { processImageUpload } from './image-upload';
 import { assertCategoryAccess, assertContestantAccess, assertEventAccess, eventOwnerScope, isSuperAdmin } from './access-control';
 import { computeRevenue } from './event-revenue';
 import { loadWithdrawnByEvent } from './event-revenue-queries';
+import { buildTransactionsWorkbook, exportFilename } from './transactions-export';
 
 // ==========================================
 // EVENTS FUNCTIONS
@@ -715,6 +716,89 @@ export const deleteContestantFn = createServerFn({ method: 'POST' })
 // EVENT TRANSACTION FUNCTIONS (events' equivalent of voters)
 // ==========================================
 
+/** The Vote Transactions Manager's filters, always limited to events the admin may see. */
+function transactionFilter(admin: any, eventId: string, rawSearch: unknown, rawStatus: unknown) {
+  const searchQuery = String(rawSearch ?? '').trim();
+  const conditions: any[] = [eventOwnerScope(admin), eq(events.id, eventId)];
+  if (searchQuery) {
+    const searchPattern = `%${searchQuery}%`;
+    conditions.push(
+      or(
+        ilike(contestants.name, searchPattern),
+        ilike(eventTransactions.payPhone, searchPattern),
+        ilike(eventTransactions.transRef, searchPattern),
+      )
+    );
+  }
+  if (rawStatus === 'PAID') {
+    conditions.push(eq(eventTransactions.payStatus, true));
+  } else if (rawStatus === 'PENDING') {
+    conditions.push(eq(eventTransactions.payStatus, false));
+  }
+  return and(...conditions);
+}
+
+// Excel's own limit is ~1M rows; this keeps one export's memory use sensible.
+const MAX_EXPORT_ROWS = 200_000;
+
+/**
+ * Every transaction matching the manager's current filters (all of them when
+ * unfiltered) as an .xlsx workbook, returned base64-encoded for download.
+ */
+export const exportEventTransactionsFn = createServerFn({ method: 'POST' })
+  .middleware([arcjetMiddleware, authMiddleware])
+  .handler(async ({ context, data }: any) => {
+    const admin: any = context?.user;
+    const eventId = data?.eventId;
+    await assertEventAccess(admin, eventId);
+    const statusFilter = data?.statusFilter === 'PAID' || data?.statusFilter === 'PENDING' ? data.statusFilter : 'ALL';
+    const searchQuery = String(data?.searchQuery ?? '').trim();
+    const where = transactionFilter(admin, eventId, searchQuery, statusFilter);
+
+    const [[{ total }], [event]] = await Promise.all([
+      db
+        .select({ total: count() })
+        .from(eventTransactions)
+        .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+        .innerJoin(categories, eq(contestants.categoryId, categories.id))
+        .innerJoin(events, eq(categories.eventId, events.id))
+        .where(where),
+      db.select({ title: events.title }).from(events).where(eq(events.id, eventId)),
+    ]);
+    if (total > MAX_EXPORT_ROWS) {
+      throw new Error(`That's ${total.toLocaleString()} transactions, more than one export can hold (${MAX_EXPORT_ROWS.toLocaleString()}). Filter by status or search, then export again.`);
+    }
+
+    const rows = await db
+      .select({
+        createdAt: eventTransactions.createdAt,
+        transRef: eventTransactions.transRef,
+        payRef: eventTransactions.payRef,
+        categoryName: categories.name,
+        contestantName: contestants.name,
+        contestantCode: contestants.code,
+        payPhone: eventTransactions.payPhone,
+        channel: eventTransactions.channel,
+        votes: eventTransactions.votes,
+        payAmount: eventTransactions.payAmount,
+        payStatus: eventTransactions.payStatus,
+      })
+      .from(eventTransactions)
+      .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
+      .innerJoin(categories, eq(contestants.categoryId, categories.id))
+      .innerJoin(events, eq(categories.eventId, events.id))
+      .where(where)
+      .orderBy(desc(eventTransactions.createdAt));
+
+    const exportedAt = new Date();
+    const workbook = buildTransactionsWorkbook(rows, { eventTitle: event?.title ?? 'Event', statusFilter, searchQuery, exportedAt });
+    return {
+      filename: exportFilename(event?.title ?? 'event', exportedAt),
+      base64Data: XLSX.write(workbook, { type: 'base64', bookType: 'xlsx', compression: true }) as string,
+      rowCount: rows.length,
+    };
+  });
+
 export const getEventTransactionsFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data }: any) => {
@@ -722,29 +806,11 @@ export const getEventTransactionsFn = createServerFn({ method: 'GET' })
     const eventId = data?.eventId ?? data;
     const page = Math.max(Number(data?.page) || 1, 1);
     const pageSize = Math.max(Number(data?.pageSize) || 15, 1);
-    const searchQuery = (data?.searchQuery || '').trim();
-    const statusFilter = data?.statusFilter || 'ALL';
 
     const limitValue = pageSize;
     const offsetValue = (page - 1) * limitValue;
 
-    const conditions: any = [eventOwnerScope(admin), eq(events.id, eventId)];
-    if (searchQuery) {
-      const searchPattern = `%${searchQuery}%`;
-      conditions.push(
-        or(
-          ilike(contestants.name, searchPattern),
-          ilike(eventTransactions.payPhone, searchPattern),
-          ilike(eventTransactions.transRef, searchPattern),
-        )
-      );
-    }
-    if (statusFilter === 'PAID') {
-      conditions.push(eq(eventTransactions.payStatus, true));
-    } else if (statusFilter === 'PENDING') {
-      conditions.push(eq(eventTransactions.payStatus, false));
-    }
-    const queryCondition = and(...conditions);
+    const queryCondition = transactionFilter(admin, eventId, data?.searchQuery, data?.statusFilter);
 
     const [rows, [countResult]] = await Promise.all([
       db

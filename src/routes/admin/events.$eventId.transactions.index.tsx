@@ -3,13 +3,26 @@ import { useEffect, useState } from "react";
 import {
   Plus, Search, Edit2, Trash2,
   CheckCircle, XCircle,
-  ArrowLeft, User, PhoneCallIcon, Coins, Hash,
+  ArrowLeft, User, PhoneCallIcon, Coins, Hash, FileSpreadsheet, Loader2,
 } from "lucide-react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteEventTransactionFn, getEventTransactionsFn } from "#/server/tenant-events";
+import { deleteEventTransactionFn, exportEventTransactionsFn, getEventTransactionsFn } from "#/server/tenant-events";
 import { TableSkeleton } from "#/components/ui/skeleton";
 
 const TRANSACTIONS_PAGE_SIZE = 15;
+
+/** Saves a base64-encoded .xlsx returned by the server as a download. */
+function downloadXlsx(base64: string, filename: string) {
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 const transactionsQueryOptions = (params: {
   eventId: any;
@@ -92,6 +105,12 @@ function TransactionsDirectory() {
     onError: (error: any) => console.error(error.message),
   });
 
+  const isFiltered = statusFilter !== "ALL" || debouncedSearchQuery !== "";
+  const exportMutation = useMutation({
+    mutationFn: () => exportEventTransactionsFn({ data: { eventId, statusFilter, searchQuery: debouncedSearchQuery } } as any),
+    onSuccess: (result: any) => downloadXlsx(result.base64Data, result.filename),
+  });
+
   const handleDeleteTransaction = (id: any) => {
     if (confirm("Are you sure you want to remove this transaction? This will permanently drop its contribution to the vote tally.")) {
       deleteMutation.mutate({ data: id } as any);
@@ -118,7 +137,18 @@ function TransactionsDirectory() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-col items-stretch sm:items-end gap-1.5 shrink-0">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => exportMutation.mutate()}
+            disabled={exportMutation.isPending || totalCount === 0}
+            title={isFiltered ? `Exports the ${totalCount.toLocaleString()} transactions matching your search and status filter` : "Exports every transaction for this event"}
+            className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-600 text-zinc-200 text-xs px-3.5 py-2 rounded-lg font-medium transition-all disabled:opacity-40 disabled:pointer-events-none"
+          >
+            {exportMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 text-emerald-400" />}
+            <span>{exportMutation.isPending ? "Preparing…" : isFiltered ? "Export filtered" : "Export to Excel"}</span>
+          </button>
           <Link
             to="/admin/events/$eventId/transactions/new"
             params={{ eventId }}
@@ -127,6 +157,12 @@ function TransactionsDirectory() {
             <Plus className="w-4 h-4" />
             <span>Record Transaction</span>
           </Link>
+        </div>
+        {exportMutation.isError && (
+          <p role="alert" className="text-[11px] text-red-400 max-w-sm sm:text-right">
+            {(exportMutation.error as any)?.message || "Export failed. Please try again."}
+          </p>
+        )}
         </div>
       </div>
 
