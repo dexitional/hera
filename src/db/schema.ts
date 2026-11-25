@@ -92,6 +92,8 @@ export const events = pgTable('events', {
   //   own       -> their own votes, trend and rank in the category
   //   standings -> the above plus every nominee's votes in their category
   nomineeResultsView: text('nominee_results_view').default('own').notNull(),
+  // Nominee group chat: when locked, only the event's admins can post.
+  nomineeChatLocked: boolean('nominee_chat_locked').default(false).notNull(),
   adminId: text('admin_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => ({
@@ -141,8 +143,34 @@ export const nomineeAccess = pgTable('nominee_access', {
   // Set when the nominee completes their profile for the first time.
   activatedAt: timestamp('activated_at'),
   lastLoginAt: timestamp('last_login_at'),
+  // Set by an admin to stop this nominee posting in the event's group chat.
+  chatMutedAt: timestamp('chat_muted_at'),
 }, (t) => ({
   codeHashUniq: uniqueIndex('nominee_access_code_hash_uniq').on(t.codeHash),
+}));
+
+// The nominee group chat of an event: its nominees and its admins.
+// Moderation is soft: a deleted message keeps its row (body cleared) so
+// every client can drop it on its next poll. updated_at (millisecond
+// precision, set by the app) is the polling cursor: any new, edited,
+// pinned or deleted message gets a fresh one.
+export const nomineeChatMessages = pgTable('nominee_chat_messages', {
+  id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'cascade' }).notNull(),
+  // Exactly one author: a nominee, or an admin (null once that account is deleted).
+  contestantId: uuid('contestant_id').references(() => contestants.id, { onDelete: 'cascade' }),
+  adminId: text('admin_id').references(() => user.id, { onDelete: 'set null' }),
+  authorType: text('author_type').notNull(),
+  body: text('body'),
+  pinned: boolean('pinned').default(false).notNull(),
+  deletedAt: timestamp('deleted_at', { precision: 3 }),
+  deletedBy: text('deleted_by'),
+  createdAt: timestamp('created_at', { precision: 3 }).notNull(),
+  updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+}, (t) => ({
+  eventUpdatedIdx: index('nominee_chat_event_updated_idx').on(t.eventId, t.updatedAt),
+  eventCreatedIdx: index('nominee_chat_event_created_idx').on(t.eventId, t.createdAt),
+  authorTypeValues: check('nominee_chat_author_type_values', sql`${t.authorType} in ('nominee', 'admin')`),
 }));
 
 export const eventTransactions = pgTable('event_transactions', {

@@ -155,6 +155,13 @@
       "when": 1795581370248,
       "tag": "0021_nominee_results_view",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1795595672347,
+      "tag": "0022_nominee_chat",
+      "breakpoints": true
     }
   ]
 }

@@ -35,7 +35,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   elections: 'Elections', events: 'Events', revenue: 'Revenue', users: 'Users', settings: 'Settings',
   manage: 'Overview', voters: 'Voters', candidates: 'Candidates', positions: 'Positions', feed: 'Live feed',
   adminfeed: 'Admin feed', results: 'Results', edit: 'Edit', new: 'New', categories: 'Categories',
-  contestants: 'Nominees', transactions: 'Transactions', invoice: 'Invoice', receipt: 'Receipt', pay: 'Payment',
+  contestants: 'Nominees', transactions: 'Transactions', chat: 'Nominees chat', invoice: 'Invoice', receipt: 'Receipt', pay: 'Payment',
   organizations: 'Organisations', public: 'Public page',
 }
 // What an ID segment is, based on the segment before it.

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Check, EyeOff, Loader2, Trophy, UserRound, UsersRound } from 'lucide-react'
+import { Check, EyeOff, Loader2, MessagesSquare, Trophy, UserRound, UsersRound } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { getNomineePortalSettingsFn, setNomineeResultsViewFn } from '#/server/nominee-portal'
 
@@ -46,16 +46,21 @@ export function NomineePortalSettings({ eventId }: { eventId: string }) {
             </p>
           </div>
         </div>
-        {data && (
+        <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
           <Link
-            to="/admin/events/$eventId/contestants"
+            to="/admin/events/$eventId/chat"
             params={{ eventId }}
-            className="shrink-0 text-xs text-zinc-400 hover:text-white"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-zinc-600 hover:text-white"
           >
-            <span className="font-mono font-bold text-zinc-200">{data.active}</span> active ·{' '}
-            <span className="font-mono font-bold text-zinc-200">{data.invited}</span> invited of {data.nominees} nominees
+            <MessagesSquare className="h-3.5 w-3.5 text-purple-400" /> Open group chat
           </Link>
-        )}
+          {data && (
+            <Link to="/admin/events/$eventId/contestants" params={{ eventId }} className="text-xs text-zinc-400 hover:text-white">
+              <span className="font-mono font-bold text-zinc-200">{data.active}</span> active ·{' '}
+              <span className="font-mono font-bold text-zinc-200">{data.invited}</span> invited of {data.nominees} nominees
+            </Link>
+          )}
+        </div>
       </div>
 
       <div role="radiogroup" aria-label="What nominees see" className="mt-4 grid gap-3 sm:grid-cols-3">
