@@ -39,6 +39,11 @@ export function eventOwnerScope(admin: SessionUser) {
   return isSuperAdmin(admin) ? undefined : eq(events.adminId, requireUser(admin).id);
 }
 
+/** Same as eventOwnerScope, for election queries. */
+export function electionOwnerScope(admin: SessionUser) {
+  return isSuperAdmin(admin) ? undefined : eq(elections.adminId, requireUser(admin).id);
+}
+
 /** Super admins may access any election; regular admins only their own. */
 export async function assertElectionAccess(admin: SessionUser, electionId: unknown) {
   const user = requireUser(admin);
