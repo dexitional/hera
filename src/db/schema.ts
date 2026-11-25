@@ -87,11 +87,17 @@ export const events = pgTable('events', {
   // set by a super admin. Organiser's share = gross - gross * pct / 100.
   platformFeePercent: numeric('platform_fee_percent', { precision: 5, scale: 2, mode: 'number' }).default(0).notNull(),
   isActive: boolean('is_active').default(false).notNull(),
+  // What nominees see on their portal dashboard, set by the event's admin:
+  //   hidden    -> no vote figures at all
+  //   own       -> their own votes, trend and rank in the category
+  //   standings -> the above plus every nominee's votes in their category
+  nomineeResultsView: text('nominee_results_view').default('own').notNull(),
   adminId: text('admin_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => ({
   adminIdx: index('events_admin_id_idx').on(t.adminId),
   feePercentRange: check('events_platform_fee_percent_range', sql`${t.platformFeePercent} >= 0 and ${t.platformFeePercent} <= 100`),
+  nomineeResultsViewValues: check('events_nominee_results_view_values', sql`${t.nomineeResultsView} in ('hidden', 'own', 'standings')`),
 }));
 
 export const categories = pgTable('categories', {

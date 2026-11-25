@@ -110,7 +110,7 @@ export function NomineeInviteDialog({ target, onClose }: { target: InviteTarget 
                 <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Portal link</p>
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <span className="select-all truncate font-mono text-xs text-zinc-300">{result.link}</span>
-                  <CopyButton value={message} label="invite message" />
+                  <CopyButton value={result.link} label="portal link" />
                 </div>
               </div>
 

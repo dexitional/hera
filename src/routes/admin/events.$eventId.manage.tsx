@@ -8,6 +8,7 @@ import { exportEventResultsToExcelFn, getEventOverviewFn, updateEventActiveState
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ManageDashboardSkeleton } from "#/components/ui/skeleton";
+import { NomineePortalSettings } from "#/components/admin/NomineePortalSettings";
 
 const eventOverviewQueryOptions = (eventId: any) => ({
   queryKey: ['event-overview', eventId],
@@ -339,6 +340,9 @@ function ManageEventConsole() {
 
         </div>
       </div>
+
+      {/* ================= NOMINEE PORTAL: WHAT NOMINEES SEE ================= */}
+      <NomineePortalSettings eventId={String(event.id)} />
 
       {/* ================= LIVE STREAM / RESULTS ACTION NOTIFICATION ROW ================= */}
       <div className="bg-gradient-to-r from-purple-950/20 via-[#0a192a]/50 to-[#0a192a]/50 rounded-xl border border-zinc-800 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

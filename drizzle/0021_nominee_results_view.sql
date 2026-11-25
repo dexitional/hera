@@ -1,0 +1,2 @@
+ALTER TABLE "events" ADD COLUMN "nominee_results_view" text DEFAULT 'own' NOT NULL;--> statement-breakpoint
+ALTER TABLE "events" ADD CONSTRAINT "events_nominee_results_view_values" CHECK ("events"."nominee_results_view" in ('hidden', 'own', 'standings'));

@@ -2,6 +2,7 @@ import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-rout
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Camera, Loader2 } from "lucide-react";
 import { getNomineeMeFn, updateNomineeProfileFn } from "#/server/nominee-portal";
+import { PANEL } from "#/components/nominee/NomineeDashboard";
 
 export const Route = createFileRoute("/nominee-portal/profile")({
   loader: async () => {
@@ -78,7 +79,7 @@ function NomineeProfile() {
           </p>
         </section>
 
-        <form onSubmit={submit} className="mb-24 space-y-6 rounded-3xl bg-zinc-800/50 p-6 shadow-md sm:p-8">
+        <form onSubmit={submit} className={`${PANEL} mb-24 space-y-6 p-6 sm:p-8`}>
           <div className="flex items-center gap-4">
             <button
               type="button"

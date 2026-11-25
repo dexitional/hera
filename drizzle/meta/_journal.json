@@ -148,6 +148,13 @@
       "when": 1795580773237,
       "tag": "0020_nominee_access",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795581370248,
+      "tag": "0021_nominee_results_view",
+      "breakpoints": true
     }
   ]
 }
