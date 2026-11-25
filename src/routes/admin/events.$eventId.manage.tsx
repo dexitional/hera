@@ -118,11 +118,6 @@ function ManageEventConsole() {
             />
           )}
           <div className="space-y-1 min-w-0">
-            <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono uppercase tracking-wider">
-              <Link to="/admin/events" className="hover:text-purple-400 transition-colors">Events App</Link>
-              <span>/</span>
-              <span className="text-zinc-400 select-all">Console Node: ev_{event.id}</span>
-            </div>
             <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
               <Sliders className="w-5 h-5 text-purple-400 shrink-0" />
               <span className="truncate">Manage: {event.title}</span>
@@ -236,7 +231,7 @@ function ManageEventConsole() {
                   <FolderTree className="w-5 h-5 text-purple-400" />
                 </div>
                 <span className="text-xs font-mono font-bold bg-zinc-900 border border-zinc-800 text-zinc-400 px-2.5 py-1 rounded">
-                  {event.counts?.categories ?? 0} Sections Registered
+                  {event.counts?.categories ?? 0} Registered
                 </span>
               </div>
               <div>
@@ -274,7 +269,7 @@ function ManageEventConsole() {
                   <UserCheck className="w-5 h-5 text-orange-400" />
                 </div>
                 <span className="text-xs font-mono font-bold bg-zinc-900 border border-zinc-800 text-zinc-400 px-2.5 py-1 rounded">
-                  {event.counts?.contestants ?? 0} Enrolled Profiles
+                  {event.counts?.contestants ?? 0} Enrolled
                 </span>
               </div>
               <div>
