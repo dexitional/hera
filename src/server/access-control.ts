@@ -23,6 +23,13 @@ export function isSuperAdmin(admin: SessionUser): boolean {
   return admin?.role === 'super';
 }
 
+/** Throws unless the caller is a super admin. */
+export function assertSuperAdmin(admin: SessionUser) {
+  const user = requireUser(admin);
+  if (!isSuperAdmin(user)) throw new Error('Forbidden: super admin access required.');
+  return user;
+}
+
 /**
  * WHERE fragment restricting a query to the caller's own events. Returns
  * undefined for super admins, which drizzle's and() simply drops -- so the

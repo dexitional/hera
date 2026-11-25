@@ -7,8 +7,7 @@ import {
   Search,
   Settings,
   User2Icon,
-  X
-} from 'lucide-react';
+  X, Landmark } from "lucide-react";
 import { useEffect, useRef, useState } from 'react';
 
 
@@ -255,6 +254,11 @@ export default function DashboardHeader({ user }: any) {
                 <a href="/admin/settings" className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-300 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors">
                   <Settings className="w-4 h-4 text-zinc-500" /> Account Settings
                 </a>
+                {user?.role === 'super' && (
+                  <a href="/admin/revenue" className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-300 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors">
+                    <Landmark className="w-4 h-4 text-zinc-500" /> Revenue &amp; Withdrawals
+                  </a>
+                )}
               </div>
               <div className="pt-1">
                 <button 

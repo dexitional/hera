@@ -3,12 +3,14 @@ import { createServerFn } from '@tanstack/react-start';
 import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import XLSX from 'xlsx-js-style';
 import { db } from '../db';
-import { categories, contestants, events, eventTransactions, user } from '../db/schema';
+import { categories, contestants, events, eventTransactions, eventWithdrawals, user } from '../db/schema';
 import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
 import { generateContestantCode } from '#/lib/utils';
 import { creditCardVote } from './paystack-credit';
 import { processImageUpload } from './image-upload';
 import { assertCategoryAccess, assertContestantAccess, assertEventAccess, eventOwnerScope, isSuperAdmin } from './access-control';
+import { computeRevenue } from './event-revenue';
+import { loadWithdrawnByEvent } from './event-revenue-queries';
 
 // ==========================================
 // EVENTS FUNCTIONS
@@ -293,6 +295,13 @@ export const deleteEventFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data: eventId }: any) => {
     const admin: any = context?.user;
+    // event_withdrawals.event_id is ON DELETE RESTRICT: an event with recorded
+    // payouts can't be deleted. Say so plainly instead of a raw FK error.
+    // Counts voided rows too -- they are part of the audit trail and also block the delete.
+    const [{ total }] = await db.select({ total: count() }).from(eventWithdrawals).where(eq(eventWithdrawals.eventId, eventId));
+    if (Number(total) > 0) {
+      throw new Error('This event has recorded withdrawals, so it cannot be deleted. Deactivate it instead.');
+    }
     return await db
       .delete(events)
       .where(and(eq<any>(events.id, eventId), eventOwnerScope(admin)))
@@ -336,7 +345,7 @@ export const getEventOverviewFn = createServerFn({ method: 'GET' })
         .where(eq<any>(categories.eventId, eventId)),
       db
         .select({
-          totalPayAmount: sql<number>`coalesce(sum(${eventTransactions.payAmount}), 0)::int`,
+          totalPayAmount: sql<number>`coalesce(sum(${eventTransactions.payAmount}), 0)::float8`,
           totalVotes: sql<number>`coalesce(sum(${eventTransactions.votes}), 0)::int`,
         })
         .from(eventTransactions)
@@ -344,6 +353,10 @@ export const getEventOverviewFn = createServerFn({ method: 'GET' })
         .innerJoin(categories, eq(contestants.categoryId, categories.id))
         .where(and(eq<any>(categories.eventId, eventId), eq(eventTransactions.payStatus, true))),
     ]);
+
+    // Revenue split from the event's platform fee % (set by a super admin).
+    const withdrawnTotal = (await loadWithdrawnByEvent(db, [eventId])).get(eventId) ?? 0;
+    const revenue = computeRevenue({ gross: transactionTotals?.totalPayAmount ?? 0, feePercent: eventRecord.platformFeePercent, withdrawn: withdrawnTotal });
 
     return {
       id: eventRecord.id,
@@ -353,8 +366,14 @@ export const getEventOverviewFn = createServerFn({ method: 'GET' })
       startAt: eventRecord.startAt ? eventRecord.startAt.toISOString() : null,
       endAt: eventRecord.endAt ? eventRecord.endAt.toISOString() : null,
       unitPrice: eventRecord.unitPrice,
-      paymentAmount: transactionTotals?.totalPayAmount ?? 0,
-      paymentDeduction: eventRecord.paymentDeduction,
+      // paymentAmount / paymentDeduction keep their old names for the console
+      // UI: gross collected, and the platform fee amount (from the fee %).
+      paymentAmount: revenue.gross,
+      paymentDeduction: revenue.fee,
+      platformFeePercent: revenue.feePercent,
+      organiserShare: revenue.organiserShare,
+      withdrawn: revenue.withdrawn,
+      balance: revenue.balance,
       isActive: eventRecord.isActive,
       createdAt: eventRecord.createdAt ? eventRecord.createdAt.toISOString() : null,
       counts: {
@@ -894,7 +913,7 @@ export const getEventTelemetryFn = createServerFn({ method: 'GET' })
       db
         .select({
           totalVotes: sql<number>`coalesce(sum(${eventTransactions.votes}), 0)::int`,
-          totalAmount: sql<number>`coalesce(sum(${eventTransactions.payAmount}), 0)::int`,
+          totalAmount: sql<number>`coalesce(sum(${eventTransactions.payAmount}), 0)::float8`,
           totalTransactions: sql<number>`count(${eventTransactions.id})::int`,
         })
         .from(eventTransactions)
@@ -1022,7 +1041,7 @@ export const getEventFinalResultsFn = createServerFn({ method: 'GET' })
       db
         .select({
           totalVotes: sql<number>`coalesce(sum(${eventTransactions.votes}), 0)::int`,
-          totalAmount: sql<number>`coalesce(sum(${eventTransactions.payAmount}), 0)::int`,
+          totalAmount: sql<number>`coalesce(sum(${eventTransactions.payAmount}), 0)::float8`,
           totalTransactions: sql<number>`count(${eventTransactions.id})::int`,
         })
         .from(eventTransactions)

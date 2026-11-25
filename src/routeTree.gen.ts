@@ -26,6 +26,7 @@ import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as AuthSigninRouteImport } from './routes/auth.signin'
 import { Route as AuthErrorRouteImport } from './routes/auth.error'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminRevenueRouteImport } from './routes/admin/revenue'
 import { Route as AdminPublicRouteImport } from './routes/admin/public'
 import { Route as NomineeNomineeIdIndexRouteImport } from './routes/nominee/$nomineeId/index'
 import { Route as EventsEventIdIndexRouteImport } from './routes/events/$eventId/index'
@@ -47,6 +48,7 @@ import { Route as AdminElectionsNewRouteImport } from './routes/admin/elections.
 import { Route as AdminContestantsNewRouteImport } from './routes/admin/contestants.new'
 import { Route as AdminCategoriesNewRouteImport } from './routes/admin/categories.new'
 import { Route as EventsEventIdCategoriesIndexRouteImport } from './routes/events/$eventId/categories/index'
+import { Route as AdminEventsEventIdRevenueRouteImport } from './routes/admin/events.$eventId.revenue'
 import { Route as AdminEventsEventIdResultsRouteImport } from './routes/admin/events.$eventId.results'
 import { Route as AdminEventsEventIdManageRouteImport } from './routes/admin/events.$eventId.manage'
 import { Route as AdminEventsEventIdFeedRouteImport } from './routes/admin/events.$eventId.feed'
@@ -165,6 +167,11 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminRevenueRoute = AdminRevenueRouteImport.update({
+  id: '/revenue',
+  path: '/revenue',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminPublicRoute = AdminPublicRouteImport.update({
   id: '/public',
   path: '/public',
@@ -271,6 +278,12 @@ const EventsEventIdCategoriesIndexRoute =
     id: '/events/$eventId/categories/',
     path: '/events/$eventId/categories/',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminEventsEventIdRevenueRoute =
+  AdminEventsEventIdRevenueRouteImport.update({
+    id: '/events/$eventId/revenue',
+    path: '/events/$eventId/revenue',
+    getParentRoute: () => AdminRouteRoute,
   } as any)
 const AdminEventsEventIdResultsRoute =
   AdminEventsEventIdResultsRouteImport.update({
@@ -474,6 +487,7 @@ export interface FileRoutesByFullPath {
   '/tickets': typeof TicketsRoute
   '/welcome': typeof WelcomeRoute
   '/admin/public': typeof AdminPublicRoute
+  '/admin/revenue': typeof AdminRevenueRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/error': typeof AuthErrorRoute
   '/auth/signin': typeof AuthSigninRoute
@@ -513,6 +527,7 @@ export interface FileRoutesByFullPath {
   '/admin/events/$eventId/feed': typeof AdminEventsEventIdFeedRoute
   '/admin/events/$eventId/manage': typeof AdminEventsEventIdManageRoute
   '/admin/events/$eventId/results': typeof AdminEventsEventIdResultsRoute
+  '/admin/events/$eventId/revenue': typeof AdminEventsEventIdRevenueRoute
   '/events/$eventId/categories/': typeof EventsEventIdCategoriesIndexRoute
   '/admin/elections/$electionId/candidates/new': typeof AdminElectionsElectionIdCandidatesNewRoute
   '/admin/elections/$electionId/feed/bak': typeof AdminElectionsElectionIdFeedBakRoute
@@ -545,6 +560,7 @@ export interface FileRoutesByTo {
   '/tickets': typeof TicketsRoute
   '/welcome': typeof WelcomeRoute
   '/admin/public': typeof AdminPublicRoute
+  '/admin/revenue': typeof AdminRevenueRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/error': typeof AuthErrorRoute
   '/auth/signin': typeof AuthSigninRoute
@@ -584,6 +600,7 @@ export interface FileRoutesByTo {
   '/admin/events/$eventId/feed': typeof AdminEventsEventIdFeedRoute
   '/admin/events/$eventId/manage': typeof AdminEventsEventIdManageRoute
   '/admin/events/$eventId/results': typeof AdminEventsEventIdResultsRoute
+  '/admin/events/$eventId/revenue': typeof AdminEventsEventIdRevenueRoute
   '/events/$eventId/categories': typeof EventsEventIdCategoriesIndexRoute
   '/admin/elections/$electionId/candidates/new': typeof AdminElectionsElectionIdCandidatesNewRoute
   '/admin/elections/$electionId/feed/bak': typeof AdminElectionsElectionIdFeedBakRoute
@@ -618,6 +635,7 @@ export interface FileRoutesById {
   '/tickets': typeof TicketsRoute
   '/welcome': typeof WelcomeRoute
   '/admin/public': typeof AdminPublicRoute
+  '/admin/revenue': typeof AdminRevenueRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/auth/error': typeof AuthErrorRoute
   '/auth/signin': typeof AuthSigninRoute
@@ -657,6 +675,7 @@ export interface FileRoutesById {
   '/admin/events/$eventId/feed': typeof AdminEventsEventIdFeedRoute
   '/admin/events/$eventId/manage': typeof AdminEventsEventIdManageRoute
   '/admin/events/$eventId/results': typeof AdminEventsEventIdResultsRoute
+  '/admin/events/$eventId/revenue': typeof AdminEventsEventIdRevenueRoute
   '/events/$eventId/categories/': typeof EventsEventIdCategoriesIndexRoute
   '/admin/elections/$electionId/candidates/new': typeof AdminElectionsElectionIdCandidatesNewRoute
   '/admin/elections/$electionId/feed/bak': typeof AdminElectionsElectionIdFeedBakRoute
@@ -692,6 +711,7 @@ export interface FileRouteTypes {
     | '/tickets'
     | '/welcome'
     | '/admin/public'
+    | '/admin/revenue'
     | '/admin/settings'
     | '/auth/error'
     | '/auth/signin'
@@ -731,6 +751,7 @@ export interface FileRouteTypes {
     | '/admin/events/$eventId/feed'
     | '/admin/events/$eventId/manage'
     | '/admin/events/$eventId/results'
+    | '/admin/events/$eventId/revenue'
     | '/events/$eventId/categories/'
     | '/admin/elections/$electionId/candidates/new'
     | '/admin/elections/$electionId/feed/bak'
@@ -763,6 +784,7 @@ export interface FileRouteTypes {
     | '/tickets'
     | '/welcome'
     | '/admin/public'
+    | '/admin/revenue'
     | '/admin/settings'
     | '/auth/error'
     | '/auth/signin'
@@ -802,6 +824,7 @@ export interface FileRouteTypes {
     | '/admin/events/$eventId/feed'
     | '/admin/events/$eventId/manage'
     | '/admin/events/$eventId/results'
+    | '/admin/events/$eventId/revenue'
     | '/events/$eventId/categories'
     | '/admin/elections/$electionId/candidates/new'
     | '/admin/elections/$electionId/feed/bak'
@@ -835,6 +858,7 @@ export interface FileRouteTypes {
     | '/tickets'
     | '/welcome'
     | '/admin/public'
+    | '/admin/revenue'
     | '/admin/settings'
     | '/auth/error'
     | '/auth/signin'
@@ -874,6 +898,7 @@ export interface FileRouteTypes {
     | '/admin/events/$eventId/feed'
     | '/admin/events/$eventId/manage'
     | '/admin/events/$eventId/results'
+    | '/admin/events/$eventId/revenue'
     | '/events/$eventId/categories/'
     | '/admin/elections/$electionId/candidates/new'
     | '/admin/elections/$electionId/feed/bak'
@@ -1045,6 +1070,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/revenue': {
+      id: '/admin/revenue'
+      path: '/revenue'
+      fullPath: '/admin/revenue'
+      preLoaderRoute: typeof AdminRevenueRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/public': {
       id: '/admin/public'
       path: '/public'
@@ -1191,6 +1223,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/events/$eventId/categories/'
       preLoaderRoute: typeof EventsEventIdCategoriesIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/events/$eventId/revenue': {
+      id: '/admin/events/$eventId/revenue'
+      path: '/events/$eventId/revenue'
+      fullPath: '/admin/events/$eventId/revenue'
+      preLoaderRoute: typeof AdminEventsEventIdRevenueRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/admin/events/$eventId/results': {
       id: '/admin/events/$eventId/results'
@@ -1435,6 +1474,7 @@ const AdminElectionsElectionIdFeedRouteWithChildren =
 
 interface AdminRouteRouteChildren {
   AdminPublicRoute: typeof AdminPublicRoute
+  AdminRevenueRoute: typeof AdminRevenueRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminCategoriesNewRoute: typeof AdminCategoriesNewRoute
@@ -1461,6 +1501,7 @@ interface AdminRouteRouteChildren {
   AdminEventsEventIdFeedRoute: typeof AdminEventsEventIdFeedRoute
   AdminEventsEventIdManageRoute: typeof AdminEventsEventIdManageRoute
   AdminEventsEventIdResultsRoute: typeof AdminEventsEventIdResultsRoute
+  AdminEventsEventIdRevenueRoute: typeof AdminEventsEventIdRevenueRoute
   AdminElectionsElectionIdCandidatesNewRoute: typeof AdminElectionsElectionIdCandidatesNewRoute
   AdminElectionsElectionIdPositionsNewRoute: typeof AdminElectionsElectionIdPositionsNewRoute
   AdminElectionsElectionIdVotersNewRoute: typeof AdminElectionsElectionIdVotersNewRoute
@@ -1483,6 +1524,7 @@ interface AdminRouteRouteChildren {
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminPublicRoute: AdminPublicRoute,
+  AdminRevenueRoute: AdminRevenueRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminCategoriesNewRoute: AdminCategoriesNewRoute,
@@ -1511,6 +1553,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminEventsEventIdFeedRoute: AdminEventsEventIdFeedRoute,
   AdminEventsEventIdManageRoute: AdminEventsEventIdManageRoute,
   AdminEventsEventIdResultsRoute: AdminEventsEventIdResultsRoute,
+  AdminEventsEventIdRevenueRoute: AdminEventsEventIdRevenueRoute,
   AdminElectionsElectionIdCandidatesNewRoute:
     AdminElectionsElectionIdCandidatesNewRoute,
   AdminElectionsElectionIdPositionsNewRoute:

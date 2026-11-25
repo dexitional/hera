@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, uuid, text, integer, timestamp, varchar, boolean, doublePrecision, unique, index, uniqueIndex, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, timestamp, varchar, boolean, doublePrecision, numeric, unique, index, uniqueIndex, jsonb, check } from 'drizzle-orm/pg-core';
 import { uuidv7 } from '../lib/uuid';
 
 // ==========================================
@@ -76,12 +76,18 @@ export const events = pgTable('events', {
   endAt: timestamp('end_at', { mode: 'date' }),
   unitPrice: doublePrecision('unit_price'),
   paymentAmount: doublePrecision('payment_amount'),
+  // Legacy absolute fee amount, never set by any screen; superseded by
+  // platformFeePercent below. Kept so existing data isn't lost.
   paymentDeduction: doublePrecision('payment_deduction'),
+  // Platform's cut of the event's vote revenue, as a percentage (0-100),
+  // set by a super admin. Organiser's share = gross - gross * pct / 100.
+  platformFeePercent: numeric('platform_fee_percent', { precision: 5, scale: 2, mode: 'number' }).default(0).notNull(),
   isActive: boolean('is_active').default(false).notNull(),
   adminId: text('admin_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => ({
   adminIdx: index('events_admin_id_idx').on(t.adminId),
+  feePercentRange: check('events_platform_fee_percent_range', sql`${t.platformFeePercent} >= 0 and ${t.platformFeePercent} <= 100`),
 }));
 
 export const categories = pgTable('categories', {
@@ -128,6 +134,30 @@ export const eventTransactions = pgTable('event_transactions', {
   // (WHERE pay_ref IS NOT NULL) so manually-entered admin transactions without a
   // payRef are unaffected.
   payRefUniqueIdx: uniqueIndex('event_transactions_pay_ref_uniq_idx').on(t.payRef).where(sql`${t.payRef} is not null`),
+}));
+
+// Money paid out of an event's revenue to the organiser (recorded by a super
+// admin; the payout itself happens outside the app). Never deleted: mistakes
+// are voided with a reason so the ledger stays a complete audit trail.
+export const eventWithdrawals = pgTable('event_withdrawals', {
+  id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
+  // restrict: an event with recorded payouts can't be deleted out from
+  // under its financial history.
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'restrict' }).notNull(),
+  amount: numeric('amount', { precision: 12, scale: 2, mode: 'number' }).notNull(),
+  method: text('method').notNull(), // bank_transfer | mobile_money | cash | cheque | other
+  recipient: text('recipient'),     // account name / number / MoMo number
+  reference: text('reference'),     // bank or MoMo transaction reference
+  note: text('note'),
+  paidAt: timestamp('paid_at', { mode: 'date' }).notNull(),
+  recordedBy: text('recorded_by').references(() => user.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  voidedAt: timestamp('voided_at', { mode: 'date' }),
+  voidedBy: text('voided_by').references(() => user.id, { onDelete: 'set null' }),
+  voidReason: text('void_reason'),
+}, (t) => ({
+  eventIdx: index('event_withdrawals_event_idx').on(t.eventId, t.paidAt),
+  amountPositive: check('event_withdrawals_amount_positive', sql`${t.amount} > 0`),
 }));
 
 // ==========================================
@@ -303,6 +333,13 @@ export const contestantsRelations = relations(contestants, ({ one, many }) => ({
     references: [categories.id],
   }),
   transactions: many(eventTransactions),
+}));
+
+export const eventWithdrawalsRelations = relations(eventWithdrawals, ({ one }) => ({
+  event: one(events, {
+    fields: [eventWithdrawals.eventId],
+    references: [events.id],
+  }),
 }));
 
 export const eventTransactionsRelations = relations(eventTransactions, ({ one }) => ({
