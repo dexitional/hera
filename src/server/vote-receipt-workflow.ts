@@ -7,7 +7,7 @@ type CastSelection = { positionId: string; candidateId: string | null };
 
 // Runs after a successful castBallotServerFn commit. Every failure here is
 // caught and logged rather than thrown, so a broken mail provider (e.g.
-// UNOSEND_API_KEY missing or rejected) can never roll back or surface an
+// Gmail credentials missing or rejected) can never roll back or surface an
 // error on an otherwise-successful vote -- but sendEmail() itself throws on
 // failure, so the real reason still lands in the logs below instead of
 // disappearing silently. Scoped to authMode 'google' only: that's the one

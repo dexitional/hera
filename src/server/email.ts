@@ -1,44 +1,98 @@
-// Kept as the sole plain export in this module (not mixed alongside
-// createServerFn exports) -- see paystack-credit.ts's comment for why that
-// matters. Safe to import at top-level from src/lib/auth.ts (a plain config
-// module, not a raw route file) the same way db/pg already is.
-const UNOSEND_API_URL = 'https://api.unosend.co/emails';
+import nodemailer, { type Transporter } from 'nodemailer';
 
-// Throws on any failure (missing key, request error, non-2xx response)
-// instead of swallowing it -- a caller that silently no-ops on a broken mail
-// provider looks identical to a successful send, which is exactly how the
-// vote-receipt workflow lost visibility into UNOSEND_API_KEY going missing.
-// Callers that must never fail their own flow because of a mail hiccup (e.g.
-// better-auth's sendVerificationEmail) are responsible for catching this.
-export async function sendEmail(params: { to: string; subject: string; html: string }): Promise<void> {
-  const apiKey = process.env.UNOSEND_API_KEY;
-  if (!apiKey) {
-    throw new Error('sendEmail: UNOSEND_API_KEY is not configured.');
+// Transactional email (account verification, password reset, vote receipts)
+// sent through Gmail's SMTP server with an App Password.
+//
+// Setup: on the sending Google account turn on 2-Step Verification, then
+// create an App Password (Google Account -> Security -> App passwords) and set
+//   GMAIL_USER=you@gmail.com            (or a Google Workspace address)
+//   GMAIL_APP_PASSWORD=abcdefghijklmnop (spaces as shown by Google are fine)
+// Optional:
+//   SMTP_FROM_NAME=Heravote             display name on outgoing mail
+//   GMAIL_FROM_ADDRESS=...              only if it is a verified "Send mail as"
+//                                       alias of GMAIL_USER; otherwise Gmail
+//                                       rewrites From to GMAIL_USER anyway
+//
+// Sending limits: about 500 recipients/day for a personal Gmail account and
+// about 2,000/day for Google Workspace. Large Google-login elections send one
+// receipt per vote, so plan for those limits.
+//
+// Kept out of the createServerFn modules (see paystack-credit.ts). Only ever
+// imported server-side: src/lib/auth.ts and the vote-receipt workflow.
+
+const GMAIL_SMTP = { host: 'smtp.gmail.com', port: 465, secure: true } as const;
+
+let transporter: Transporter | null = null;
+
+function getTransporter(): Transporter {
+  const user = process.env.GMAIL_USER?.trim();
+  // Google displays App Passwords in groups of four ("abcd efgh ijkl mnop").
+  const pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '');
+  if (!user || !pass) {
+    throw new Error('sendEmail: GMAIL_USER and GMAIL_APP_PASSWORD must be configured.');
   }
+  transporter ??= nodemailer.createTransport({
+    ...GMAIL_SMTP,
+    auth: { user, pass },
+    // Reuse a few authenticated connections instead of logging in per email.
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 100,
+  });
+  return transporter;
+}
 
+/** Plain-text alternative part: improves deliverability and readability in text-only clients. */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<a [^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (_m, href, label) => {
+      const text = label.replace(/<[^>]+>/g, '').trim();
+      return text && text !== href ? `${text} (${href})` : href;
+    })
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|h[1-6]|tr|div|li)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&copy;/g, '(c)')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s*\n\s*\n+/g, '\n\n')
+    .trim();
+}
+
+// Throws on any failure (missing credentials, auth rejected, network error)
+// instead of swallowing it -- a caller that silently no-ops on a broken mail
+// setup looks identical to a successful send. Callers that must never fail
+// their own flow because of a mail hiccup (e.g. better-auth's
+// sendVerificationEmail) are responsible for catching this.
+export async function sendEmail(params: { to: string; subject: string; html: string }): Promise<void> {
+  const mailer = getTransporter();
   const fromName = process.env.SMTP_FROM_NAME || 'Heravote';
-  const fromEmail = process.env.SMTP_FROM_EMAIL || 'noreply@heravote.com';
+  const fromAddress = process.env.GMAIL_FROM_ADDRESS?.trim() || process.env.GMAIL_USER!.trim();
 
-  const res = await fetch(UNOSEND_API_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: `${fromName} <${fromEmail}>`,
-      to: [params.to],
+  try {
+    await mailer.sendMail({
+      from: { name: fromName, address: fromAddress },
+      to: params.to,
       subject: params.subject,
       html: params.html,
-    }),
-  });
-
-  console.log(await res.json())
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`sendEmail: Unosend request failed (${res.status}): ${body}`);
+      text: htmlToText(params.html),
+    });
+  } catch (err: any) {
+    // EAUTH usually means a wrong App Password, or 2-Step Verification is off.
+    const hint = err?.code === 'EAUTH' ? ' (check GMAIL_USER / GMAIL_APP_PASSWORD)' : '';
+    throw new Error(`sendEmail: Gmail SMTP send failed${hint}: ${err?.message ?? err}`);
   }
+}
+
+/** Opens an SMTP session and checks the credentials, without sending anything. */
+export async function verifyEmailTransport(): Promise<void> {
+  await getTransporter().verify();
 }
 
 // ==========================================
