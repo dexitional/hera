@@ -1,3 +1,4 @@
+import { authErrorMessage } from '#/lib/errors';
 import { useState } from 'react';
 import { Shield, Users, ThumbsUp, Mail, Lock, ArrowRight, LoaderCircle } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
@@ -27,17 +28,14 @@ export default function AuthPage({ error, redirectTo }: any) {
     setLoading(true)
 
     try {
-        const { data, error }:any = await authClient.signIn.email({
+        const { error }:any = await authClient.signIn.email({
             email: formData.email,
             password: formData.password,
             rememberMe: formData.rememberMe
         });
     
-        console.log(data)
-    
         if (error) {
-          setMsg(error?.message);
-          console.error("Authentication failed:", error.message);
+          setMsg(authErrorMessage(error, "We couldn't sign you in right now. Please try again in a moment."));
         } else {
           // A client-side navigate() here would reuse the current document,
           // so the beforeLoad chain's checkAuthSession call can race the
@@ -54,8 +52,7 @@ export default function AuthPage({ error, redirectTo }: any) {
         // /api/auth/sign-in/email with a plain-text 403/429 body. Without
         // this, that looked to the user like sign-in silently did nothing
         // and left them stuck on the signin page with zero feedback.
-        setMsg(error?.message || "Sign in failed. Please try again.");
-        console.error("Authentication failed:", error?.message);
+        setMsg(authErrorMessage(error, "We couldn't sign you in right now. Please try again in a moment."));
     } finally {
         setLoading(false);
     }
@@ -75,8 +72,7 @@ export default function AuthPage({ error, redirectTo }: any) {
             // Called if the sign-in process fails
             onError: (ctx: any) => {
                 setLoading(false);
-                console.error("Sign in failed:", ctx.error.message);
-                alert(`Login error: ${ctx.error.message}`);
+                setMsg(authErrorMessage(ctx.error, "We couldn't connect to Google. Please try again."));
             },
             // Optional: Called before the request starts
             onRequest: () => {
@@ -202,7 +198,9 @@ export default function AuthPage({ error, redirectTo }: any) {
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 group-hover:text-purple-400 transition-colors w-4 h-4" />
                     </div>
 
-                    <div className="text-red-500 text-sm " style={{ opacity: 1, transform: "none" }}>{msg}</div>
+                    {msg && (
+                      <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-3 text-sm text-red-200">{msg}</div>
+                    )}
 
                     {/* Actions Panel */}
                     <div className="flex items-center justify-between text-sm">

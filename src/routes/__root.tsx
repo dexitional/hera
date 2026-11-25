@@ -3,7 +3,6 @@ import {
   Scripts,
   createRootRouteWithContext,
   useRouterState,
-  type ErrorComponentProps,
 } from '@tanstack/react-router'
 import { ADMIN_THEME_INIT_SCRIPT } from '#/lib/admin-theme'
 import { lazy, Suspense } from 'react'
@@ -19,7 +18,7 @@ import appCss from '../styles.css?url'
 import type { QueryClient } from '@tanstack/react-query'
 import Header from '#/components/Header'
 import Footer from '#/components/Footer'
-import { ErrorComponent } from '@tanstack/react-router'
+import { NotFoundPage, RouteErrorPage } from '#/components/ErrorPage'
 import { checkAuthSession } from '#/lib/auth-helper'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 
@@ -60,14 +59,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     ],
   }),
   shellComponent: RootDocument,
-  errorComponent: ({ error }: ErrorComponentProps) => {
-    return (
-      <div style={{ padding: '2rem', fontFamily: 'sans-serif', color: 'red' }}>
-        <h2>Application Error</h2>
-        <ErrorComponent error={error} />
-      </div>
-    );
-  },
+  errorComponent: RouteErrorPage,
 
   beforeLoad: async () => {
     try {
@@ -86,17 +78,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       return { user: null, authenticated: false };
     }
   },
-  notFoundComponent: () => {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0d1f36] text-white p-6">
-        <h2 className="text-xl font-bold">404 - Page Directory Not Found</h2>
-        <p className="text-xs text-zinc-400 mt-2">The route path could not be resolved cleanly.</p>
-        <a href="/admin/elections" className="mt-4 px-4 py-2 bg-purple-600 rounded text-xs">
-          Return to Elections
-        </a>
-      </div>
-    )
-  },
+  notFoundComponent: NotFoundPage,
 
 })
 

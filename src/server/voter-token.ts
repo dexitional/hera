@@ -92,7 +92,7 @@ export function tokenColumns(token: string) {
 /** Rejects a missing/empty token on insert (the column used to be NOT NULL). */
 export function requireToken(token: unknown): string {
   if (typeof token !== 'string' || token.length === 0) {
-    throw new Error('Each voter needs an access token.');
+    throw new Error('Each voter needs an access code.');
   }
   return token;
 }

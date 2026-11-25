@@ -59,7 +59,7 @@ export const nomineeInviteFn = createServerFn({ method: 'POST' })
       .innerJoin(events, eq(categories.eventId, events.id))
       .leftJoin(nomineeAccess, eq(nomineeAccess.contestantId, contestants.id))
       .where(eq(contestants.id, contestantId));
-    if (!row) throw new Error('Contestant not found.');
+    if (!row) throw new Error("We couldn't find that nominee. They may have been removed, or you may not have access to them.");
     if (action === 'sms' && !row.phone) throw new Error('Add a phone number to this nominee before sending an invite.');
 
     let code = row.access?.codeEnc ? decryptToken(row.access.codeEnc) : null;
@@ -275,7 +275,7 @@ export const setNomineeResultsViewFn = createServerFn({ method: 'POST' })
   .handler(async ({ context, data }: any) => {
     const eventId = data?.eventId;
     await assertEventAccess(context?.user, eventId);
-    if (!(NOMINEE_RESULTS_VIEWS as readonly unknown[]).includes(data?.view)) throw new Error('Unknown results setting.');
+    if (!(NOMINEE_RESULTS_VIEWS as readonly unknown[]).includes(data?.view)) throw new Error('Please choose one of the available options.');
     await db.update(events).set({ nomineeResultsView: data.view }).where(eq(events.id, eventId));
     return { view: data.view };
   });

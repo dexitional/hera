@@ -52,7 +52,7 @@ export const getPublicEventFn = createServerFn({ method: 'GET' })
       .where(and(eq<any>(events.id, eventId), eq<any>(events.isActive, true)));
 
     if (!eventRecord) {
-      throw new Error(`Event [${eventId}] not found or not currently active.`);
+      throw new Error("This event isn't available right now. It may have ended or not be open for voting yet.");
     }
 
     const categoryRows = await db
@@ -93,7 +93,7 @@ export const getPublicCategoryFn = createServerFn({ method: 'GET' })
       .where(and(eq<any>(categories.id, categoryId), eq<any>(events.isActive, true)));
 
     if (!row) {
-      throw new Error(`Category [${categoryId}] not found or not currently active.`);
+      throw new Error("This category isn't available right now. Its event may have ended or not be open for voting yet.");
     }
 
     const contestantRows = await db
@@ -138,7 +138,7 @@ export const getPublicContestantFn = createServerFn({ method: 'GET' })
       .where(and(eq<any>(contestants.code, code), eq<any>(events.isActive, true)));
 
     if (!row) {
-      throw new Error(`Nominee [${code}] not found or not currently active.`);
+      throw new Error(`We couldn't find an active nominee with the code ${code}. Please check the code and try again.`);
     }
 
     return {
@@ -463,7 +463,7 @@ export const createCategoryFn = createServerFn({ method: 'POST' })
             : and(eq<any>(events.id, data.eventId), eventOwnerScope(admin))
         );
       if (!ownedEvent) {
-        throw new Error('Event not found.');
+        throw new Error("We couldn't find that event. It may have been removed, or you may not have access to it.");
       }
 
       return await db.insert(categories).values({
@@ -502,7 +502,7 @@ export const updateCategoryFn = createServerFn({ method: 'POST' })
         )
         .returning({ id: categories.id, name: categories.name, description: categories.description, code: categories.code, eventId: categories.eventId, createdAt: categories.createdAt });
       if (updated.length === 0) {
-        throw new Error('Category not found.');
+        throw new Error("We couldn't find that category. It may have been removed, or you may not have access to it.");
       }
       return updated;
     } catch (error: any) {
@@ -523,7 +523,7 @@ export const deleteCategoryFn = createServerFn({ method: 'POST' })
       .innerJoin(events, eq(categories.eventId, events.id))
       .where(and(eq<any>(categories.id, categoryId), eventOwnerScope(admin)));
     if (!ownedCategory) {
-      throw new Error('Category not found.');
+      throw new Error("We couldn't find that category. It may have been removed, or you may not have access to it.");
     }
     return await db.delete(categories).where(eq<any>(categories.id, categoryId)).returning();
   });
@@ -631,7 +631,7 @@ export const createContestantFn = createServerFn({ method: 'POST' })
             : and(eq<any>(categories.id, data.get("categoryId")), eventOwnerScope(admin))
         );
       if (!ownedCategory) {
-        throw new Error('Category not found.');
+        throw new Error("We couldn't find that category. It may have been removed, or you may not have access to it.");
       }
 
       const finalAvatarUrl = await processImageUpload(data.get("image") as File | null, {
@@ -689,7 +689,7 @@ export const updateContestantFn = createServerFn({ method: 'POST' })
             : and(eq<any>(contestants.id, data.get("id")), eventOwnerScope(admin))
         );
       if (!ownedContestant) {
-        throw new Error('Contestant not found.');
+        throw new Error("We couldn't find that nominee. They may have been removed, or you may not have access to them.");
       }
       // The category it moves to must be the admin's too, or a nominee could
       // be moved into another organisation's event.
@@ -735,7 +735,7 @@ export const deleteContestantFn = createServerFn({ method: 'POST' })
       .innerJoin(events, eq(categories.eventId, events.id))
       .where(and(eq<any>(contestants.id, contestantId), eventOwnerScope(admin)));
     if (!ownedContestant) {
-      throw new Error('Contestant not found.');
+      throw new Error("We couldn't find that nominee. They may have been removed, or you may not have access to them.");
     }
     return await db.delete(contestants).where(eq<any>(contestants.id, contestantId)).returning();
   });
@@ -903,7 +903,7 @@ export const createEventTransactionFn = createServerFn({ method: 'POST' })
           : and(eq<any>(contestants.id, data.contestantId), eventOwnerScope(admin))
       );
     if (!ownedContestant) {
-      throw new Error('Contestant not found.');
+      throw new Error("We couldn't find that nominee. They may have been removed, or you may not have access to them.");
     }
 
     return await db.insert(eventTransactions).values({
@@ -934,7 +934,7 @@ export const updateEventTransactionFn = createServerFn({ method: 'POST' })
           : and(eq<any>(eventTransactions.id, data.id), eventOwnerScope(admin))
       );
     if (!ownedTransaction) {
-      throw new Error('Transaction not found.');
+      throw new Error("We couldn't find that transaction. It may have been removed, or you may not have access to it.");
     }
 
     return await db
@@ -965,7 +965,7 @@ export const deleteEventTransactionFn = createServerFn({ method: 'POST' })
       .innerJoin(events, eq(categories.eventId, events.id))
       .where(and(eq<any>(eventTransactions.id, transactionId), eventOwnerScope(admin)));
     if (!ownedTransaction) {
-      throw new Error('Transaction not found.');
+      throw new Error("We couldn't find that transaction. It may have been removed, or you may not have access to it.");
     }
     return await db.delete(eventTransactions).where(eq<any>(eventTransactions.id, transactionId)).returning();
   });
@@ -1406,7 +1406,7 @@ export const verifyAndCastCardVoteFn = createServerFn({ method: 'POST' })
     const { reference, contestantId, votes } = data;
 
     if (!reference || !contestantId || !votes) {
-      throw new Error('Missing required payment details.');
+      throw new Error('Some payment details are missing. Please try the payment again.');
     }
 
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
@@ -1448,6 +1448,6 @@ export const verifyAndCastCardVoteFn = createServerFn({ method: 'POST' })
       case 'not_found':
         throw new Error(result.reason);
       case 'amount_mismatch':
-        throw new Error('Paid amount does not match the expected vote total.');
+        throw new Error("The amount paid doesn't match the number of votes selected, so the votes weren't added. Please contact support with your payment reference.");
     }
   });

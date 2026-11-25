@@ -29,10 +29,11 @@ async function rejectIfArcjetDenied(request: Request): Promise<Response | null> 
   const { aj } = await import('../../lib/arcjet');
   const decision: any = await (aj as any).protect(request, { requested: 1 });
   if (!decision.isDenied()) return null;
-  if (decision.reason.isRateLimit()) return new Response('Too Many Requests', { status: 429 });
-  if (decision.reason.isBot()) return new Response('Bot Traffic Detected', { status: 403 });
-  if (decision.reason.isShield()) return new Response('Request blocked by security shield', { status: 403 });
-  return new Response('Access Denied', { status: 403 });
+  // JSON bodies so the auth client surfaces a readable message.
+  if (decision.reason.isRateLimit()) return Response.json({ code: 'RATE_LIMITED', message: "You're going a little fast. Please wait a few seconds and try again." }, { status: 429 });
+  if (decision.reason.isBot()) return Response.json({ code: 'BOT_DETECTED', message: "We couldn't verify your browser. Please refresh the page and try again." }, { status: 403 });
+  if (decision.reason.isShield()) return Response.json({ code: 'BLOCKED', message: 'This request was blocked by our security checks. Please refresh the page and try again.' }, { status: 403 });
+  return Response.json({ code: 'ACCESS_DENIED', message: "We couldn't complete that request. Please refresh the page and try again." }, { status: 403 });
 }
 
 export const Route = createFileRoute('/api/auth/$')({

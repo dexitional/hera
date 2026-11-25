@@ -132,7 +132,7 @@ export const resendVerificationEmailFn = createServerFn({ method: 'POST' })
       .where(eq(user.id, userId));
 
     if (!target) {
-      throw new Error('User not found.');
+      throw new Error("We couldn't find that account. It may have been deleted.");
     }
     if (target.emailVerified) {
       throw new Error('This user is already verified.');
@@ -202,7 +202,7 @@ export const updateElectionAdminSettingsFn = createServerFn({ method: 'POST' })
     if (isActive !== undefined) patch.isActive = !!isActive;
 
     if (Object.keys(patch).length === 0) {
-      throw new Error('No fields supplied to update.');
+      throw new Error("There's nothing to update. Change a field and try again.");
     }
 
     const [updated] = await db
@@ -230,7 +230,7 @@ export const setUserPasswordFn = createServerFn({ method: 'POST' })
     const userId = String(data?.userId ?? '');
     const newPassword = String(data?.newPassword ?? '');
     const signOutEverywhere = data?.signOutEverywhere !== false;
-    if (!userId) throw new Error('User not found.');
+    if (!userId) throw new Error("We couldn't find that account. It may have been deleted.");
     if (userId === admin.id) throw new Error('Change your own password from Account Settings.');
     if (newPassword.length < MIN_PASSWORD_LENGTH || newPassword.length > MAX_PASSWORD_LENGTH) {
       throw new Error(`Password must be between ${MIN_PASSWORD_LENGTH} and ${MAX_PASSWORD_LENGTH} characters.`);
@@ -260,7 +260,7 @@ export const sendPasswordResetLinkFn = createServerFn({ method: 'POST' })
     const userId = String(data?.userId ?? '');
     if (userId === admin.id) throw new Error('Change your own password from Account Settings.');
     const [target] = await db.select({ id: user.id, email: user.email }).from(user).where(eq(user.id, userId));
-    if (!target) throw new Error('User not found.');
+    if (!target) throw new Error("We couldn't find that account. It may have been deleted.");
     try {
       await auth.api.requestPasswordReset({ body: { email: target.email, redirectTo: '/auth/reset-password' } });
     } catch (err: any) {

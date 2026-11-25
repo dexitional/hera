@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { authErrorMessage } from '#/lib/errors'
 import { useState } from 'react'
 import { ArrowLeft, ArrowRight, KeyRound, LoaderCircle, Mail, MailCheck } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
@@ -24,7 +25,7 @@ function ForgotPassword() {
       const { error } = await authClient.requestPasswordReset({ email: email.trim(), redirectTo: '/auth/reset-password' })
       // The server answers the same way whether or not the account exists,
       // so only transport/rate-limit failures land here.
-      if (error) setError(error.message || 'We could not send the email right now. Please try again shortly.')
+      if (error) setError(authErrorMessage(error, "We couldn't send the email right now. Please try again shortly."))
       else setSent(true)
     } catch {
       setError('We could not send the email right now. Please try again shortly.')

@@ -87,7 +87,7 @@ export const getElectionDataFn = createServerFn({ method: 'GET' }).middleware([a
 
     } catch (error: any) {
       console.error('Failed to resolve election ballot structural tree:', error);
-      throw new Error('Failed to pull ballot hierarchy.');
+      throw new Error("We couldn't load this ballot. Please refresh the page and try again.");
     }
 
 
@@ -205,7 +205,7 @@ export const updateElectionFn = createServerFn({ method: 'POST' })
       .from(elections)
       .where(ownershipFilter);
     if (!ownedElection) {
-      throw new Error('Election not found.');
+      throw new Error("We couldn't find that election. It may have been removed, or you may not have access to it.");
     }
 
     try {
@@ -266,7 +266,7 @@ export const updateElectionStatusFn = createServerFn({ method: 'POST' })
       )
       .returning();
     if (!updated) {
-      throw new Error('Election not found.');
+      throw new Error("We couldn't find that election. It may have been removed, or you may not have access to it.");
     }
     return updated;
   });
@@ -286,7 +286,7 @@ export const updateElectionPublicStateFn = createServerFn({ method: 'POST' })
       )
       .returning();
     if (!updated) {
-      throw new Error('Election not found.');
+      throw new Error("We couldn't find that election. It may have been removed, or you may not have access to it.");
     }
     return updated;
   });
@@ -1414,7 +1414,7 @@ export const createPositionFn = createServerFn({ method: 'POST' })
           : and(eq<any>(elections.id, data.electionId), eq<any>(elections.adminId, admin.id))
       );
     if (!ownedElection) {
-      throw new Error('Election not found.');
+      throw new Error("We couldn't find that election. It may have been removed, or you may not have access to it.");
     }
     return await db.insert(positions).values({
       electionId: data.electionId,
@@ -1438,7 +1438,7 @@ export const updatePositionFn = createServerFn({ method: 'POST' })
           : and(eq<any>(positions.id, data.id), eq<any>(elections.adminId, admin.id))
       );
     if (!ownedPosition) {
-      throw new Error('Position not found.');
+      throw new Error("We couldn't find that position. It may have been removed, or you may not have access to it.");
     }
     return await db
       .update(positions)
@@ -1462,7 +1462,7 @@ export const deletePositionFn = createServerFn({ method: 'POST' })
       .innerJoin(elections, eq(positions.electionId, elections.id))
       .where(and(eq<any>(positions.id, positionId), eq<any>(elections.adminId, admin.id)));
     if (!ownedPosition) {
-      throw new Error('Position not found.');
+      throw new Error("We couldn't find that position. It may have been removed, or you may not have access to it.");
     }
     return await db.delete(positions).where(eq<any>(positions.id, positionId)).returning();
   });
@@ -1546,7 +1546,7 @@ export const createCandidateFn = createServerFn({ method: 'POST' })
           : and(eq<any>(positions.id, data.get("positionId")), eq<any>(elections.adminId, admin.id))
       );
     if (!ownedPosition) {
-      throw new Error('Position not found.');
+      throw new Error("We couldn't find that position. It may have been removed, or you may not have access to it.");
     }
 
     try {
@@ -1589,7 +1589,7 @@ export const updateCandidateFn = createServerFn({ method: 'POST' })
           : and(eq<any>(candidates.id, data.get("id")), eq<any>(elections.adminId, admin.id))
       );
     if (!ownedCandidate) {
-      throw new Error('Candidate not found.');
+      throw new Error("We couldn't find that candidate. They may have been removed, or you may not have access to them.");
     }
 
     try {
@@ -1631,7 +1631,7 @@ export const deleteCandidateFn = createServerFn({ method: 'POST' })
       .innerJoin(elections, eq(positions.electionId, elections.id))
       .where(and(eq<any>(candidates.id, candidateId), eq<any>(elections.adminId, admin.id)));
     if (!ownedCandidate) {
-      throw new Error('Candidate not found.');
+      throw new Error("We couldn't find that candidate. They may have been removed, or you may not have access to them.");
     }
     return await db.delete(candidates).where(eq<any>(candidates.id, candidateId)).returning();
   });
@@ -1786,7 +1786,7 @@ export const getElectionRegistrationStatsFn = createServerFn({ method: 'GET' }).
   async ({ data: electionTag }: any) => {
     const [electionRecord] = await db.select({ id: elections.id }).from(elections).where(eq<any>(elections.tag, electionTag));
     if (!electionRecord) {
-      throw new Error('Election not found.');
+      throw new Error("We couldn't find that election. It may have been removed, or you may not have access to it.");
     }
 
     const [[votersCountResult], [votesCastResult]] = await Promise.all([
@@ -1810,7 +1810,7 @@ export const exportVoterNamesFn = createServerFn({ method: 'GET' }).middleware([
   async ({ data: electionTag }: any) => {
     const [electionRecord] = await db.select({ id: elections.id, tag: elections.tag }).from(elections).where(eq<any>(elections.tag, electionTag));
     if (!electionRecord) {
-      throw new Error('Election not found.');
+      throw new Error("We couldn't find that election. It may have been removed, or you may not have access to it.");
     }
 
     const registeredVoters = await db
@@ -1850,7 +1850,7 @@ export const createVoterFn = createServerFn({ method: 'POST' })
           : and(eq<any>(elections.id, data.electionId), eq<any>(elections.adminId, admin.id))
       );
     if (!ownedElection) {
-      throw new Error('Election not found.');
+      throw new Error("We couldn't find that election. It may have been removed, or you may not have access to it.");
     }
     return await db.insert(voters).values({
       electionId: data.electionId,
@@ -1877,7 +1877,7 @@ export const updateVoterFn = createServerFn({ method: 'POST' })
           : and(eq<any>(voters.id, data.id), eq<any>(elections.adminId, admin.id))
       );
     if (!ownedVoter) {
-      throw new Error('Voter not found.');
+      throw new Error("We couldn't find that voter. They may have been removed, or you may not have access to them.");
     }
     return await db
       .update(voters)
@@ -2628,7 +2628,7 @@ export const deleteVoterFn = createServerFn({ method: 'POST' })
       .innerJoin(elections, eq(voters.electionId, elections.id))
       .where(and(eq<any>(voters.id, voterId), eq<any>(elections.adminId, admin.id)));
     if (!ownedVoter) {
-      throw new Error('Voter not found.');
+      throw new Error("We couldn't find that voter. They may have been removed, or you may not have access to them.");
     }
     return await db.delete(voters).where(eq<any>(voters.id, voterId)).returning().then((rows) => rows.map((r) => toAdminVoter(r)));
   }
@@ -2743,14 +2743,14 @@ export const castBallotServerFn = createServerFn({
 
         // 2. Fallback defensive structural intercept check
         if (!voterCheck) {
-          throw new Error("Voter registration identity record not found for this election.");
+          throw new Error("We couldn't find your voter record for this election. Please sign in again, or contact the election organiser.");
         }
 
         // 3. Identity was already established by the signed ballot session
         // (only issued after a successful password / OTP / Google login).
 
         if (voterCheck.hasVoted) {
-          throw new Error("Security Alert: This voter credential index has already cast a ballot.");
+          throw new Error("You've already voted in this election. Each voter can vote only once.");
         }
 
         // 4. The election must be open. Previously only the browser checked
