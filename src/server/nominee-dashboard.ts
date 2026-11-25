@@ -55,7 +55,8 @@ export async function loadOwnVotes(contestantId: string, eventStart: Date | null
   const paid = and(eq(eventTransactions.contestantId, contestantId), eq(eventTransactions.payStatus, true));
   const day = sql<string>`to_char(date_trunc('day', ${eventTransactions.createdAt}), 'YYYY-MM-DD')`;
 
-  const [[totals], daily, recent] = await Promise.all([
+  const hour = sql<number>`extract(hour from ${eventTransactions.createdAt})::int`;
+  const [[totals], daily, recent, hourly] = await Promise.all([
     db
       .select({
         total: sql<number>`coalesce(sum(${eventTransactions.votes}), 0)::int`,
@@ -76,7 +77,14 @@ export async function loadOwnVotes(contestantId: string, eventStart: Date | null
       .where(paid)
       .orderBy(desc(eventTransactions.createdAt))
       .limit(10),
+    // All-time votes by hour of day (GMT), for "when your supporters vote".
+    db
+      .select({ hour, votes: sql<number>`coalesce(sum(${eventTransactions.votes}), 0)::int` })
+      .from(eventTransactions)
+      .where(paid)
+      .groupBy(hour),
   ]);
+  const byHour = new Map(hourly.map((h) => [Number(h.hour), Number(h.votes) || 0]));
 
   const byDay = new Map(daily.map((d) => [d.day, Number(d.votes) || 0]));
   return {
@@ -86,5 +94,6 @@ export async function loadOwnVotes(contestantId: string, eventStart: Date | null
     payments: Number(totals?.supporters) || 0,
     series: dayKeys(since, now).map((date) => ({ date, votes: byDay.get(date) ?? 0 })),
     recent: recent.map((r) => ({ at: r.createdAt.toISOString(), votes: r.votes, channel: r.channel === 'USSD' ? 'USSD' : 'Web' })),
+    hours: Array.from({ length: 24 }, (_, h) => byHour.get(h) ?? 0),
   };
 }

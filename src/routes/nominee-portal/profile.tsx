@@ -1,6 +1,6 @@
-import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router";
+import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2 } from "lucide-react";
 import { getNomineeMeFn, updateNomineeProfileFn } from "#/server/nominee-portal";
 import { PANEL } from "#/components/nominee/NomineeDashboard";
 
@@ -63,23 +63,24 @@ function NomineeProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d1f36] text-white antialiased font-sans">
-      <main className="mx-auto w-full max-w-2xl px-4 sm:px-6 lg:px-8">
-        <section className="w-full pt-6 pb-8 sm:pt-12 lg:pt-20">
-          {!firstTime && (
-            <Link to="/nominee-portal" search={{ code: undefined }} className="mb-4 inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white">
-              <ArrowLeft className="h-4 w-4" /> Back to portal
-            </Link>
+    <div className="space-y-6">
+        <section>
+          {firstTime && (
+            <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-purple-200">
+              Step 1 of 1 · Before you continue
+            </p>
           )}
-          <h1 className="mb-2 text-3xl font-extrabold leading-tight tracking-tight text-white md:text-5xl">
+          <h1 className="mb-2 text-3xl font-extrabold leading-tight tracking-tight text-white md:text-4xl">
             {firstTime ? "Complete your profile" : "Edit your profile"}
           </h1>
-          <p className="text-lg text-zinc-300">
+          <p className="text-zinc-300">
             {me.category.name} · {me.event.title}. This is what voters see on your voting page.
           </p>
         </section>
 
-        <form onSubmit={submit} className={`${PANEL} mb-24 space-y-6 p-6 sm:p-8`}>
+        <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
+
+        <form onSubmit={submit} className={`${PANEL} space-y-6 p-6 sm:p-8`}>
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -125,7 +126,27 @@ function NomineeProfile() {
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} {firstTime ? "Save and continue" : "Save changes"}
           </button>
         </form>
-      </main>
+
+        {/* Live preview of the public card */}
+        <aside className="space-y-3 lg:sticky lg:top-24">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Live preview</p>
+          <div className={`${PANEL} overflow-hidden`}>
+            <div className="relative aspect-[4/5] bg-black/30">
+              {preview ? <img src={preview} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-sm text-zinc-500">Add a photo</div>}
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 pt-16">
+                <span className="rounded-full bg-purple-500/25 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-100">{me.category.name}</span>
+                <p className="mt-2 break-words text-xl font-extrabold leading-tight text-white">{name || "Your name"}</p>
+                <p className="mt-1 line-clamp-2 text-sm text-zinc-200">{tagline || "Your tagline"}</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-xs text-zinc-400">Voting code</span>
+              <span className="font-mono text-sm font-bold tracking-wider text-white">{me.contestant.code}</span>
+            </div>
+          </div>
+          <p className="text-xs text-zinc-500">This is roughly how your card appears to voters.</p>
+        </aside>
+        </div>
     </div>
   );
 }

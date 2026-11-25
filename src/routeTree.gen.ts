@@ -16,6 +16,7 @@ import { Route as ElectionsRouteImport } from './routes/elections'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as NomineePortalRouteRouteImport } from './routes/nominee-portal/route'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as NomineePortalIndexRouteImport } from './routes/nominee-portal/index'
@@ -23,7 +24,9 @@ import { Route as EventsIndexRouteImport } from './routes/events/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as VoteElectionRouteImport } from './routes/vote/election'
 import { Route as VoteCastRouteImport } from './routes/vote/cast'
+import { Route as NomineePortalShareRouteImport } from './routes/nominee-portal/share'
 import { Route as NomineePortalProfileRouteImport } from './routes/nominee-portal/profile'
+import { Route as NomineePortalChatRouteImport } from './routes/nominee-portal/chat'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as AuthSigninRouteImport } from './routes/auth.signin'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
@@ -57,6 +60,7 @@ import { Route as AdminEventsEventIdResultsRouteImport } from './routes/admin/ev
 import { Route as AdminEventsEventIdManageRouteImport } from './routes/admin/events.$eventId.manage'
 import { Route as AdminEventsEventIdFeedRouteImport } from './routes/admin/events.$eventId.feed'
 import { Route as AdminEventsEventIdEditRouteImport } from './routes/admin/events.$eventId.edit'
+import { Route as AdminEventsEventIdChatRouteImport } from './routes/admin/events.$eventId.chat'
 import { Route as AdminElectionsElectionIdResultsRouteImport } from './routes/admin/elections.$electionId.results'
 import { Route as AdminElectionsElectionIdReceiptRouteImport } from './routes/admin/elections.$electionId.receipt'
 import { Route as AdminElectionsElectionIdPayRouteImport } from './routes/admin/elections.$electionId.pay'
@@ -121,6 +125,11 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NomineePortalRouteRoute = NomineePortalRouteRouteImport.update({
+  id: '/nominee-portal',
+  path: '/nominee-portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRouteRoute = AdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -132,9 +141,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const NomineePortalIndexRoute = NomineePortalIndexRouteImport.update({
-  id: '/nominee-portal/',
-  path: '/nominee-portal/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => NomineePortalRouteRoute,
 } as any)
 const EventsIndexRoute = EventsIndexRouteImport.update({
   id: '/events/',
@@ -156,10 +165,20 @@ const VoteCastRoute = VoteCastRouteImport.update({
   path: '/vote/cast',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NomineePortalShareRoute = NomineePortalShareRouteImport.update({
+  id: '/share',
+  path: '/share',
+  getParentRoute: () => NomineePortalRouteRoute,
+} as any)
 const NomineePortalProfileRoute = NomineePortalProfileRouteImport.update({
-  id: '/nominee-portal/profile',
-  path: '/nominee-portal/profile',
-  getParentRoute: () => rootRouteImport,
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => NomineePortalRouteRoute,
+} as any)
+const NomineePortalChatRoute = NomineePortalChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => NomineePortalRouteRoute,
 } as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
   id: '/auth/signup',
@@ -329,6 +348,11 @@ const AdminEventsEventIdFeedRoute = AdminEventsEventIdFeedRouteImport.update({
 const AdminEventsEventIdEditRoute = AdminEventsEventIdEditRouteImport.update({
   id: '/events/$eventId/edit',
   path: '/events/$eventId/edit',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminEventsEventIdChatRoute = AdminEventsEventIdChatRouteImport.update({
+  id: '/events/$eventId/chat',
+  path: '/events/$eventId/chat',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminElectionsElectionIdResultsRoute =
@@ -503,6 +527,7 @@ const AdminElectionsElectionIdCandidatesCandidateIdEditRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
+  '/nominee-portal': typeof NomineePortalRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/blog': typeof BlogRoute
   '/contact': typeof ContactRoute
@@ -518,7 +543,9 @@ export interface FileRoutesByFullPath {
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/nominee-portal/chat': typeof NomineePortalChatRoute
   '/nominee-portal/profile': typeof NomineePortalProfileRoute
+  '/nominee-portal/share': typeof NomineePortalShareRoute
   '/vote/cast': typeof VoteCastRoute
   '/vote/election': typeof VoteElectionRoute
   '/admin/': typeof AdminIndexRoute
@@ -551,6 +578,7 @@ export interface FileRoutesByFullPath {
   '/admin/elections/$electionId/pay': typeof AdminElectionsElectionIdPayRoute
   '/admin/elections/$electionId/receipt': typeof AdminElectionsElectionIdReceiptRoute
   '/admin/elections/$electionId/results': typeof AdminElectionsElectionIdResultsRoute
+  '/admin/events/$eventId/chat': typeof AdminEventsEventIdChatRoute
   '/admin/events/$eventId/edit': typeof AdminEventsEventIdEditRoute
   '/admin/events/$eventId/feed': typeof AdminEventsEventIdFeedRoute
   '/admin/events/$eventId/manage': typeof AdminEventsEventIdManageRoute
@@ -595,7 +623,9 @@ export interface FileRoutesByTo {
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/nominee-portal/chat': typeof NomineePortalChatRoute
   '/nominee-portal/profile': typeof NomineePortalProfileRoute
+  '/nominee-portal/share': typeof NomineePortalShareRoute
   '/vote/cast': typeof VoteCastRoute
   '/vote/election': typeof VoteElectionRoute
   '/admin': typeof AdminIndexRoute
@@ -628,6 +658,7 @@ export interface FileRoutesByTo {
   '/admin/elections/$electionId/pay': typeof AdminElectionsElectionIdPayRoute
   '/admin/elections/$electionId/receipt': typeof AdminElectionsElectionIdReceiptRoute
   '/admin/elections/$electionId/results': typeof AdminElectionsElectionIdResultsRoute
+  '/admin/events/$eventId/chat': typeof AdminEventsEventIdChatRoute
   '/admin/events/$eventId/edit': typeof AdminEventsEventIdEditRoute
   '/admin/events/$eventId/feed': typeof AdminEventsEventIdFeedRoute
   '/admin/events/$eventId/manage': typeof AdminEventsEventIdManageRoute
@@ -659,6 +690,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
+  '/nominee-portal': typeof NomineePortalRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/blog': typeof BlogRoute
   '/contact': typeof ContactRoute
@@ -674,7 +706,9 @@ export interface FileRoutesById {
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signin': typeof AuthSigninRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/nominee-portal/chat': typeof NomineePortalChatRoute
   '/nominee-portal/profile': typeof NomineePortalProfileRoute
+  '/nominee-portal/share': typeof NomineePortalShareRoute
   '/vote/cast': typeof VoteCastRoute
   '/vote/election': typeof VoteElectionRoute
   '/admin/': typeof AdminIndexRoute
@@ -707,6 +741,7 @@ export interface FileRoutesById {
   '/admin/elections/$electionId/pay': typeof AdminElectionsElectionIdPayRoute
   '/admin/elections/$electionId/receipt': typeof AdminElectionsElectionIdReceiptRoute
   '/admin/elections/$electionId/results': typeof AdminElectionsElectionIdResultsRoute
+  '/admin/events/$eventId/chat': typeof AdminEventsEventIdChatRoute
   '/admin/events/$eventId/edit': typeof AdminEventsEventIdEditRoute
   '/admin/events/$eventId/feed': typeof AdminEventsEventIdFeedRoute
   '/admin/events/$eventId/manage': typeof AdminEventsEventIdManageRoute
@@ -739,6 +774,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/nominee-portal'
     | '/about'
     | '/blog'
     | '/contact'
@@ -754,7 +790,9 @@ export interface FileRouteTypes {
     | '/auth/reset-password'
     | '/auth/signin'
     | '/auth/signup'
+    | '/nominee-portal/chat'
     | '/nominee-portal/profile'
+    | '/nominee-portal/share'
     | '/vote/cast'
     | '/vote/election'
     | '/admin/'
@@ -787,6 +825,7 @@ export interface FileRouteTypes {
     | '/admin/elections/$electionId/pay'
     | '/admin/elections/$electionId/receipt'
     | '/admin/elections/$electionId/results'
+    | '/admin/events/$eventId/chat'
     | '/admin/events/$eventId/edit'
     | '/admin/events/$eventId/feed'
     | '/admin/events/$eventId/manage'
@@ -831,7 +870,9 @@ export interface FileRouteTypes {
     | '/auth/reset-password'
     | '/auth/signin'
     | '/auth/signup'
+    | '/nominee-portal/chat'
     | '/nominee-portal/profile'
+    | '/nominee-portal/share'
     | '/vote/cast'
     | '/vote/election'
     | '/admin'
@@ -864,6 +905,7 @@ export interface FileRouteTypes {
     | '/admin/elections/$electionId/pay'
     | '/admin/elections/$electionId/receipt'
     | '/admin/elections/$electionId/results'
+    | '/admin/events/$eventId/chat'
     | '/admin/events/$eventId/edit'
     | '/admin/events/$eventId/feed'
     | '/admin/events/$eventId/manage'
@@ -894,6 +936,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/nominee-portal'
     | '/about'
     | '/blog'
     | '/contact'
@@ -909,7 +952,9 @@ export interface FileRouteTypes {
     | '/auth/reset-password'
     | '/auth/signin'
     | '/auth/signup'
+    | '/nominee-portal/chat'
     | '/nominee-portal/profile'
+    | '/nominee-portal/share'
     | '/vote/cast'
     | '/vote/election'
     | '/admin/'
@@ -942,6 +987,7 @@ export interface FileRouteTypes {
     | '/admin/elections/$electionId/pay'
     | '/admin/elections/$electionId/receipt'
     | '/admin/elections/$electionId/results'
+    | '/admin/events/$eventId/chat'
     | '/admin/events/$eventId/edit'
     | '/admin/events/$eventId/feed'
     | '/admin/events/$eventId/manage'
@@ -973,6 +1019,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
+  NomineePortalRouteRoute: typeof NomineePortalRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
   BlogRoute: typeof BlogRoute
   ContactRoute: typeof ContactRoute
@@ -985,11 +1032,9 @@ export interface RootRouteChildren {
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   AuthSigninRoute: typeof AuthSigninRoute
   AuthSignupRoute: typeof AuthSignupRoute
-  NomineePortalProfileRoute: typeof NomineePortalProfileRoute
   VoteCastRoute: typeof VoteCastRoute
   VoteElectionRoute: typeof VoteElectionRoute
   EventsIndexRoute: typeof EventsIndexRoute
-  NomineePortalIndexRoute: typeof NomineePortalIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiWebhooksArkeselUssdRoute: typeof ApiWebhooksArkeselUssdRoute
   ApiWebhooksPaystackRoute: typeof ApiWebhooksPaystackRoute
@@ -1052,6 +1097,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/nominee-portal': {
+      id: '/nominee-portal'
+      path: '/nominee-portal'
+      fullPath: '/nominee-portal'
+      preLoaderRoute: typeof NomineePortalRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -1068,10 +1120,10 @@ declare module '@tanstack/react-router' {
     }
     '/nominee-portal/': {
       id: '/nominee-portal/'
-      path: '/nominee-portal'
+      path: '/'
       fullPath: '/nominee-portal/'
       preLoaderRoute: typeof NomineePortalIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof NomineePortalRouteRoute
     }
     '/events/': {
       id: '/events/'
@@ -1101,12 +1153,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VoteCastRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/nominee-portal/share': {
+      id: '/nominee-portal/share'
+      path: '/share'
+      fullPath: '/nominee-portal/share'
+      preLoaderRoute: typeof NomineePortalShareRouteImport
+      parentRoute: typeof NomineePortalRouteRoute
+    }
     '/nominee-portal/profile': {
       id: '/nominee-portal/profile'
-      path: '/nominee-portal/profile'
+      path: '/profile'
       fullPath: '/nominee-portal/profile'
       preLoaderRoute: typeof NomineePortalProfileRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof NomineePortalRouteRoute
+    }
+    '/nominee-portal/chat': {
+      id: '/nominee-portal/chat'
+      path: '/chat'
+      fullPath: '/nominee-portal/chat'
+      preLoaderRoute: typeof NomineePortalChatRouteImport
+      parentRoute: typeof NomineePortalRouteRoute
     }
     '/auth/signup': {
       id: '/auth/signup'
@@ -1337,6 +1403,13 @@ declare module '@tanstack/react-router' {
       path: '/events/$eventId/edit'
       fullPath: '/admin/events/$eventId/edit'
       preLoaderRoute: typeof AdminEventsEventIdEditRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/events/$eventId/chat': {
+      id: '/admin/events/$eventId/chat'
+      path: '/events/$eventId/chat'
+      fullPath: '/admin/events/$eventId/chat'
+      preLoaderRoute: typeof AdminEventsEventIdChatRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/elections/$electionId/results': {
@@ -1577,6 +1650,7 @@ interface AdminRouteRouteChildren {
   AdminElectionsElectionIdPayRoute: typeof AdminElectionsElectionIdPayRoute
   AdminElectionsElectionIdReceiptRoute: typeof AdminElectionsElectionIdReceiptRoute
   AdminElectionsElectionIdResultsRoute: typeof AdminElectionsElectionIdResultsRoute
+  AdminEventsEventIdChatRoute: typeof AdminEventsEventIdChatRoute
   AdminEventsEventIdEditRoute: typeof AdminEventsEventIdEditRoute
   AdminEventsEventIdFeedRoute: typeof AdminEventsEventIdFeedRoute
   AdminEventsEventIdManageRoute: typeof AdminEventsEventIdManageRoute
@@ -1629,6 +1703,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminElectionsElectionIdPayRoute: AdminElectionsElectionIdPayRoute,
   AdminElectionsElectionIdReceiptRoute: AdminElectionsElectionIdReceiptRoute,
   AdminElectionsElectionIdResultsRoute: AdminElectionsElectionIdResultsRoute,
+  AdminEventsEventIdChatRoute: AdminEventsEventIdChatRoute,
   AdminEventsEventIdEditRoute: AdminEventsEventIdEditRoute,
   AdminEventsEventIdFeedRoute: AdminEventsEventIdFeedRoute,
   AdminEventsEventIdManageRoute: AdminEventsEventIdManageRoute,
@@ -1674,9 +1749,27 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
   AdminRouteRouteChildren,
 )
 
+interface NomineePortalRouteRouteChildren {
+  NomineePortalChatRoute: typeof NomineePortalChatRoute
+  NomineePortalProfileRoute: typeof NomineePortalProfileRoute
+  NomineePortalShareRoute: typeof NomineePortalShareRoute
+  NomineePortalIndexRoute: typeof NomineePortalIndexRoute
+}
+
+const NomineePortalRouteRouteChildren: NomineePortalRouteRouteChildren = {
+  NomineePortalChatRoute: NomineePortalChatRoute,
+  NomineePortalProfileRoute: NomineePortalProfileRoute,
+  NomineePortalShareRoute: NomineePortalShareRoute,
+  NomineePortalIndexRoute: NomineePortalIndexRoute,
+}
+
+const NomineePortalRouteRouteWithChildren =
+  NomineePortalRouteRoute._addFileChildren(NomineePortalRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRouteRoute: AdminRouteRouteWithChildren,
+  NomineePortalRouteRoute: NomineePortalRouteRouteWithChildren,
   AboutRoute: AboutRoute,
   BlogRoute: BlogRoute,
   ContactRoute: ContactRoute,
@@ -1689,11 +1782,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuthResetPasswordRoute: AuthResetPasswordRoute,
   AuthSigninRoute: AuthSigninRoute,
   AuthSignupRoute: AuthSignupRoute,
-  NomineePortalProfileRoute: NomineePortalProfileRoute,
   VoteCastRoute: VoteCastRoute,
   VoteElectionRoute: VoteElectionRoute,
   EventsIndexRoute: EventsIndexRoute,
-  NomineePortalIndexRoute: NomineePortalIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiWebhooksArkeselUssdRoute: ApiWebhooksArkeselUssdRoute,
   ApiWebhooksPaystackRoute: ApiWebhooksPaystackRoute,

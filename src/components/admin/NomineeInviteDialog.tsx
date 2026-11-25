@@ -66,7 +66,7 @@ export function NomineeInviteDialog({ target, onClose }: { target: InviteTarget 
   }, [target?.id])
 
   const message = result
-    ? `Hi ${target?.name}, you're a nominee on Heravote. Complete your profile and follow your votes here: ${result.link} . Your access code: ${result.code}. Keep it private.`
+    ? `Hi ${target?.name}, you're a nominee on Heravote. Sign in and follow your votes here: ${result.link} . Your access code: ${result.code}. Keep it private: it is your password.`
     : ''
 
   return (
@@ -80,7 +80,7 @@ export function NomineeInviteDialog({ target, onClose }: { target: InviteTarget 
                 <KeyRound className="h-4 w-4 text-purple-400" /> Invite {target?.name}
               </DialogPrimitive.Title>
               <DialogPrimitive.Description className="mt-1 text-xs text-zinc-400">
-                The nominee opens the link, signs in with their phone and this code, and completes their profile.
+                The nominee opens the link (or enters this code at /nominee-portal) and completes their profile. The code works like a password: share it only with this nominee.
               </DialogPrimitive.Description>
             </div>
             <DialogPrimitive.Close aria-label="Close" className="rounded-md p-1 text-zinc-500 hover:bg-zinc-800 hover:text-white">

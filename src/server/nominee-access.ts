@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { categories, contestants, events, nomineeAccess } from '../db/schema';
 import { nomineeSessionKey, safeEqual } from './voter-token';
+import { fastRedis } from './redis-fast';
 
 // Nominee portal access: access codes and the signed session cookie.
 //
@@ -115,4 +116,49 @@ export async function requireNominee() {
   const nominee = await currentNominee();
   if (!nominee) throw new Error('Your session has ended. Please sign in again.');
   return nominee;
+}
+
+// ---------------------------------------------------------------------------
+// Sign-in throttling (code-only sign-in)
+// ---------------------------------------------------------------------------
+//
+// With no second factor, the defence against guessing is volume: a code is
+// one of 31^8 (~8.5e11). Wrong attempts are capped per client IP, and a
+// platform-wide ceiling stops a distributed guessing run (it can briefly
+// pause code sign-in for everyone, the price of not letting a botnet grind
+// through codes). Both windows are 15 minutes and fail open if Redis is down
+// (Arcjet's per-IP limit still applies).
+
+const WINDOW_SECONDS = 15 * 60;
+const MAX_FAILURES_PER_IP = 10;
+const MAX_FAILURES_GLOBAL = 1000;
+const ipKey = (ip: string) => `nomineeauth:fail:ip:${ip}`;
+const GLOBAL_KEY = 'nomineeauth:fail:all';
+
+export async function isCodeSignInThrottled(ip: string): Promise<boolean> {
+  try {
+    const [perIp, all] = await fastRedis.mget(ipKey(ip), GLOBAL_KEY);
+    return Number(perIp || 0) >= MAX_FAILURES_PER_IP || Number(all || 0) >= MAX_FAILURES_GLOBAL;
+  } catch {
+    return false;
+  }
+}
+
+export async function recordCodeSignInFailure(ip: string): Promise<void> {
+  try {
+    for (const key of [ipKey(ip), GLOBAL_KEY]) {
+      const n = await fastRedis.incr(key);
+      if (n === 1) await fastRedis.expire(key, WINDOW_SECONDS);
+    }
+  } catch {
+    // fail open -- see above
+  }
+}
+
+export async function clearCodeSignInFailures(ip: string): Promise<void> {
+  try {
+    await fastRedis.del(ipKey(ip));
+  } catch {
+    // fail open
+  }
 }

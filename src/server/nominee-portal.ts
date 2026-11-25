@@ -8,17 +8,15 @@ import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
 import { assertContestantAccess, assertEventAccess } from './access-control';
 import { decryptToken, encryptToken, hashToken } from './voter-token';
 import {
-  canonicalCode, clearNomineeSession, currentNominee, generateNomineeCode, issueNomineeSession,
-  NOMINEE_CODE_LENGTH, requireNominee,
+  canonicalCode, clearCodeSignInFailures, clearNomineeSession, currentNominee, generateNomineeCode, isCodeSignInThrottled,
+  issueNomineeSession, NOMINEE_CODE_LENGTH, recordCodeSignInFailure, requireNominee,
 } from './nominee-access';
-import { clearLoginFailures, getClientIp, isLoginLockedOut, LOCKED_OUT_MESSAGE, recordLoginFailure } from './voter-auth';
+import { getClientIp } from './voter-auth';
 import { processImageUpload } from './image-upload';
 import { asResultsView, loadCategoryStandings, loadOwnVotes, NOMINEE_RESULTS_VIEWS } from './nominee-dashboard';
-import { maskPhone, normalizePhone, toSmsRecipient } from '#/lib/phone';
+import { maskPhone, toSmsRecipient } from '#/lib/phone';
 
 // Nominee portal: admin invites, nominee sign-in and profile completion.
-
-const LOCKOUT_SCOPE = 'nominee';
 
 function portalUrl(code: string): string {
   const base = (process.env.BETTER_AUTH_URL || process.env.VITE_BASE_URL || 'http://localhost:3000').replace(/\/+$/, '');
@@ -90,7 +88,7 @@ export const nomineeInviteFn = createServerFn({ method: 'POST' })
       await sendSms(
         toSmsRecipient(row.phone!),
         `Heravote: Hi ${row.name}, you're a nominee for ${row.categoryName} in ${row.eventTitle}. ` +
-          `Complete your profile and follow your votes at ${link} . Your access code: ${code}. Keep it private.`,
+          `Sign in and follow your votes at ${link} . Your access code: ${code}. Keep it private: it is your password.`,
       );
       smsSent = true;
       await db
@@ -114,30 +112,36 @@ export const nomineeInviteFn = createServerFn({ method: 'POST' })
 // Nominee: sign in / out, profile
 // ---------------------------------------------------------------------------
 
+/**
+ * Sign in with the access code alone (it works like a password). Guessing is
+ * held back by per-IP and platform-wide failure caps; see nominee-access.ts.
+ */
 export const nomineeSignInFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware])
   .handler(async ({ data }: any) => {
-    const phone = normalizePhone(data?.phone);
     const code = canonicalCode(data?.code);
-    const failure = 'That phone number and access code don\'t match. Check the invite you received.';
-    if (!phone || code.length !== NOMINEE_CODE_LENGTH) throw new Error(failure);
-
+    const failure = "That access code isn't valid. Check the invite you received, or ask the organiser for a new code.";
     const ip = getClientIp(getRequest());
-    if (await isLoginLockedOut(LOCKOUT_SCOPE, phone, ip)) throw new Error(LOCKED_OUT_MESSAGE);
-
-    const codeHash = hashToken(code);
-    const [row] = await db
-      .select({ contestantId: nomineeAccess.contestantId, phone: contestants.phone, activatedAt: nomineeAccess.activatedAt })
-      .from(nomineeAccess)
-      .innerJoin(contestants, eq(nomineeAccess.contestantId, contestants.id))
-      .where(eq(nomineeAccess.codeHash, codeHash));
-
-    if (!row || normalizePhone(row.phone) !== phone) {
-      await recordLoginFailure(LOCKOUT_SCOPE, phone, ip);
+    if (await isCodeSignInThrottled(ip)) {
+      throw new Error('Too many unsuccessful attempts. Please wait 15 minutes and try again.');
+    }
+    if (code.length !== NOMINEE_CODE_LENGTH) {
+      await recordCodeSignInFailure(ip);
       throw new Error(failure);
     }
 
-    await clearLoginFailures(LOCKOUT_SCOPE, phone, ip);
+    const codeHash = hashToken(code);
+    const [row] = await db
+      .select({ contestantId: nomineeAccess.contestantId, activatedAt: nomineeAccess.activatedAt })
+      .from(nomineeAccess)
+      .where(eq(nomineeAccess.codeHash, codeHash));
+
+    if (!row) {
+      await recordCodeSignInFailure(ip);
+      throw new Error(failure);
+    }
+
+    await clearCodeSignInFailures(ip);
     await db.update(nomineeAccess).set({ lastLoginAt: new Date() }).where(eq(nomineeAccess.contestantId, row.contestantId));
     issueNomineeSession(row.contestantId, codeHash);
     return { activated: Boolean(row.activatedAt) };
@@ -279,3 +283,33 @@ export const setNomineeResultsViewFn = createServerFn({ method: 'POST' })
     await db.update(events).set({ nomineeResultsView: data.view }).where(eq(events.id, eventId));
     return { view: data.view };
   });
+
+// ---------------------------------------------------------------------------
+// Share kit
+// ---------------------------------------------------------------------------
+
+const MAX_PHOTO_BYTES = 6 * 1024 * 1024;
+
+/**
+ * The signed-in nominee's own photo as a data URL, so the browser can draw
+ * it on the campaign poster canvas (a cross-origin storage URL would taint
+ * the canvas and block the download). Only ever fetches the URL stored on
+ * the nominee's own record.
+ */
+export const getNomineePhotoFn = createServerFn({ method: 'GET' }).handler(async () => {
+  const n = await requireNominee();
+  const url = n.contestant.imageUrl;
+  if (!url || !/^https?:\/\//i.test(url)) return { dataUrl: null };
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+    const type = res.headers.get('content-type') ?? '';
+    const length = Number(res.headers.get('content-length') ?? 0);
+    if (!res.ok || !type.startsWith('image/') || length > MAX_PHOTO_BYTES) return { dataUrl: null };
+    const bytes = Buffer.from(await res.arrayBuffer());
+    if (bytes.length > MAX_PHOTO_BYTES) return { dataUrl: null };
+    return { dataUrl: `data:${type};base64,${bytes.toString('base64')}` };
+  } catch {
+    // The poster falls back to initials.
+    return { dataUrl: null };
+  }
+});

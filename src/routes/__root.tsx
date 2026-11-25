@@ -85,7 +85,8 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 function RootDocument({ children }: { children: React.ReactNode }) {
   // The admin has its own shell (sidebar + top bar), so the public site's
   // header and footer are not rendered there.
-  const isAdmin = useRouterState({ select: (s) => s.location.pathname.startsWith('/admin') })
+  // The admin and the nominee portal are apps with their own headers.
+  const isAdmin = useRouterState({ select: (s) => /^\/(admin|nominee-portal)(\/|$)/.test(s.location.pathname) })
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
