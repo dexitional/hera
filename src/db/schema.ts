@@ -10,6 +10,10 @@ export const user = pgTable("user", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull(),
+  // Set when a super admin marks the account unverified. While set, Google
+  // sign-in won't re-verify the email from Google's claim; the user can still
+  // verify by clicking an emailed link (which clears it). See src/lib/auth.ts.
+  emailVerificationRevoked: boolean("email_verification_revoked").default(false).notNull(),
   image: text("image"),
   role: text("role").notNull().default("user"),
   phone: text("phone"),

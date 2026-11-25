@@ -105,7 +105,9 @@ export const setUserEmailVerifiedFn = createServerFn({ method: 'POST' })
 
     const [updated] = await db
       .update(user)
-      .set({ emailVerified: !!emailVerified, updatedAt: new Date() })
+      // Unverifying also sets email_verification_revoked so Google sign-in
+      // can't silently re-verify the account; verifying clears it.
+      .set({ emailVerified: !!emailVerified, emailVerificationRevoked: !emailVerified, updatedAt: new Date() })
       .where(eq(user.id, userId))
       .returning();
 
