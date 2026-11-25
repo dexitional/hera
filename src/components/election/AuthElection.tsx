@@ -34,11 +34,18 @@ export default function AuthElection({ data }: any) {
 
   const loginMutation = useMutation({
     mutationFn: verifyVoterFn,
-    onSuccess: async (resp) => {
+    onSuccess: async (resp: any) => {
+      // OTP elections: step 1 only sends the code. The server never returns the
+      // OTP itself -- the voter record arrives from verifyVoterOtpFn once the
+      // code has been checked. 'sent' is just the flag that shows the OTP form.
+      if (resp?.otpRequired) {
+        useAuthStore.getState().loadOtp('sent', resp?.maskPhone);
+        setLoading(false);
+        return;
+      }
+
       const dt = resp?.data;
-      const maskPhone = resp?.maskPhone;
-      const dbOtp: any = resp?.otp;
-     
+
       if(dt){
         // Initialize Store
         const user:any = {
@@ -55,7 +62,6 @@ export default function AuthElection({ data }: any) {
           electionEnd: dt?.elections?.endAt,
           electionAutoStart: dt?.elections?.autoStop,
           electionImageUrl: dt?.elections?.imageUrl,
-          inviteToken: dt?.voters?.inviteToken,
         }
 
         if(user.electionId != data.id){
@@ -80,22 +86,15 @@ export default function AuthElection({ data }: any) {
           return false;
         }
         
-        // Stage OTP after Authentication
-        if(['otp', 'aotp'].includes(data?.authMode?.toLowerCase())){
-            useAuthStore.getState().loadOtp(dbOtp, maskPhone);
-        } else {
-          
-          const token = generateTokenCode()
-          // authActions.login(user,token);
-          useAuthStore.getState().login(user, token);
-          navigate({ to: `/vote/cast`});
-          queryClient.invalidateQueries({ queryKey: ['voter-page'] });
-        }
+        const token = generateTokenCode()
+        useAuthStore.getState().login(user, token);
+        navigate({ to: `/vote/cast`});
+        queryClient.invalidateQueries({ queryKey: ['voter-page'] });
         setLoading(false);
-      
+
       } else {
         setLoading(false);
-        setMsg("Invalid credentials. try again !");
+        setMsg(resp?.message || "Invalid credentials. try again !");
         setTimeout(() => setMsg(null), 5000)
       }
     },
@@ -108,7 +107,7 @@ export default function AuthElection({ data }: any) {
 
   const verifyMutation = useMutation({
     mutationFn: verifyVoterOtpFn,
-    onSuccess: async (resp) => {
+    onSuccess: async (resp: any) => {
       const dt = resp?.data;
       if(dt){
         // Initialize Store
@@ -126,7 +125,6 @@ export default function AuthElection({ data }: any) {
           electionEnd: dt?.elections?.endAt,
           electionAutoStart: dt?.elections?.autoStop,
           electionImageUrl: dt?.elections?.imageUrl,
-          inviteToken: dt?.voters?.inviteToken,
         }
 
         if(user.electionId != data.id){
@@ -160,7 +158,7 @@ export default function AuthElection({ data }: any) {
       
       } else {
         setLoading(false);
-        setMsg("Invalid OTP. try again !");
+        setMsg(resp?.message || "Invalid OTP. try again !");
         setTimeout(() => setMsg(null),5000)
       }
       
@@ -209,7 +207,6 @@ export default function AuthElection({ data }: any) {
             electionEnd: dt?.elections?.endAt,
             electionAutoStart: dt?.elections?.autoStop,
             electionImageUrl: dt?.elections?.imageUrl,
-            inviteToken: dt?.voters?.inviteToken,
           }
 
           if(user.electionId != data.id){

@@ -6,13 +6,14 @@ import {
   Globe, Shield, Eye, Filter, ChevronDown, CheckCircle, Sliders
 } from "lucide-react";
 import { deleteElectionFn, getElectionsFn } from "#/server/tenant-elections";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { TableSkeleton } from "#/components/ui/skeleton";
+import ScopeToggle, { OwnerLine, type ListScope } from "#/components/admin/ScopeToggle";
 
 
-const electionsQueryOptions = () => ({
-  queryKey: ['elections-admin'],
-  queryFn: () => getElectionsFn(),
+const electionsQueryOptions = (scope: ListScope = 'mine') => ({
+  queryKey: ['elections-admin', scope],
+  queryFn: () => getElectionsFn({ data: { scope } } as any),
 });
 
 export const Route = createFileRoute("/admin/elections/")({
@@ -25,7 +26,11 @@ export const Route = createFileRoute("/admin/elections/")({
 
 function ElectionsDirectory() {
   const queryClient = useQueryClient();
-  const { data }:any = useSuspenseQuery(electionsQueryOptions());
+  const { user }: any = Route.useRouteContext();
+  const isSuperAdmin = user?.role === 'super';
+  // Super admins can switch to every organisation's elections.
+  const [scope, setScope] = useState<ListScope>('mine');
+  const { data }: any = useQuery({ ...electionsQueryOptions(scope), placeholderData: keepPreviousData });
   const  elections:any = data?.map((r: any) => ({ 
     id: r?.id,
     adminId: r.adminId,
@@ -39,7 +44,9 @@ function ElectionsDirectory() {
     makePublic: r.makePublic,
     showFeed: r.showFeed,
     isActive: r.isActive,
-  }))
+    ownerName: r.ownerName,
+    ownerOrganization: r.ownerOrganization,
+  })) ?? []
 
   // const [elections, setElections] = useState<any>(initials);
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,7 +68,8 @@ function ElectionsDirectory() {
   const filteredElections = elections?.filter((election: any) => {
     const matchesSearch = 
       election.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      election.tag.toLowerCase().includes(searchQuery.toLowerCase());
+      election.tag.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      `${election.ownerOrganization ?? ''} ${election.ownerName ?? ''}`.toLowerCase().includes(searchQuery.toLowerCase());
     
     if (statusFilter === "ACTIVE") return matchesSearch && election.isActive;
     if (statusFilter === "ARCHIVED") return matchesSearch && !election.isActive;
@@ -98,6 +106,7 @@ function ElectionsDirectory() {
           </div>
           
           <div className="flex items-center gap-3 shrink-0">
+            {isSuperAdmin && <ScopeToggle value={scope} onChange={setScope} />}
             <a
               href="/admin/elections/new"
               className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs px-3.5 py-2 rounded-lg font-medium shadow-md transition-all"
@@ -180,6 +189,7 @@ function ElectionsDirectory() {
                       <td className="px-6 py-4 max-w-xs">
                         <div className="flex flex-col">
                           <span className="font-semibold text-white tracking-wide text-sm">{election.title}</span>
+                          {election.adminId !== user?.id && <OwnerLine organization={election.ownerOrganization} name={election.ownerName} />}
                           <span className="text-[10px] text-purple-400 font-mono font-bold bg-purple-950/20 border border-purple-900/30 px-1.5 py-0.5 rounded w-max mt-1 select-all">
                             tag: {election.tag}
                           </span>

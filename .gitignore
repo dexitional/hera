@@ -11,3 +11,10 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+
+# Database dumps / backups (contain voter PII and credentials). drizzle/*.sql
+# migrations are NOT matched by these patterns.
+/herav.sql
+*.sql.gz
+*.dump
+/backups

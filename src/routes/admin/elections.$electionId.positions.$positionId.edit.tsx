@@ -7,7 +7,8 @@ export const Route = createFileRoute("/admin/elections/$electionId/positions/$po
   component: EditPosition,
   loader: async ({ params }:any) => {
     const positionId = params.positionId;
-    const elections = await getElectionsFn();
+    // includeElectionId: a super admin editing another tenant's election still sees it in the dropdown.
+    const elections = await getElectionsFn({ data: { includeElectionId: params.electionId } } as any);
     const data = await getPositionFn({ data: positionId });
     return { data, elections }
   },

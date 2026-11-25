@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, uuid, text, integer, timestamp, varchar, boolean, doublePrecision, unique, index, uniqueIndex, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, timestamp, varchar, boolean, doublePrecision, numeric, unique, index, uniqueIndex, jsonb, check } from 'drizzle-orm/pg-core';
 import { uuidv7 } from '../lib/uuid';
 
 // ==========================================
@@ -33,7 +33,9 @@ export const session = pgTable('session', {
   userAgent: text('user_agent'),
   impersonatedBy: text('impersonated_by'),
   userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
-});
+}, (t) => ({
+  userIdx: index('session_user_id_idx').on(t.userId),
+}));
 
 export const account = pgTable('account', {
   id: text('id').primaryKey(),
@@ -49,7 +51,9 @@ export const account = pgTable('account', {
   password: text('password'),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
-});
+}, (t) => ({
+  userIdx: index('account_user_id_idx').on(t.userId),
+}));
 
 export const verification = pgTable('verification', {
   id: text('id').primaryKey(),
@@ -72,11 +76,19 @@ export const events = pgTable('events', {
   endAt: timestamp('end_at', { mode: 'date' }),
   unitPrice: doublePrecision('unit_price'),
   paymentAmount: doublePrecision('payment_amount'),
+  // Legacy absolute fee amount, never set by any screen; superseded by
+  // platformFeePercent below. Kept so existing data isn't lost.
   paymentDeduction: doublePrecision('payment_deduction'),
+  // Platform's cut of the event's vote revenue, as a percentage (0-100),
+  // set by a super admin. Organiser's share = gross - gross * pct / 100.
+  platformFeePercent: numeric('platform_fee_percent', { precision: 5, scale: 2, mode: 'number' }).default(0).notNull(),
   isActive: boolean('is_active').default(false).notNull(),
   adminId: text('admin_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  adminIdx: index('events_admin_id_idx').on(t.adminId),
+  feePercentRange: check('events_platform_fee_percent_range', sql`${t.platformFeePercent} >= 0 and ${t.platformFeePercent} <= 100`),
+}));
 
 export const categories = pgTable('categories', {
   id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
@@ -98,7 +110,9 @@ export const contestants = pgTable('contestants', {
   imageUrl: text('image_url'),
   code: text('code').notNull().unique(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  categoryIdx: index('contestants_category_id_idx').on(t.categoryId),
+}));
 
 export const eventTransactions = pgTable('event_transactions', {
   id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
@@ -120,6 +134,30 @@ export const eventTransactions = pgTable('event_transactions', {
   // (WHERE pay_ref IS NOT NULL) so manually-entered admin transactions without a
   // payRef are unaffected.
   payRefUniqueIdx: uniqueIndex('event_transactions_pay_ref_uniq_idx').on(t.payRef).where(sql`${t.payRef} is not null`),
+}));
+
+// Money paid out of an event's revenue to the organiser (recorded by a super
+// admin; the payout itself happens outside the app). Never deleted: mistakes
+// are voided with a reason so the ledger stays a complete audit trail.
+export const eventWithdrawals = pgTable('event_withdrawals', {
+  id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
+  // restrict: an event with recorded payouts can't be deleted out from
+  // under its financial history.
+  eventId: uuid('event_id').references(() => events.id, { onDelete: 'restrict' }).notNull(),
+  amount: numeric('amount', { precision: 12, scale: 2, mode: 'number' }).notNull(),
+  method: text('method').notNull(), // bank_transfer | mobile_money | cash | cheque | other
+  recipient: text('recipient'),     // account name / number / MoMo number
+  reference: text('reference'),     // bank or MoMo transaction reference
+  note: text('note'),
+  paidAt: timestamp('paid_at', { mode: 'date' }).notNull(),
+  recordedBy: text('recorded_by').references(() => user.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  voidedAt: timestamp('voided_at', { mode: 'date' }),
+  voidedBy: text('voided_by').references(() => user.id, { onDelete: 'set null' }),
+  voidReason: text('void_reason'),
+}, (t) => ({
+  eventIdx: index('event_withdrawals_event_idx').on(t.eventId, t.paidAt),
+  amountPositive: check('event_withdrawals_amount_positive', sql`${t.amount} > 0`),
 }));
 
 // ==========================================
@@ -158,7 +196,11 @@ export const elections = pgTable('elections', {
   placeholder: jsonb('placeholder').$type<{ username: string; password: string }>()
     .default({ username: 'Username', password: 'Password' }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  // Every voter-facing page resolves the election by tag.
+  tagIdx: index('elections_tag_idx').on(t.tag),
+  adminIdx: index('elections_admin_id_idx').on(t.adminId),
+}));
 
 export const positions = pgTable('positions', {
   id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
@@ -167,7 +209,9 @@ export const positions = pgTable('positions', {
   order: integer('order'),
   slots: integer('slots').default(1).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  electionIdx: index('positions_election_id_idx').on(t.electionId),
+}));
 
 export const candidates = pgTable('candidates', {
   id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
@@ -178,7 +222,9 @@ export const candidates = pgTable('candidates', {
   imageUrl: text('image_url'),
   isActive: boolean('is_active').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (t) => ({
+  positionIdx: index('candidates_position_id_idx').on(t.positionId),
+}));
 
 export const voters = pgTable('voters', {
   id: uuid('id').primaryKey().$defaultFn(() => uuidv7()),
@@ -188,13 +234,24 @@ export const voters = pgTable('voters', {
   phoneNumber: text('phone_number').notNull(),
   email: text('email').notNull(),
   voteIp: text('vote_ip'),
-  inviteToken: varchar('invite_token', { length: 64 }).notNull().unique(),
+  // Legacy plaintext token. NULL once a row is converted to token_hash +
+  // token_enc (src/server/voter-token.ts, src/scripts/encrypt-voter-tokens.ts).
+  inviteToken: varchar('invite_token', { length: 64 }).unique(),
+  // HMAC-SHA256 of the token: login lookups + global uniqueness.
+  tokenHash: text('token_hash').unique(),
+  // AES-256-GCM encrypted token, for admin display / invite SMS / USSD.
+  tokenEnc: text('token_enc'),
   isVerified: boolean('is_verified').default(false).notNull(),
   hasVoted: boolean('has_voted').default(false).notNull(),
   invitedAt: timestamp('invited_at').defaultNow().notNull(),
 }, (t) => ({
   electionEmailUniq: unique().on(t.electionId, t.email),
   electionUsernameUniq: unique().on(t.electionId, t.username),
+  // Matches verifyVoterFn's credential lookup, LOWER(REPLACE(username, ' ', '')),
+  // which can't use the plain (election_id, username) unique index.
+  loginIdx: index('voters_election_login_idx').on(t.electionId, sql`lower(replace(${t.username}, ' ', ''))`),
+  // Turnout counts (hasVoted = true) and VOTED/PENDING filters.
+  votedIdx: index('voters_election_has_voted_idx').on(t.electionId, t.hasVoted),
 }));
 
 export const electionVotes = pgTable('election_votes', {
@@ -205,7 +262,13 @@ export const electionVotes = pgTable('election_votes', {
   receiptSignature: text('receipt_signature').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => ({
-  electionVotesPerfIdx: index('election_votes_lookup_idx').on(t.electionId, t.positionId)
+  electionVotesPerfIdx: index('election_votes_lookup_idx').on(t.electionId, t.positionId),
+  // Tally join (candidate_id = c.id AND position_id = c.position_id).
+  candidateIdx: index('election_votes_candidate_idx').on(t.candidateId, t.positionId),
+  // Per-position abstention counts (position_id = X AND candidate_id IS NULL).
+  positionCandidateIdx: index('election_votes_position_candidate_idx').on(t.positionId, t.candidateId),
+  // Live feed: latest votes for an election.
+  electionCreatedIdx: index('election_votes_election_created_idx').on(t.electionId, t.createdAt),
 }));
 
 
@@ -270,6 +333,13 @@ export const contestantsRelations = relations(contestants, ({ one, many }) => ({
     references: [categories.id],
   }),
   transactions: many(eventTransactions),
+}));
+
+export const eventWithdrawalsRelations = relations(eventWithdrawals, ({ one }) => ({
+  event: one(events, {
+    fields: [eventWithdrawals.eventId],
+    references: [events.id],
+  }),
 }));
 
 export const eventTransactionsRelations = relations(eventTransactions, ({ one }) => ({

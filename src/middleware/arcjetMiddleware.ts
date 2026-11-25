@@ -1,7 +1,7 @@
 // app/middleware/arcjetMiddleware.ts
 import { createMiddleware } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { aj, ajVoterLookup } from "#/lib/arcjet";
+import { aj, ajVoter, ajVoterLookup } from "#/lib/arcjet";
 
 async function protectWith(client: any) {
   // 1. Extract the underlying Web API Request object from TanStack Start
@@ -45,5 +45,14 @@ export const arcjetMiddleware = createMiddleware().server(async ({ next }) => {
 // place of (not alongside) arcjetMiddleware on the handler it protects.
 export const arcjetVoterLookupMiddleware = createMiddleware().server(async ({ next }) => {
   await protectWith(ajVoterLookup);
+  return next();
+});
+
+// For the anonymous voter flow (election page, login, OTP, ballot fetch and
+// cast): shield + bot detection with a per-IP limit sized for many voters on
+// one shared network -- see ajVoter in lib/arcjet.ts. Use in place of (not
+// alongside) arcjetMiddleware.
+export const arcjetVoterMiddleware = createMiddleware().server(async ({ next }) => {
+  await protectWith(ajVoter);
   return next();
 });

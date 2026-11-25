@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authClient } from "#/lib/auth-client";
-import { getAllUsersFn, setUserEmailVerifiedFn, resendVerificationEmailFn } from "#/server/tenant-admin-users";
+import { getAllUsersFn, setUserEmailVerifiedFn, resendVerificationEmailFn, setUserPasswordFn } from "#/server/tenant-admin-users";
 import { TableSkeleton } from "#/components/ui/skeleton";
 
 const USERS_PAGE_SIZE = 15;
@@ -43,6 +43,7 @@ export const Route = createFileRoute("/admin/users/")({
 
 function UsersDirectory() {
   const queryClient = useQueryClient();
+  const { user: currentUser }: any = Route.useRouteContext();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -112,8 +113,11 @@ function UsersDirectory() {
     onError: (error: any) => alert(error?.message || "Failed to enable user."),
   });
 
+  // Same server function as the user page's Password panel: signs the user
+  // out of every device and refuses the super admin's own account.
   const resetPasswordMutation = useMutation({
-    mutationFn: (payload: { userId: string; newPassword: string }) => authClient.admin.setUserPassword(payload),
+    mutationFn: (payload: { userId: string; newPassword: string }) =>
+      setUserPasswordFn({ data: { ...payload, signOutEverywhere: true } } as any),
     onError: (error: any) => alert(error?.message || "Failed to reset password."),
   });
 
@@ -123,12 +127,11 @@ function UsersDirectory() {
   };
 
   const handleResetPassword = async (targetUser: any) => {
-    if (!confirm(`Reset the password for ${targetUser.name} (${targetUser.email})? A new temporary password will be generated.`)) return;
+    if (!confirm(`Reset the password for ${targetUser.name} (${targetUser.email})? A new temporary password will be generated and they'll be signed out of every device. (To email them a reset link instead, open their account page.)`)) return;
     const newPassword = generateTempPassword();
     await resetPasswordMutation.mutateAsync({ userId: targetUser.id, newPassword });
-    // Surface the generated password once -- there's no email infra to deliver it automatically,
-    // so the super admin has to relay it to the tenant admin out of band.
-    prompt(`Password reset for ${targetUser.email}. Share this temporary password with them (copy it now, it won't be shown again):`, newPassword);
+    // Shown once for the super admin to relay out of band.
+    prompt(`Password reset for ${targetUser.email}. Share this temporary password with them securely (copy it now, it won't be shown again):`, newPassword);
   };
 
   return (
@@ -289,9 +292,9 @@ function UsersDirectory() {
 
                         <button
                           type="button"
-                          title="Reset password"
+                          title={u.id === currentUser?.id ? "Change your own password in Account Settings" : "Reset password"}
                           onClick={() => handleResetPassword(u)}
-                          disabled={resetPasswordMutation.isPending}
+                          disabled={resetPasswordMutation.isPending || u.id === currentUser?.id}
                           className="p-1.5 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-40"
                         >
                           <KeyRound className="w-3.5 h-3.5" />

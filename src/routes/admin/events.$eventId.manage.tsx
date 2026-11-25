@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Sliders, FolderTree, UserCheck, Coins, ArrowUpRight, Plus,
   Percent, CircleDollarSign, BarChart3, LayoutGrid, Flame, Pencil,
-  ArrowLeft, Loader2, Receipt, Activity, FileSpreadsheet,
+  ArrowLeft, Loader2, Receipt, Activity, FileSpreadsheet, Landmark,
 } from "lucide-react";
 import { exportEventResultsToExcelFn, getEventOverviewFn, updateEventActiveStateFn } from "#/server/tenant-events";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
@@ -89,10 +89,12 @@ function ManageEventConsole() {
     });
   };
 
+  // From getEventOverviewFn: gross, platform fee (from the event's fee %),
+  // and what is still available to withdraw after recorded payouts.
   const paymentAmount = event.paymentAmount ?? 0;
   const paymentDeduction = event.paymentDeduction ?? 0;
-  const deductionRate = paymentAmount > 0 ? ((paymentDeduction / paymentAmount) * 100).toFixed(0) : "0";
-  const netRevenueCollected = paymentAmount - paymentDeduction;
+  const deductionRate = Number(event.platformFeePercent ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const netRevenueCollected = event.balance ?? paymentAmount - paymentDeduction;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -130,6 +132,15 @@ function ManageEventConsole() {
 
         <div className="flex items-center gap-2 shrink-0">
           <Link
+            to="/admin/events/$eventId/revenue"
+            params={{ eventId: String(event.id) }}
+            title="Revenue, platform fee and withdrawals"
+            className="flex flex-col items-center justify-center gap-2 px-3 h-14 rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+          >
+            <Landmark className="w-4 h-4" />
+            <span className="text-[9px] font-bold uppercase tracking-wide leading-none">Revenue</span>
+          </Link>
+          <Link
             to="/admin/events/$eventId/edit"
             params={{ eventId: String(event.id) }}
             title="Edit Main Event Form"
@@ -164,7 +175,7 @@ function ManageEventConsole() {
             ₵{paymentAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </h3>
           <p className="text-[10px] text-zinc-400 mt-2 font-medium flex items-center gap-1">
-            Net balance: <span className="text-emerald-400 font-bold">₵{netRevenueCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            Available to withdraw: <span className="text-emerald-400 font-bold">₵{netRevenueCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </p>
         </div>
 
@@ -174,10 +185,10 @@ function ManageEventConsole() {
             <Percent className="w-3.5 h-3.5 text-purple-400" /> Deduction Rate
           </p>
           <h3 className="text-2xl font-black text-purple-400 mt-1.5 font-mono">
-            {deductionRate}% <span className="text-xs text-zinc-600 font-sans font-normal">flat fee</span>
+            {deductionRate}% <span className="text-xs text-zinc-600 font-sans font-normal">platform fee</span>
           </h3>
           <p className="text-[10px] text-zinc-500 mt-2 font-medium">
-            Abs. cut: ₵{paymentDeduction.toLocaleString(undefined, { minimumFractionDigits: 2 })} GHS
+            Fee so far: ₵{paymentDeduction.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </p>
         </div>
 

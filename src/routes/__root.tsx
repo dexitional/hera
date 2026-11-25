@@ -4,10 +4,13 @@ import {
   createRootRouteWithContext,
   type ErrorComponentProps,
 } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { TanStackDevtools } from '@tanstack/react-devtools'
+import { lazy, Suspense } from 'react'
 
-import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
+// Dev-only: import.meta.env.DEV is statically false in production builds, so
+// the lazy import (and all devtools code) is dropped from the client bundle.
+const DevtoolsPanel = import.meta.env.DEV
+  ? lazy(() => import('../integrations/devtools-panel'))
+  : null
 
 import appCss from '../styles.css?url'
 
@@ -108,18 +111,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {children}
         </GoogleOAuthProvider>
         <Footer />
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-            TanStackQueryDevtools,
-          ]}
-        />
+        {DevtoolsPanel && (
+          <Suspense fallback={null}>
+            <DevtoolsPanel />
+          </Suspense>
+        )}
         <Scripts />
       </body>
     </html>

@@ -113,6 +113,27 @@
       "when": 1784804350158,
       "tag": "0015_add_election_alias_url_and_bill_to",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1795548034092,
+      "tag": "0016_perf_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795552465078,
+      "tag": "0017_voter_token_encryption",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795569585657,
+      "tag": "0018_event_revenue_withdrawals",
+      "breakpoints": true
     }
   ]
 }

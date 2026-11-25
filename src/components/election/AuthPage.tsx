@@ -98,8 +98,8 @@ export default function AuthPage({ error, redirectTo }: any) {
               
               {/* Left Side: Marketing/Promo Panel */}
               <div>
-                <div className="flex items-center gap-3 mb-6"></div>
-                <h1 className="text-4xl md:text-4xl font-extrabold tracking-tight text-white mb-6 leading-tight text-left font-sans">
+                <div className="flex items-center gap-3 mb-6 max-sm:mb-0!"></div>
+                <h1 className="text-4xl max-sm:text-3xl! md:text-4xl font-extrabold tracking-tight text-white mb-6 leading-tight text-left font-sans">
                   Welcome Back to Heravote
                 </h1>
                 <p className="text-lg md:text-xl text-zinc-300 mb-8 text-left max-w-lg">
@@ -216,6 +216,9 @@ export default function AuthPage({ error, redirectTo }: any) {
                         />
                         <label className="ml-2 text-zinc-400 select-none">Remember me</label>
                       </div>
+                      <a href="/auth/forgot-password" className="text-purple-400 hover:text-purple-300 transition-colors font-medium">
+                        Forgot password?
+                      </a>
                     </div>
 
                     {/* Submit Button */}

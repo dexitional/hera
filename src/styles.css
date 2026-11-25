@@ -291,6 +291,14 @@
       padding: 0
   }
 
+  /* Tailwind v4 dropped the pointer cursor on buttons, which made every
+     button (e.g. the nominee page's "Vote Now") look unclickable. Restore
+     it for enabled buttons; disabled ones keep their own cursor. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+      cursor: pointer
+  }
+
   ::file-selector-button {
       box-sizing: border-box;
       border: 0 solid;

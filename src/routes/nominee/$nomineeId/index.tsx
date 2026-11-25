@@ -1,11 +1,11 @@
-import { useState } from 'react'
 import PayMode from '#/components/PayMode'
+import ShareMenu from '#/components/ShareMenu'
 import { Dialog, DialogTrigger } from '#/components/ui/dialog'
 import { modalPage, useModalPageState, type ModalNominee } from '#/lib/utils'
 import { getPublicContestantFn } from '#/server/tenant-events'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Award, ArrowLeft, Check, Image as ImageIcon, QrCode, Share2, ThumbsUp, User } from 'lucide-react'
+import { Award, ArrowLeft, Image as ImageIcon, QrCode, ThumbsUp, User } from 'lucide-react'
 
 const nomineeQueryOptions = (nomineeId: any) => ({
   queryKey: ["nominee-page", nomineeId],
@@ -24,34 +24,6 @@ function RouteComponent() {
   const { nomineeId } = Route.useParams();
   const { data: nominee }: any = useSuspenseQuery(nomineeQueryOptions(nomineeId));
   const modal = useModalPageState();
-  const [shareCopied, setShareCopied] = useState(false);
-
-  const handleShare = async () => {
-    const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-    const shareData = {
-      title: nominee.name,
-      text: `Vote for ${nominee.name} in ${nominee.category.name}!`,
-      url: shareUrl,
-    };
-
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch {
-        // User cancelled the native share sheet -- nothing to do.
-      }
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setShareCopied(true);
-      setTimeout(() => setShareCopied(false), 2000);
-    } catch {
-      // Clipboard access blocked -- nothing more we can do.
-    }
-  };
-
   const openVoteModal = () => {
     const nomineeContext: ModalNominee = {
       id: nominee.id,
@@ -76,8 +48,8 @@ function RouteComponent() {
         modalPage.setState((prev) => ({ ...prev, open, ...(!open ? { size: 'lg', page: 'card' } : {}) }))
       }}
     >
-      <main className="pt-8 sm:pt-12 lg:pt-16 pb-20 md:pb-0">
-        <div className="min-h-screen bg-[#18181b] text-white antialiased font-sans -mt-16">
+      <main className="pt-8 sm:pt-12 lg:pt-16 pb-20 md:pb-0 max-sm:pt-0!">
+        <div className="min-h-screen bg-[#18181b] text-white antialiased font-sans -mt-16 max-sm:mt-0!">
           <main className="w-full">
             <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-10 lg:pt-14 pb-8 animate-in fade-in slide-in-from-top-4 duration-500">
               <div className="mb-6">
@@ -125,22 +97,10 @@ function RouteComponent() {
                     <QrCode className="w-4 h-4 text-purple-400" />
                     <span>Code: {nominee.code}</span>
                   </div>
-                  <button
-                    onClick={handleShare}
-                    className="flex items-center gap-2 bg-slate-600/10 px-3 py-1.5 rounded-full hover:bg-slate-600/20 transition-colors"
-                  >
-                    {shareCopied ? (
-                      <>
-                        <Check className="w-4 h-4 text-green-400" />
-                        <span>Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Share2 className="w-4 h-4 text-purple-400" />
-                        <span>Share</span>
-                      </>
-                    )}
-                  </button>
+                  <ShareMenu
+                    title={nominee.name}
+                    text={`Vote for ${nominee.name} in ${nominee.category.name}!`}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -187,7 +147,12 @@ function RouteComponent() {
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-3xl p-10 flex flex-col gap-4 shadow-md transition-all duration-300 group bg-[#6d28d9]/8">
+                  {/* The whole card opens the vote modal (the button remains the
+                      keyboard/screen-reader control). */}
+                  <div
+                    onClick={openVoteModal}
+                    className="rounded-3xl p-10 flex flex-col gap-4 shadow-md transition-all duration-300 group bg-[#6d28d9]/8 cursor-pointer hover:bg-[#6d28d9]/15 ring-1 ring-transparent hover:ring-purple-400/40"
+                  >
                     <div className="flex items-center justify-between">
                       <ThumbsUp className="w-8 h-8 text-purple-300" />
                       <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-500 text-white">
@@ -213,8 +178,9 @@ function RouteComponent() {
                     </div>
                     <DialogTrigger asChild>
                       <button
+                        type="button"
                         onClick={openVoteModal}
-                        className="w-full px-4 py-3 bg-purple-500/20 hover:bg-purple-500/30 text-white rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 group/button text-sm font-bold border border-purple-400/30 hover:border-purple-400/50"
+                        className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 group/button text-sm font-bold border border-purple-400/40 shadow-lg shadow-purple-900/40 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300"
                       >
                         <ThumbsUp className="w-4 h-4 group-hover/button:translate-x-1 transition-transform" />
                         Vote Now

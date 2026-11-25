@@ -8,10 +8,10 @@ function About() {
   return (
     <div className="min-h-screen bg-[#0d1f36] text-white antialiased font-sans flex flex-col items-center">
     <main className="w-full flex flex-col items-center justify-center">
-      <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24">
+      <section className="w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-12 pb-24 max-sm:pt-6!">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6" style={{ opacity: 1, transform: "none" }}>
-            <h2 className="text-5xl font-extrabold mb-6 text-white">Our Story</h2>
+            <h2 className="text-5xl font-extrabold mb-6 text-white max-sm:text-3xl! max-sm:leading-tight! max-sm:tracking-tight!">Our Story</h2>
             <p className="text-base text-zinc-300 leading-relaxed">
               Founded in 2019, Heravote emerged to solve a simple problem: make voting easy, secured, accessible, convenient and transparent with real-time results. Whether you're running organization elections or events nominations and award ceremonies, Heravote adapts perfectlyto your needs.
             </p>

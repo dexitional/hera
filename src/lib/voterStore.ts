@@ -15,8 +15,6 @@ export interface User {
   electionEnd: string
   electionAutoStart: boolean
   electionImageUrl: string
-  // The voter's OTP/password secret, re-verified server-side when the ballot is cast.
-  inviteToken: string
 }
 
 interface AuthState {
@@ -52,6 +50,18 @@ export const useAuthStore = create<AuthState>()(
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() => localStorage),
+      // v1: the voter's password/OTP is no longer kept in the browser (the
+      // ballot is authorised by an httpOnly session cookie). Strip it, and
+      // any real OTP, from sessions persisted by older versions.
+      version: 1,
+      migrate: (persisted: any) => {
+        if (persisted?.user) {
+          const { inviteToken: _token, ...user } = persisted.user;
+          persisted.user = user;
+        }
+        if (persisted?.otp && persisted.otp !== 'sent') persisted.otp = 'sent';
+        return persisted;
+      },
     }
   )
 )

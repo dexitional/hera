@@ -67,7 +67,7 @@ function RouteComponent() {
       <main className="w-full flex flex-col items-center justify-center">
         <section className="w-full max-w-2xl mx-auto px-4 sm:px-10 lg:px-12 pt-6 sm:pt-14 lg:pt-20 pb-24">
           <div className="text-left mb-8">
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-4 leading-tight">
+            <h1 className="text-4xl max-sm:text-3xl! md:text-5xl font-extrabold tracking-tight text-white mb-4 leading-tight">
               Welcome{user?.name ? `, ${user.name.split(' ')[0]}` : ''}!
             </h1>
             <p className="text-lg text-zinc-300 max-w-lg">
