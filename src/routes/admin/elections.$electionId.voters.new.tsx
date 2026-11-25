@@ -6,8 +6,9 @@ import VoterAdminForm from "#/components/election/VoterAdminForm";
 
 export const Route = createFileRoute("/admin/elections/$electionId/voters/new")({
   component: CreateVoter,
-  loader: async () => {
-    const elections = await getElectionsFn();
+  loader: async ({ params }: any) => {
+    // includeElectionId: a super admin editing another tenant's election still sees it in the dropdown.
+    const elections = await getElectionsFn({ data: { includeElectionId: params.electionId } } as any);
     return { elections }
   },
   pendingComponent: () => <FormSkeleton />,

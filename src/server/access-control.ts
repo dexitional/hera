@@ -23,6 +23,15 @@ export function isSuperAdmin(admin: SessionUser): boolean {
   return admin?.role === 'super';
 }
 
+/**
+ * WHERE fragment restricting a query to the caller's own events. Returns
+ * undefined for super admins, which drizzle's and() simply drops -- so the
+ * same query serves both "my events" and "every organisation's events".
+ */
+export function eventOwnerScope(admin: SessionUser) {
+  return isSuperAdmin(admin) ? undefined : eq(events.adminId, requireUser(admin).id);
+}
+
 /** Super admins may access any election; regular admins only their own. */
 export async function assertElectionAccess(admin: SessionUser, electionId: unknown) {
   const user = requireUser(admin);

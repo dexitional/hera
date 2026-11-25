@@ -12,7 +12,7 @@ import { getRequest } from '@tanstack/react-start/server';
 import { generateBallotReceiptSignature } from './ballot-signature';
 import { validateBallotSelections } from './ballot-validation';
 import { runVoteReceiptWorkflow } from './vote-receipt-workflow';
-import { assertCandidateAccess, assertElectionAccess, assertPositionAccess, assertVoterAccess } from './access-control';
+import { assertCandidateAccess, assertElectionAccess, assertPositionAccess, assertVoterAccess, isSuperAdmin } from './access-control';
 import { clearBallotSession, clearLoginFailures, getClientIp, isLoginLockedOut, issueBallotSession, LOCKED_OUT_MESSAGE, readBallotSession, recordLoginFailure, toVoterLoginPayload } from './voter-auth';
 import { requireToken, revealToken, tokenColumns, tokenMatches, toAdminVoter } from './voter-token';
 import { getBroadcastProgress, startBroadcast } from './jobs/sms-broadcast';
@@ -24,14 +24,27 @@ import { withCache } from './cache';
 
 export const getElectionsFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware,authMiddleware])
-  .handler(async ({ context }) => {
+  .handler(async ({ context, data }: any) => {
     const admin: any = context?.user;
-    const resp = await db.select()
+    const superAdmin = isSuperAdmin(admin);
+    // scope 'all' (super admins only): every organisation's elections.
+    // includeElectionId (super admins only): also return that election, so
+    // edit forms opened on another tenant's election can still select it.
+    const showAll = data?.scope === 'all' && superAdmin;
+    const includeId = superAdmin && typeof data?.includeElectionId === 'string' ? data.includeElectionId : null;
+    const rows = await db.select({ election: elections, ownerName: user.name, ownerOrganization: user.organization, ownerEmail: user.email })
       .from(elections)
-      .where(eq<any>(elections.adminId, admin.id))
+      .innerJoin(user, eq(elections.adminId, user.id))
+      .where(
+        showAll
+          ? undefined
+          : includeId
+            ? or(eq<any>(elections.adminId, admin.id), eq<any>(elections.id, includeId))
+            : eq<any>(elections.adminId, admin.id)
+      )
       .orderBy(desc(elections.createdAt));
 
-    return resp;
+    return rows.map((r) => ({ ...r.election, ownerName: r.ownerName, ownerOrganization: r.ownerOrganization, ownerEmail: r.ownerEmail }));
   });
 
 export const getElectionFn = createServerFn({ method: 'GET' }).middleware([arcjetMiddleware, authMiddleware]).handler(

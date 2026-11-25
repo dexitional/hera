@@ -8,7 +8,7 @@ import { arcjetMiddleware } from '#/middleware/arcjetMiddleware';
 import { generateContestantCode } from '#/lib/utils';
 import { creditCardVote } from './paystack-credit';
 import { processImageUpload } from './image-upload';
-import { assertCategoryAccess, assertContestantAccess, assertEventAccess } from './access-control';
+import { assertCategoryAccess, assertContestantAccess, assertEventAccess, eventOwnerScope, isSuperAdmin } from './access-control';
 
 // ==========================================
 // EVENTS FUNCTIONS
@@ -155,8 +155,10 @@ export const getPublicContestantFn = createServerFn({ method: 'GET' })
 
 export const getEventsFn = createServerFn({ method: 'GET' })
   .middleware([arcjetMiddleware, authMiddleware])
-  .handler(async ({ context }) => {
+  .handler(async ({ context, data }: any) => {
     const admin: any = context?.user;
+    // scope 'all' (super admins only): every organisation's events.
+    const showAll = data?.scope === 'all' && isSuperAdmin(admin);
     return await db
       .select({
         id: events.id,
@@ -172,11 +174,15 @@ export const getEventsFn = createServerFn({ method: 'GET' })
         adminId: events.adminId,
         createdAt: events.createdAt,
         categoriesCount: sql<number>`count(${categories.id})::int`,
+        ownerName: user.name,
+        ownerOrganization: user.organization,
+        ownerEmail: user.email,
       })
       .from(events)
+      .innerJoin(user, eq(events.adminId, user.id))
       .leftJoin(categories, eq(categories.eventId, events.id))
-      .where(eq<any>(events.adminId, admin.id))
-      .groupBy(events.id)
+      .where(showAll ? undefined : eq<any>(events.adminId, admin.id))
+      .groupBy(events.id, user.id)
       .orderBy(desc(events.createdAt));
   });
 
@@ -237,7 +243,7 @@ export const updateEventFn = createServerFn({ method: 'POST' })
     // Super admins can edit any tenant's event; regular admins only their own.
     const ownershipFilter = admin.role === 'super'
       ? eq<any>(events.id, data.get("id") as any)
-      : and(eq<any>(events.id, data.get("id") as any), eq<any>(events.adminId, admin.id));
+      : and(eq<any>(events.id, data.get("id") as any), eventOwnerScope(admin));
 
     const imageUrl = await processImageUpload(data.get("image") as File | null, {
       folder: 'events',
@@ -276,7 +282,7 @@ export const updateEventActiveStateFn = createServerFn({ method: 'POST' })
       .where(
         admin.role === 'super'
           ? eq<any>(events.id, eventId)
-          : and(eq<any>(events.id, eventId), eq<any>(events.adminId, admin.id))
+          : and(eq<any>(events.id, eventId), eventOwnerScope(admin))
       )
       .returning();
 
@@ -289,7 +295,7 @@ export const deleteEventFn = createServerFn({ method: 'POST' })
     const admin: any = context?.user;
     return await db
       .delete(events)
-      .where(and(eq<any>(events.id, eventId), eq<any>(events.adminId, admin.id)))
+      .where(and(eq<any>(events.id, eventId), eventOwnerScope(admin)))
       .returning();
   });
 
@@ -301,7 +307,7 @@ export const getEventOverviewFn = createServerFn({ method: 'GET' })
     const [eventRecord]: any = await db
       .select()
       .from(events)
-      .where(and(eq<any>(events.id, eventId), eq<any>(events.adminId, admin.id)));
+      .where(and(eq<any>(events.id, eventId), eventOwnerScope(admin)));
 
     if (!eventRecord) {
       throw new Error(`Event instance [${eventId}] not found.`);
@@ -377,7 +383,7 @@ export const getCategoriesFn = createServerFn({ method: 'GET' })
     const limitValue = pageSize;
     const offsetValue = (page - 1) * limitValue;
 
-    const conditions: any = [eq(events.adminId, admin.id), eq(events.id, eventId)];
+    const conditions: any = [eventOwnerScope(admin), eq(events.id, eventId)];
     if (searchQuery) {
       conditions.push(ilike(categories.name, `%${searchQuery}%`));
     }
@@ -432,7 +438,7 @@ export const createCategoryFn = createServerFn({ method: 'POST' })
         .where(
           admin.role === 'super'
             ? eq<any>(events.id, data.eventId)
-            : and(eq<any>(events.id, data.eventId), eq<any>(events.adminId, admin.id))
+            : and(eq<any>(events.id, data.eventId), eventOwnerScope(admin))
         );
       if (!ownedEvent) {
         throw new Error('Event not found.');
@@ -493,7 +499,7 @@ export const deleteCategoryFn = createServerFn({ method: 'POST' })
       .select({ id: categories.id })
       .from(categories)
       .innerJoin(events, eq(categories.eventId, events.id))
-      .where(and(eq<any>(categories.id, categoryId), eq<any>(events.adminId, admin.id)));
+      .where(and(eq<any>(categories.id, categoryId), eventOwnerScope(admin)));
     if (!ownedCategory) {
       throw new Error('Category not found.');
     }
@@ -518,7 +524,7 @@ export const getContestantsFn = createServerFn({ method: 'GET' })
     const limitValue = pageSize;
     const offsetValue = (page - 1) * limitValue;
 
-    const conditions: any = [eq(events.adminId, admin.id), eq(events.id, eventId)];
+    const conditions: any = [eventOwnerScope(admin), eq(events.id, eventId)];
     if (searchQuery) {
       conditions.push(ilike(contestants.name, `%${searchQuery}%`));
     }
@@ -579,7 +585,7 @@ export const createContestantFn = createServerFn({ method: 'POST' })
         .where(
           admin.role === 'super'
             ? eq<any>(categories.id, data.get("categoryId"))
-            : and(eq<any>(categories.id, data.get("categoryId")), eq<any>(events.adminId, admin.id))
+            : and(eq<any>(categories.id, data.get("categoryId")), eventOwnerScope(admin))
         );
       if (!ownedCategory) {
         throw new Error('Category not found.');
@@ -636,7 +642,7 @@ export const updateContestantFn = createServerFn({ method: 'POST' })
         .where(
           admin.role === 'super'
             ? eq<any>(contestants.id, data.get("id"))
-            : and(eq<any>(contestants.id, data.get("id")), eq<any>(events.adminId, admin.id))
+            : and(eq<any>(contestants.id, data.get("id")), eventOwnerScope(admin))
         );
       if (!ownedContestant) {
         throw new Error('Contestant not found.');
@@ -678,7 +684,7 @@ export const deleteContestantFn = createServerFn({ method: 'POST' })
       .from(contestants)
       .innerJoin(categories, eq(contestants.categoryId, categories.id))
       .innerJoin(events, eq(categories.eventId, events.id))
-      .where(and(eq<any>(contestants.id, contestantId), eq<any>(events.adminId, admin.id)));
+      .where(and(eq<any>(contestants.id, contestantId), eventOwnerScope(admin)));
     if (!ownedContestant) {
       throw new Error('Contestant not found.');
     }
@@ -703,7 +709,7 @@ export const getEventTransactionsFn = createServerFn({ method: 'GET' })
     const limitValue = pageSize;
     const offsetValue = (page - 1) * limitValue;
 
-    const conditions: any = [eq(events.adminId, admin.id), eq(events.id, eventId)];
+    const conditions: any = [eventOwnerScope(admin), eq(events.id, eventId)];
     if (searchQuery) {
       const searchPattern = `%${searchQuery}%`;
       conditions.push(
@@ -764,7 +770,7 @@ export const getEventTransactionFn = createServerFn({ method: 'GET' })
       .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
       .innerJoin(categories, eq(contestants.categoryId, categories.id))
       .innerJoin(events, eq(categories.eventId, events.id))
-      .where(and(eq<any>(eventTransactions.id, transactionId), eq<any>(events.adminId, admin.id)))
+      .where(and(eq<any>(eventTransactions.id, transactionId), eventOwnerScope(admin)))
       .then((rows) => rows.map((r) => r.eventTransactions));
   });
 
@@ -780,7 +786,7 @@ export const createEventTransactionFn = createServerFn({ method: 'POST' })
       .where(
         admin.role === 'super'
           ? eq<any>(contestants.id, data.contestantId)
-          : and(eq<any>(contestants.id, data.contestantId), eq<any>(events.adminId, admin.id))
+          : and(eq<any>(contestants.id, data.contestantId), eventOwnerScope(admin))
       );
     if (!ownedContestant) {
       throw new Error('Contestant not found.');
@@ -811,7 +817,7 @@ export const updateEventTransactionFn = createServerFn({ method: 'POST' })
       .where(
         admin.role === 'super'
           ? eq<any>(eventTransactions.id, data.id)
-          : and(eq<any>(eventTransactions.id, data.id), eq<any>(events.adminId, admin.id))
+          : and(eq<any>(eventTransactions.id, data.id), eventOwnerScope(admin))
       );
     if (!ownedTransaction) {
       throw new Error('Transaction not found.');
@@ -843,7 +849,7 @@ export const deleteEventTransactionFn = createServerFn({ method: 'POST' })
       .innerJoin(contestants, eq(eventTransactions.contestantId, contestants.id))
       .innerJoin(categories, eq(contestants.categoryId, categories.id))
       .innerJoin(events, eq(categories.eventId, events.id))
-      .where(and(eq<any>(eventTransactions.id, transactionId), eq<any>(events.adminId, admin.id)));
+      .where(and(eq<any>(eventTransactions.id, transactionId), eventOwnerScope(admin)));
     if (!ownedTransaction) {
       throw new Error('Transaction not found.');
     }
@@ -867,7 +873,7 @@ export const getEventTelemetryFn = createServerFn({ method: 'GET' })
       [summaryTotals],
       rawRecentTransactions,
     ] = await Promise.all([
-      db.select().from(events).where(and(eq<any>(events.id, eventId), eq<any>(events.adminId, admin.id))),
+      db.select().from(events).where(and(eq<any>(events.id, eventId), eventOwnerScope(admin))),
       db.select().from(categories).where(eq<any>(categories.eventId, eventId)),
       db
         .select({
@@ -995,7 +1001,7 @@ export const getEventFinalResultsFn = createServerFn({ method: 'GET' })
       rawContestantTallies,
       [summaryTotals],
     ] = await Promise.all([
-      db.select().from(events).where(and(eq<any>(events.id, eventId), eq<any>(events.adminId, admin.id))),
+      db.select().from(events).where(and(eq<any>(events.id, eventId), eventOwnerScope(admin))),
       db.select().from(categories).where(eq<any>(categories.eventId, eventId)).orderBy(asc(categories.createdAt)),
       db
         .select({
@@ -1093,7 +1099,7 @@ export const exportEventResultsToExcelFn = createServerFn({ method: 'GET' })
         rawContestantTallies,
         rawRecentTransactions,
       ] = await Promise.all([
-        db.select().from(events).where(and(eq<any>(events.id, eventId), eq<any>(events.adminId, admin.id))),
+        db.select().from(events).where(and(eq<any>(events.id, eventId), eventOwnerScope(admin))),
         db.select().from(categories).where(eq<any>(categories.eventId, eventId)).orderBy(asc(categories.createdAt)),
         db
           .select({

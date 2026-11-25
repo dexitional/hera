@@ -5,12 +5,13 @@ import {
   Sparkles, Filter, ChevronDown, CheckCircle, XCircle, FolderTree, Coins, ImageOff
 } from "lucide-react";
 import { deleteEventFn, getEventsFn } from "#/server/tenant-events";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { TableSkeleton } from "#/components/ui/skeleton";
+import ScopeToggle, { OwnerLine, type ListScope } from "#/components/admin/ScopeToggle";
 
-const eventsQueryOptions = () => ({
-  queryKey: ['events-admin'],
-  queryFn: () => getEventsFn(),
+const eventsQueryOptions = (scope: ListScope = 'mine') => ({
+  queryKey: ['events-admin', scope],
+  queryFn: () => getEventsFn({ data: { scope } } as any),
 });
 
 export const Route = createFileRoute("/admin/events/")({
@@ -23,7 +24,11 @@ export const Route = createFileRoute("/admin/events/")({
 
 function EventsDirectory() {
   const queryClient = useQueryClient();
-  const { data: events }: any = useSuspenseQuery(eventsQueryOptions());
+  const { user }: any = Route.useRouteContext();
+  const isSuperAdmin = user?.role === 'super';
+  // Super admins can switch to every organisation's events.
+  const [scope, setScope] = useState<ListScope>('mine');
+  const { data: events }: any = useQuery({ ...eventsQueryOptions(scope), placeholderData: keepPreviousData });
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "DISABLED">("ALL");
@@ -44,7 +49,8 @@ function EventsDirectory() {
   const filteredEvents = (events ?? []).filter((event: any) => {
     const matchesSearch =
       event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.description.toLowerCase().includes(searchQuery.toLowerCase());
+      event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      `${event.ownerOrganization ?? ''} ${event.ownerName ?? ''}`.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (statusFilter === "ACTIVE") return matchesSearch && event.isActive;
     if (statusFilter === "DISABLED") return matchesSearch && !event.isActive;
@@ -79,6 +85,7 @@ function EventsDirectory() {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
+            {isSuperAdmin && <ScopeToggle value={scope} onChange={setScope} />}
             <Link
               to="/admin/events/new"
               className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-xs px-3.5 py-2 rounded-lg font-medium shadow-md transition-all"
@@ -167,6 +174,7 @@ function EventsDirectory() {
                           </div>
                           <div className="flex flex-col min-w-0">
                             <span className="font-semibold text-white tracking-wide text-sm truncate">{event.title}</span>
+                            {event.adminId !== user?.id && <OwnerLine organization={event.ownerOrganization} name={event.ownerName} />}
                             <p className="text-xs text-zinc-500 mt-1 line-clamp-2 leading-relaxed">
                               {event.description}
                             </p>
