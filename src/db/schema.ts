@@ -216,6 +216,15 @@ export const eventTransactions = pgTable('event_transactions', {
   payRefUniqueIdx: uniqueIndex('event_transactions_pay_ref_uniq_idx').on(t.payRef).where(sql`${t.payRef} is not null`),
 }));
 
+// Platform-wide settings changed by super admins at runtime (no redeploy),
+// e.g. key 'sms' -> { provider: 'arkesel' | 'mnotify', failover: boolean }.
+export const platformSettings = pgTable('platform_settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  updatedBy: text('updated_by').references(() => user.id, { onDelete: 'set null' }),
+});
+
 // Money paid out of an event's revenue to the organiser (recorded by a super
 // admin; the payout itself happens outside the app). Never deleted: mistakes
 // are voided with a reason so the ledger stays a complete audit trail.

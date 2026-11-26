@@ -3,7 +3,8 @@ import { Queue, Worker, type ConnectionOptions, type Job } from 'bullmq';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { elections, voters } from '../../db/schema';
-import { addCountryCode, buildElectionVoteUrl, fetchWithRetry } from '../../lib/utils';
+import { addCountryCode, buildElectionVoteUrl } from '../../lib/utils';
+import { sendSmsMessage } from '../sms-gateway';
 import { fastRedis, fastRedisReady } from '../redis-fast';
 import { revealToken } from '../voter-token';
 
@@ -230,14 +231,10 @@ async function processSmsJob(job: Job<SmsJobData>): Promise<void> {
   // From here on, never throw: a retry could send a duplicate.
   let outcome: 'successful' | 'failed' = 'failed';
   try {
-    const sms = await fetchWithRetry(`${process.env.SMS_API_URL}/sms/send`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'api-key': process.env.SMS_API_KEY! },
-      body: JSON.stringify({ sender: process.env.SMS_SENDER_ID, message, recipients: [phone] }),
-    });
-    if (!sms.ok) throw new Error(`HTTP Gateway State Error ${sms.status}`);
-    const resp: any = await sms.json();
-    if (resp && (resp.status === 'success' || resp.code === '1000')) outcome = 'successful';
+    // Active gateway (Arkesel / mNotify / SMSOnlineGH), with fallback if enabled.
+    const sent = await sendSmsMessage(phone, message);
+    if (sent.ok) outcome = 'successful';
+    else throw new Error(sent.error ?? 'gateway error');
   } catch (err: any) {
     console.error(`[SMS BROADCAST] ${data.kind} to ${phone} failed:`, err?.message);
   }

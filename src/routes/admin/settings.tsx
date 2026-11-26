@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { SmsGatewaySettings } from "#/components/admin/SmsGatewaySettings";
 import { authErrorMessage } from '#/lib/errors'
 import { clearAuthCache } from '#/lib/auth-cache'
 import React, { useEffect, useRef, useState } from "react";
@@ -45,6 +46,8 @@ function AdminAccountSettings() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: sessionData, isPending: sessionPending } = authClient.useSession();
+  // Role from the server-checked route context (the admin layout's beforeLoad).
+  const { user: routeUser }: any = Route.useRouteContext();
   const user: any = sessionData?.user;
   const currentSessionToken = sessionData?.session?.token;
 
@@ -611,6 +614,9 @@ function AdminAccountSettings() {
 
         </div>
       </div>
+
+      {/* Platform-wide: only super admins choose the SMS gateway. */}
+      {routeUser?.role === "super" && <SmsGatewaySettings />}
 
     </div>
  );

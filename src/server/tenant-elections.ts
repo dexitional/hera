@@ -1,7 +1,7 @@
 import { authMiddleware } from '#/middleware/authMiddleware';
 import { addCountryCode, buildElectionVoteUrl, chunkArray, maskPhoneNumber, prepareVotersForBulkImport, stripCountryCode } from '#/lib/utils';
 import { createServerFn } from '@tanstack/react-start';
-import { and, asc, desc, eq, inArray, or, sql, ilike, count } from 'drizzle-orm';
+import { and, asc, desc, eq, or, sql, ilike, count } from 'drizzle-orm';
 import { db } from '../db';
 import { candidates, elections, electionVotes, positions, voters, user } from '../db/schema';
 import { processImageUpload } from './image-upload';
@@ -1998,24 +1998,9 @@ export const updateVoterFn = createServerFn({ method: 'POST' })
           // invite SMS also delivers it and marks the voter verified).
           if (!voter.voters.isVerified) {
             const fname = voter.voters.name?.split(' ')[0];
-            const smsPayload: any = {
-              sender: process.env.SMS_SENDER_ID,
-              message: `Hi ${fname}, Your verification OTP is ${revealToken(voter.voters)}. Thank you`,
-              recipients: [phone],
-            };
-            const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'api-key': process.env.SMS_API_KEY
-              } as any,
-              body: JSON.stringify(smsPayload)
-            });
-
-            if (!sms.ok) {
-              const errorText = await sms.text();
-              throw new Error(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`);
-            }
+            const { sendSmsMessage } = await import('./sms-gateway');
+            const sent = await sendSmsMessage(phone, `Hi ${fname}, Your verification OTP is ${revealToken(voter.voters)}. Thank you`);
+            if (!sent.ok) throw new Error(`SMS not sent: ${sent.error}`);
 
             await db
               .update(voters)
@@ -2233,45 +2218,24 @@ export const inviteVoterFn = createServerFn({ method: 'POST' }).middleware([arcj
       const fname = rec?.voters?.name?.split(" ")[0];
       const username = rec?.voters?.username;
       const electionUrl = buildElectionVoteUrl({ tag: rec?.elections?.tag, aliasUrl: rec?.elections?.aliasUrl });
-      let smsPayload: any;
+      let message: string;
       if(['otp', 'aotp'].includes(rec?.elections?.authMode?.toLowerCase())){
-        smsPayload = {
-          sender: process.env.SMS_SENDER_ID,
-          message: `Hello ${fname}, Your Verification OTP is ${inviteToken} . Visit ${electionUrl} to vote!`,
-          recipients: [phone],
-        }
-
+        message = `Hello ${fname}, Your Verification OTP is ${inviteToken} . Visit ${electionUrl} to vote!`;
       } else {
         const usernameLabel = rec?.elections?.placeholder?.username || 'Username';
         const passwordLabel = rec?.elections?.placeholder?.password || 'Password';
-
-        smsPayload = {
-          sender: process.env.SMS_SENDER_ID,
-          message: `Hello ${fname}, Please vote with ${usernameLabel}: ${username}, ${passwordLabel}: ${inviteToken} . Visit ${electionUrl} to vote!`,
-          recipients: [phone],
-        };
+        message = `Hello ${fname}, Please vote with ${usernameLabel}: ${username}, ${passwordLabel}: ${inviteToken} . Visit ${electionUrl} to vote!`;
       }
       
       if (!phone.length) {
         throw new Error(`Phone number is Invalid, ${phone}`);
       }
 
-      const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'api-key': process.env.SMS_API_KEY
-        } as any,
-        body: JSON.stringify(smsPayload)
-      });
+      const { sendSmsMessage } = await import('./sms-gateway');
+      const sent = await sendSmsMessage(phone, message);
+      if (!sent.ok) throw new Error(`SMS not sent: ${sent.error}`);
 
-      if (!sms.ok) {
-        const errorText = await sms.text();
-        throw new Error(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`);
-      }
-
-      const resp = await sms.json();
-      if (resp) {
+      {
         return await db
           .update(voters)
           .set({
@@ -2290,154 +2254,6 @@ export const inviteVoterFn = createServerFn({ method: 'POST' }).middleware([arcj
 );
 
 
-export const inviteVoters2Fn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware, authMiddleware]).handler(
-  async ({ context, data: electionId }: any) => {
-    await assertElectionAccess(context?.user, electionId);
-    try {
-      // Fetch Voter
-      const rec = await db.select()
-        .from(voters)
-        .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-        .where(eq<any>(elections.id, electionId));
-
-      let mdata: any = {};
-      rec.map((r: any) => {
-        const phone = addCountryCode(r?.voters?.phoneNumber);
-        const inviteToken = revealToken(r?.voters);
-        const fname = r?.voters?.name?.split(" ")[0];
-        const username = r?.voters?.username;
-        mdata[phone] = { fname, username, inviteToken }
-      })
-
-      // Send Invite Code via SMS
-      const electionUrl = buildElectionVoteUrl({ tag: rec[0]?.elections?.tag, aliasUrl: rec[0]?.elections?.aliasUrl });
-      const usernameLabel = rec[0]?.elections?.placeholder?.username || 'Username';
-      const passwordLabel = rec[0]?.elections?.placeholder?.password || 'Password';
-      const smsPayload: any = {
-        sender: process.env.SMS_SENDER_ID,
-        message: `Hello <%fname%>, Please vote with ${usernameLabel}: <%username%>, ${passwordLabel}: <%inviteToken%> . Try and Visit ${electionUrl} to vote!`,
-        recipients: mdata,
-      };
-      
-      const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/template/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'api-key': process.env.SMS_API_KEY
-        } as any,
-        body: JSON.stringify(smsPayload)
-      });
-
-      if (!sms.ok) {
-        const errorText = await sms.text();
-        throw new Error(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`);
-      }
-
-      const resp = await sms.json();
-      if (resp) {
-        const { data: mt } = resp;
-        const sentInvites = mt?.map((r: any) => ("0" + stripCountryCode(r.recipient)));
-        const sentInvitesCodes = mt?.map((r: any) => (r.recipient));
-        
-        return await db.update(voters).set({ isVerified: true }).where(
-          and(
-            eq(voters.electionId, electionId),
-            or(
-              inArray(voters.phoneNumber, sentInvites),
-              inArray(voters.phoneNumber, sentInvitesCodes),
-            )
-          )
-        ).returning().then((rows) => rows.map((r) => toAdminVoter(r)));
-      }
-
-    } catch (error: any) {
-      console.log(error.message)
-    }
-  }
-);
-
-export const inviteVoters1Fn = createServerFn({ method: 'POST' }).middleware([arcjetMiddleware, authMiddleware]).handler(
-  async ({ context, data: electionId }: any) => {
-    await assertElectionAccess(context?.user, electionId);
-    try {
-      // Fetch Voter
-      const rec = await db.select()
-        .from(voters)
-        .innerJoin(elections, eq<any>(voters.electionId, elections.id))
-        .where(
-          and(
-            eq<any>(elections.id, electionId),
-            //eq<any>(voters.isVerified, false)
-            eq<any>(voters.hasVoted, false)
-          )
-        );
-
-      let resp2 = await Promise.all(rec.map( async (r: any) => {
-
-          const phone = addCountryCode(r?.voters?.phoneNumber);
-          const inviteToken = revealToken(r?.voters);
-          const fname = r?.voters?.name?.split(" ")[0];
-          const username = r?.voters?.username;
-          
-          // Send Invite Code via SMS
-          const electionUrl = buildElectionVoteUrl({ tag: rec[0]?.elections?.tag, aliasUrl: rec[0]?.elections?.aliasUrl });
-          const smsPayload: any = {
-            sender: process.env.SMS_SENDER_ID,
-            message: `Hello ${fname}, Please vote with Username: ${username}, Password: ${inviteToken} . Try and Visit ${electionUrl} to vote!`,
-            recipients: [phone],
-          };
-
-          if (!phone?.length || phone?.length < 9) {
-            console.log(`Phone number is Invalid, ${phone}`);
-            return ({ message: `Phone number is Invalid, ${phone}` });
-          }
-    
-          const sms: any = await fetch(`${process.env.SMS_API_URL}/sms/send`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'api-key': process.env.SMS_API_KEY
-            } as any,
-            body: JSON.stringify(smsPayload)
-          });
-
-          if (!sms.ok) {
-            const errorText = await sms.text();
-            console.log(`SMS API HTTP Error! Status: ${sms.status} - ${errorText}`)
-            return ({ message: `SMS API HTTP Error! Status: ${sms.status} - ${errorText}` });
-          }
-
-          const resp = await sms.json();
-          console.log("SMS Response: ", resp);
-          if (resp) {
-            const { data: mt } = resp;
-            const sentInvites = mt?.map((r: any) => ("0" + stripCountryCode(r.recipient)));
-            const sentInvitesCodes = mt?.map((r: any) => (r.recipient));
-            
-            return await db.update(voters).set({ isVerified: true }).where(
-              and(
-                eq(voters.electionId, electionId),
-                or(
-                  inArray(voters.phoneNumber, sentInvites),
-                  inArray(voters.phoneNumber, sentInvitesCodes),
-                )
-              )
-            ).returning();
-          }
-          return null;
-      }))
-
-      // Return SMS response
-      return resp2;
-
-    } catch (error: any) {
-      console.log(error.message)
-    }
-  }
-);
-
-
-// Fixed Server Function
 export const inviteVotersFn = createServerFn({ method: 'POST' })
   .middleware([arcjetMiddleware, authMiddleware])
   .handler(async ({ context, data: electionId }: any) => {
