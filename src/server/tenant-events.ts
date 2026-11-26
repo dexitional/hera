@@ -652,10 +652,11 @@ export const createContestantFn = createServerFn({ method: 'POST' })
         quality: 75,
       });
 
-      // The interaction code is system-generated (5 chars, globally unique) --
-      // retry on the rare collision rather than trusting client input.
+      // The interaction code is system-generated (4 digits, globally unique) --
+      // retry on a collision rather than trusting client input. With only
+      // 9000 codes, collisions get likelier as nominees accumulate.
       let lastError: any;
-      for (let attempt = 0; attempt < 10; attempt++) {
+      for (let attempt = 0; attempt < 40; attempt++) {
         try {
           return await db.insert(contestants).values({
             categoryId: data.get("categoryId") as any,

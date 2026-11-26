@@ -21,7 +21,13 @@ export default function PayMode() {
   const page: ModalPage = modal.page ?? 'card'
 
   return (
-    <DialogContent className={`p-0 max-h-[90vh] overflow-hidden`}>
+    <DialogContent
+      className={[
+        'p-0 max-h-[90dvh] overflow-y-auto overscroll-contain',
+        // Pages taller than the screen scroll by swipe, with no scrollbar on phones.
+        'max-md:[scrollbar-width:none]! max-md:[&::-webkit-scrollbar]:hidden!',
+      ].join(' ')}
+    >
       <Page page={page} nominee={modal.nominee ?? null} receipt={modal.receipt ?? null} />
     </DialogContent>
   )

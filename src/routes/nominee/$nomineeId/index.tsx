@@ -107,8 +107,8 @@ function RouteComponent() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Photo: on wide screens the frame is exactly as tall as the details
                     column beside it (the photo fills it, uncropped, on a blurred
-                    backdrop of itself); stacked on phones it keeps its own shape. */}
-                <div className="relative min-h-[320px] rounded-3xl overflow-hidden bg-slate-800/40 animate-in fade-in slide-in-from-left-4 duration-500 delay-100 fill-mode-both">
+                    backdrop of itself); stacked on phones it keeps its own shape, capped at 42% of the screen height. */}
+                <div className="relative min-h-[200px] sm:min-h-[320px]! rounded-3xl overflow-hidden bg-slate-800/40 animate-in fade-in slide-in-from-left-4 duration-500 delay-100 fill-mode-both">
                   {nominee.imageUrl ? (
                     <>
                       <img
@@ -122,14 +122,14 @@ function RouteComponent() {
                           alt={nominee.name}
                           decoding="async"
                           src={nominee.imageUrl}
-                          className="relative w-full max-h-[75vh] object-contain lg:h-full! lg:max-h-full!"
+                          className="relative w-full max-h-[42vh] sm:max-h-[75vh]! object-contain lg:h-full! lg:max-h-full!"
                         />
                       </div>
                       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
                     </>
                   ) : (
-                    <div className="flex min-h-[320px] items-center justify-center">
-                      <User className="w-24 h-24 text-zinc-600" />
+                    <div className="flex min-h-[200px] sm:min-h-[320px]! items-center justify-center">
+                      <User className="w-16 h-16 sm:w-24 sm:h-24! text-zinc-600" />
                     </div>
                   )}
                 </div>
@@ -163,7 +163,7 @@ function RouteComponent() {
                       keyboard/screen-reader control). */}
                   <div
                     onClick={openVoteModal}
-                    className="rounded-3xl p-10 flex flex-col gap-4 shadow-md transition-all duration-300 group bg-[#6d28d9]/8 cursor-pointer hover:bg-[#6d28d9]/15 ring-1 ring-transparent hover:ring-purple-400/40"
+                    className="rounded-3xl p-5 sm:p-10! flex flex-col gap-4 shadow-md transition-all duration-300 group bg-[#6d28d9]/8 cursor-pointer hover:bg-[#6d28d9]/15 ring-1 ring-transparent hover:ring-purple-400/40"
                   >
                     <div className="flex items-center justify-between">
                       <ThumbsUp className="w-8 h-8 text-purple-300" />

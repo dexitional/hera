@@ -5,7 +5,7 @@ type PayPage = 'card' | 'ussd' | 'ended' | 'checkout'
 export default function VotePayCard({ nominee, onSelectMode }: { nominee: ModalNominee | null; onSelectMode: (p: PayPage) => void }) {
 
   return (
-    <div className="max-h-[90vh] overflow-y-auto">
+    <div>
         <div className="p-4 sm:p-6">
             <div className="text-center mb-6 sm:mb-8">
             <div className="mb-3 sm:mb-4">

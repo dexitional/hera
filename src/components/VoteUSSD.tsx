@@ -1,4 +1,5 @@
 import { DialogClose } from "./ui/dialog";
+import DialLink from "./DialLink";
 import { USSD_SHORTCODE, ussdDialFor, type ModalNominee } from '#/lib/utils';
 
 export default function VoteUSSD({ nominee, onBack }: { nominee: ModalNominee | null; onBack: () => void }) {
@@ -32,8 +33,9 @@ export default function VoteUSSD({ nominee, onBack }: { nominee: ModalNominee | 
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="tabler-icon tabler-icon-phone w-4 h-4 sm:w-5 sm:h-5 text-purple-400"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"></path></svg>
             <span className="text-sm font-medium text-purple-400">Dial this code</span>
           </div>
-          <div className="bg-slate-800/30 p-3 rounded-lg">
-            <span className="text-xl sm:text-2xl font-bold text-white tracking-wider">{USSD_SHORTCODE}</span>
+          <div className="bg-slate-800/30 p-3 rounded-lg flex items-center justify-between gap-3">
+            <DialLink dial={USSD_SHORTCODE} className="text-xl sm:text-2xl font-bold text-white tracking-wider no-underline" />
+            <span className="sm:hidden text-xs font-medium text-purple-300">Tap to dial</span>
           </div>
         </div>
         <div className="space-y-3 sm:space-y-4">
@@ -65,8 +67,14 @@ export default function VoteUSSD({ nominee, onBack }: { nominee: ModalNominee | 
         <div className="rounded-xl border border-dashed border-purple-500/30 bg-purple-500/5 p-3 sm:p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-purple-300">Faster alternative</p>
           <p className="mt-1 text-sm text-zinc-300">
-            Dial <span className="font-mono font-bold text-white break-all">{ussdDialFor(nominee?.code)}</span> to skip the menu and go straight to entering your votes for {nominee?.name ?? 'this nominee'}.
+            Dial <DialLink dial={ussdDialFor(nominee?.code)} className="font-mono font-bold text-white break-all" /> to skip the menu and go straight to entering your votes for {nominee?.name ?? 'this nominee'}.
           </p>
+          <DialLink
+            dial={ussdDialFor(nominee?.code)}
+            className="sm:hidden mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-purple-800 to-purple-900 px-4 py-3 text-sm font-semibold text-white no-underline shadow-lg active:from-purple-900 active:to-purple-950"
+          >
+            Tap to dial {ussdDialFor(nominee?.code)}
+          </DialLink>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <button

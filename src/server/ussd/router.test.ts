@@ -28,7 +28,16 @@ describe('ussdDialFor', () => {
 })
 
 describe('generateContestantCode', () => {
-  it('makes 5-digit codes with no leading zero', () => {
-    for (let i = 0; i < 300; i++) expect(generateContestantCode()).toMatch(/^[1-9]\d{4}$/)
+  it('makes 4-digit codes between 1000 and 9999', () => {
+    for (let i = 0; i < 2000; i++) {
+      const code = generateContestantCode()
+      expect(code).toMatch(/^\d{4}$/)
+      expect(Number(code)).toBeGreaterThanOrEqual(1000)
+      expect(Number(code)).toBeLessThanOrEqual(9999)
+    }
+  })
+  it('dials new 4-digit codes in full', () => {
+    expect(ussdDialFor('3445')).toBe('*928*330*1*3445#')
+    expect(parseDialShortcut(ussdDialFor('3445'))).toEqual(['1', '3445'])
   })
 })
