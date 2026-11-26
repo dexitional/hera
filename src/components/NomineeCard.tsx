@@ -1,4 +1,4 @@
-import { USSD_SHORTCODE, type ModalNominee } from '#/lib/utils';
+import { ussdDialFor, type ModalNominee } from '#/lib/utils';
 import { DialogClose } from './ui/dialog';
 import { User } from 'lucide-react';
 
@@ -76,19 +76,19 @@ export default function NomineeCard({ nominee }: { nominee: ModalNominee | null 
                   <div className=" space-y-3">
                     <div className=" flex items-center gap-3 text-zinc-300">
                       <span className=" w-6 h-6 flex items-center justify-center bg-zinc-900 rounded-full text-xs font-bold text-white border border-white/5">1</span>
-                      <span className=" text-sm">Dial {USSD_SHORTCODE}</span>
+                      <span className=" text-sm">Dial {ussdDialFor(nominee?.code)}</span>
                     </div>
                     <div className=" flex items-center gap-3 text-zinc-300">
                       <span className=" w-6 h-6 flex items-center justify-center bg-zinc-900 rounded-full text-xs font-bold text-white border border-white/5">2</span>
-                      <span className=" text-sm">Enter nominee code: {nominee?.code ?? "----"}</span>
+                      <span className=" text-sm">Enter the number of votes</span>
                     </div>
                     <div className=" flex items-center gap-3 text-zinc-300">
                       <span className=" w-6 h-6 flex items-center justify-center bg-zinc-900 rounded-full text-xs font-bold text-white border border-white/5">3</span>
-                      <span className=" text-sm">Enter Number of Votes</span>
+                      <span className=" text-sm">Confirm the total</span>
                     </div>
                     <div className=" flex items-center gap-3 text-zinc-300">
                       <span className=" w-6 h-6 flex items-center justify-center bg-zinc-900 rounded-full text-xs font-bold text-white border border-white/5">4</span>
-                      <span className=" text-sm">Confirm your vote</span>
+                      <span className=" text-sm">Approve the Mobile Money prompt</span>
                     </div>
                     <div className=" flex items-center gap-3 text-zinc-300">
                       <span className=" w-6 h-6 flex items-center justify-center bg-zinc-900 rounded-full text-xs font-bold text-white border border-white/5">5</span>

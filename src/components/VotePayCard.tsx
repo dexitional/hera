@@ -1,4 +1,4 @@
-import { USSD_SHORTCODE, type ModalNominee } from '#/lib/utils';
+import { ussdDialFor, type ModalNominee } from '#/lib/utils';
 
 type PayPage = 'card' | 'ussd' | 'ended' | 'checkout'
 
@@ -58,7 +58,7 @@ export default function VotePayCard({ nominee, onSelectMode }: { nominee: ModalN
                     </div>
                     </div>
                     <div className="bg-slate-600/20 px-2 py-1 sm:px-3 sm:py-1 rounded-full">
-                    <span className="text-slate-300 text-xs font-medium">{USSD_SHORTCODE}</span>
+                    <span className="text-slate-300 text-xs font-medium">{ussdDialFor(nominee?.code)}</span>
                     </div>
                 </div>
                 </div>

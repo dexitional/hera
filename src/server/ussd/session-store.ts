@@ -17,6 +17,8 @@ const keyFor = (sessionId: string) => `ussd:session:${sessionId}`;
 
 export type EventsVotingState =
   | { step: 'awaiting_code' }
+  // Several active nominees matched a 4-digit code; the voter picks one by number.
+  | { step: 'awaiting_pick'; codes: string[] }
   | { step: 'awaiting_votes'; code: string }
   | { step: 'awaiting_confirm'; code: string; voteCount: number };
 

@@ -1,13 +1,34 @@
 import { handleElectionInviteStep } from './election-invite';
 import { handleEventsVotingStep } from './events-voting';
 import { clearUssdSession, getUssdSession, setUssdSession, type UssdSessionState } from './session-store';
+import { USSD_SHORTCODE } from '../../lib/utils';
+
+// Digits of the platform shortcode, e.g. "*928*330#" -> ["928", "330"].
+const SHORTCODE_PARTS = USSD_SHORTCODE.replace(/[*#]+/g, ' ').trim().split(/\s+/);
+
+/**
+ * What the caller dialed after the platform shortcode, as separate options:
+ *   "*928*330#"          -> []
+ *   "*928*330*1#"        -> ["1"]
+ *   "*928*330*1*23445#"  -> ["1", "23445"]
+ * Gateways that send only the extra part ("1*23445") are handled too.
+ */
+export function parseDialShortcut(text: string): string[] {
+  const parts = String(text ?? '')
+    .trim()
+    .replace(/#+$/, '')
+    .split('*')
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const hasShortcode = SHORTCODE_PARTS.every((p, i) => parts[i] === p);
+  return hasShortcode ? parts.slice(SHORTCODE_PARTS.length) : parts;
+}
 
 const MAIN_MENU_MESSAGE =
-  'Welcome to Heravote Platform. Choose a service:\n\n' +
-  '1. Event voting - vote in an event.\n' +
-  '2. Online Elections - Retrieve your Invite code.\n' +
-  '3. Event Ticket - Buy an event ticket\n' +
-  '4. Event Ticket - Retrieve an event ticket';
+  'Heravote.com\n\n' +
+  '1. Vote\n' +
+  '2. Invite Code\n' +
+  '3. Ticket\n';
 
 // Single entry point for every USSD session on the shortcode. Session step
 // tracking lives server-side (session-store.ts, keyed by sessionId) rather than
@@ -41,6 +62,23 @@ export async function routeUssdSession(params: { sessionId: string; phoneNumber:
   // happened to be in `text` on this request is irrelevant/unreliable, so it's
   // intentionally ignored here.
   if (!session) {
+    // Dial shortcuts: *928*330*1# opens voting, *928*330*1*<nominee code>#
+    // jumps straight to that nominee's vote count, *928*330*2# opens the
+    // election invite service. Anything else shows the main menu.
+    // Only a fresh dial carries a shortcut: a reply arriving after its session
+    // expired (e.g. "2") must show the menu, not open a service.
+    const isDial = isNewSession || text.trim().startsWith('*');
+    const [service, nomineeCode] = isDial ? parseDialShortcut(text) : [];
+    if (service === '1') {
+      const result = nomineeCode
+        ? await handleEventsVotingStep({ state: { step: 'awaiting_code' }, latestInput: nomineeCode, phoneNumber })
+        : await handleEventsVotingStep({ state: null, latestInput: '', phoneNumber });
+      return persistAndFormat(sessionId, 'events_voting', result);
+    }
+    if (service === '2') {
+      const result = await handleElectionInviteStep({ state: null, latestInput: '', phoneNumber });
+      return persistAndFormat(sessionId, 'election_invite', result);
+    }
     await setUssdSession(sessionId, { service: 'main_menu' });
     return `CON ${MAIN_MENU_MESSAGE}`;
   }

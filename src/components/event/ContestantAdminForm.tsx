@@ -343,8 +343,8 @@ export default function ContestantAdminForm({ data: { data, categories, eventId 
                             )}
                             <div className="text-zinc-500 text-xs mt-2">
                               {isEditMode
-                                ? "A short unique code voters dial via USSD to vote for this contestant. Must be globally unique."
-                                : "A unique 5-character code (1 letter/digit + 4 digits) is generated automatically when you save."}
+                                ? "A short unique code voters dial via USSD (*928*330*1*CODE#) to vote for this contestant. Use digits only so it can be dialed. Must be globally unique."
+                                : "A unique 5-digit code is generated automatically when you save. Voters can dial *928*330*1*CODE# to vote."}
                             </div>
                           </div>
                         </div>

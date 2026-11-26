@@ -5,7 +5,7 @@ import { parseMediaUrl } from "#/lib/media-embed";
 import { MediaPlayer } from "#/components/media/MediaEmbed";
 import { Reveal } from "#/components/nominee/Reveal";
 import ShareMenu from "#/components/ShareMenu";
-import { USSD_SHORTCODE } from "#/lib/utils";
+import { USSD_SHORTCODE, ussdDialFor } from "#/lib/utils";
 import { getNomineeMeFn, getNomineePhotoFn } from "#/server/nominee-portal";
 import { PANEL } from "#/components/nominee/NomineeDashboard";
 
@@ -268,9 +268,10 @@ async function drawPoster(canvas: HTMLCanvasElement, o: {
   let ussdSize = Math.round(bandH * 0.55);
   const ussdFont = (size: number) => `900 ${size}px "SF Mono", Menlo, Consolas, monospace`;
   ctx.font = ussdFont(ussdSize);
-  while (ctx.measureText(USSD_SHORTCODE).width > colW - 36 && ussdSize > 24) { ussdSize -= 2; ctx.font = ussdFont(ussdSize); }
+  const dial = ussdDialFor(o.code);
+  while (ctx.measureText(dial).width > colW - 36 && ussdSize > 20) { ussdSize -= 2; ctx.font = ussdFont(ussdSize); }
   ctx.fillStyle = "#0b1a2e";
-  ctx.fillText(USSD_SHORTCODE, tx + 10, bandY + bandH * 0.38);
+  ctx.fillText(dial, tx + 10, bandY + bandH * 0.38);
 }
 
 function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
@@ -445,9 +446,9 @@ function ShareKit() {
   };
 
   const captions = [
-    { label: "Announcement", text: `🗳️ I've been nominated for ${me.category.name} at ${me.event.title}! Please vote for me here: ${url}\nVoting code: ${code}. No data? Dial ${USSD_SHORTCODE} and enter ${code}. Thank you! 🙏` },
+    { label: "Announcement", text: `🗳️ I've been nominated for ${me.category.name} at ${me.event.title}! Please vote for me here: ${url}\nVoting code: ${code}. No data? Dial ${ussdDialFor(code)} to vote. Thank you! 🙏` },
     { label: "Short & sweet", text: `Vote ${me.contestant.name} for ${me.category.name}! ✨ ${url} (code ${code})` },
-    { label: "Final push", text: `⏳ Voting is still open and every vote counts! Support me in ${me.category.name}: ${url}\nCode: ${code} · USSD: ${USSD_SHORTCODE}` },
+    { label: "Final push", text: `⏳ Voting is still open and every vote counts! Support me in ${me.category.name}: ${url}\nCode: ${code} · USSD: ${ussdDialFor(code)}` },
   ];
 
   const pill = (active: boolean) => `rounded-lg px-3 py-2 text-left text-xs transition-colors ${active ? "bg-white/10 text-white ring-1 ring-purple-400/50" : "text-zinc-400 hover:bg-white/5 hover:text-white"}`;
@@ -553,11 +554,11 @@ function ShareKit() {
                 <Smartphone className="h-4 w-4" /> No data? Vote by USSD
               </p>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-                <span className="select-all font-mono text-4xl font-black tracking-wider text-white sm:text-5xl">{USSD_SHORTCODE}</span>
-                <CopyButton text={USSD_SHORTCODE} label="Copy" />
+                <span className="select-all break-all font-mono text-3xl font-black tracking-wider text-white sm:text-4xl">{ussdDialFor(code)}</span>
+                <CopyButton text={ussdDialFor(code)} label="Copy" />
               </div>
               <p className="mt-2 text-sm text-zinc-200">
-                Dial it on any phone, then enter <span className="rounded-md bg-white/10 px-1.5 py-0.5 font-mono font-bold text-white">{code}</span> to vote for you.
+                One dial on any phone goes straight to voting for you: they enter the number of votes and confirm. (Or dial {USSD_SHORTCODE}, choose 1. Vote and enter <span className="rounded-md bg-white/10 px-1.5 py-0.5 font-mono font-bold text-white">{code}</span>.)
               </p>
             </div>
           </section>

@@ -37,6 +37,18 @@ export type ModalState = {
 
 export const USSD_SHORTCODE = '*928*330#'
 
+/**
+ * What a voter dials to vote for a nominee in one step, e.g. "*928*330*1*23445#".
+ * A dial string can only carry digits, so a code with a letter ("A3243")
+ * uses its last 4 digits; the USSD menu matches those (and asks the voter to
+ * pick if several active nominees share them).
+ */
+export function ussdDialFor(code: string | null | undefined): string {
+  const c = String(code ?? '').trim().toUpperCase()
+  const dialable = /^\d+$/.test(c) ? c : c.replace(/\D/g, '').slice(-4)
+  return `${USSD_SHORTCODE.replace(/#$/, '')}*1*${dialable}#`
+}
+
 export const modalPage = createStore<ModalState>({
   page: 'card',
   size: 'lg',
@@ -163,9 +175,14 @@ export function prepareVotersForBulkImport<T extends VoterImportRow>(rows: T[]) 
 }
 
 
-/** 5-char contestant interaction code: 1 alphanumeric char (no I/O) + 4 digits, uppercase. */
+/**
+ * 5-digit contestant code (no leading zero), e.g. "23445". Digits only, so
+ * voters can dial it straight into the USSD shortcut (*928*330*1*23445#).
+ * Codes created earlier may have a leading letter ("A3243"); those still work
+ * by their last 4 digits.
+ */
 export const generateContestantCode = () => {
-  const firstCharPool = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789"; // omit I, O (visually confusable with 1, 0)
+  const firstCharPool = "123456789";
   const digits = "0123456789";
   const randomValues = new Uint32Array(5);
   globalThis.crypto.getRandomValues(randomValues);
