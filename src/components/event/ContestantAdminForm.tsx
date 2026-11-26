@@ -1,7 +1,8 @@
 import React, { useState, useRef } from "react";
+import { FormCancelButton } from "#/components/admin/FormCancelButton";
 import { CheckCircle2, ChevronDown, User, UploadCloud, FileImage, X, AlertCircle, Hash, Phone } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useRouter } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { createContestantFn, updateContestantFn } from "#/server/tenant-events";
 import { convertToFormData } from "#/lib/utils";
 import { NomineeMediaFields } from "#/components/media/NomineeMediaFields";
@@ -10,7 +11,6 @@ import { toUserMessage } from "#/lib/errors";
 export default function ContestantAdminForm({ data: { data, categories, eventId } }: any) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const router = useRouter();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -343,8 +343,8 @@ export default function ContestantAdminForm({ data: { data, categories, eventId 
                             )}
                             <div className="text-zinc-500 text-xs mt-2">
                               {isEditMode
-                                ? "A short unique code voters dial via USSD to vote for this contestant. Must be globally unique."
-                                : "A unique 5-character code (1 letter/digit + 4 digits) is generated automatically when you save."}
+                                ? "A short unique code voters dial via USSD (*928*330*1*CODE#) to vote for this contestant. Use digits only so it can be dialed. Must be globally unique."
+                                : "A unique 5-digit code is generated automatically when you save. Voters can dial *928*330*1*CODE# to vote."}
                             </div>
                           </div>
                         </div>
@@ -453,15 +453,7 @@ export default function ContestantAdminForm({ data: { data, categories, eventId 
 
                     {/* Submit layout control row element */}
                     <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end gap-4">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (window.confirm(`Go back!`)) router.history.back();
-                        }}
-                        className="text-xs font-medium text-zinc-400 hover:text-white transition-colors"
-                      >
-                        Cancel
-                      </button>
+                      <FormCancelButton fallback={`/admin/events/${eventId}/contestants`} disabled={isSubmitting} className="text-xs font-medium text-zinc-400 hover:text-white transition-colors" />
 
                       <button
                         type="submit"

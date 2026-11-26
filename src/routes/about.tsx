@@ -12,10 +12,10 @@ function About() {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6" style={{ opacity: 1, transform: "none" }}>
             <h2 className="text-5xl font-extrabold mb-6 text-white max-sm:text-3xl! max-sm:leading-tight! max-sm:tracking-tight!">Our Story</h2>
-            <p className="text-base text-zinc-300 leading-relaxed">
-              Founded in 2019, Heravote emerged to solve a simple problem: make voting easy, secured, accessible, convenient and transparent with real-time results. Whether you're running organization elections or events nominations and award ceremonies, Heravote adapts perfectlyto your needs.
+            <p className="text-lg md:text-xl text-zinc-300 leading-relaxed">
+              Founded in 2019, Heravote emerged to solve a simple problem: make voting easy, secured, accessible, convenient and transparent with real-time results. Whether you're running organization elections or events nominations and award ceremonies, Heravote adapts perfectly to your needs.
             </p>
-            <p>It is scalable, secured with 24/7 support system to give you a smooth voting experience.</p>
+            <p className="mt-4 text-lg md:text-xl text-zinc-300 leading-relaxed">It is scalable, secured with 24/7 support system to give you a smooth voting experience.</p>
           </div>
           <div className="relative" style={{ opacity: 1, transform: "none" }}>
             <div className="grid grid-cols-1 gap-6">

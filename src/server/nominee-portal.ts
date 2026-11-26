@@ -24,7 +24,7 @@ function portalUrl(code: string): string {
   return `${base}/nominee-portal?code=${encodeURIComponent(code)}`;
 }
 
-const smsConfigured = () => Boolean(process.env.SMS_API_URL && process.env.SMS_API_KEY && process.env.SMS_SENDER_ID);
+
 
 // ---------------------------------------------------------------------------
 // Admin: invite a nominee
@@ -84,7 +84,8 @@ export const nomineeInviteFn = createServerFn({ method: 'POST' })
     const link = portalUrl(code);
     let smsSent = false;
     if (action === 'sms') {
-      if (!smsConfigured()) throw new Error('SMS is not configured on this server. Copy the link and share it instead.');
+      const { smsAvailable } = await import('./sms-gateway');
+      if (!smsAvailable()) throw new Error('SMS is not configured on this server. Copy the link and share it instead.');
       const { sendSms } = await import('./sms');
       await sendSms(
         toSmsRecipient(row.phone!),

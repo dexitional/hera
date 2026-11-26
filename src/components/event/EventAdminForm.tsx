@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { FormCancelButton } from "#/components/admin/FormCancelButton";
 import { CheckCircle2, Coins, ToggleLeft, Calendar, UploadCloud, FileImage, X, AlertCircle, ShieldCheck, Landmark, Smartphone, Wallet } from "lucide-react";
 import { GHANA_BANKS, MOMO_NETWORKS } from "#/lib/settlement";
 import { toUserMessage } from "#/lib/errors";
@@ -468,7 +469,8 @@ export default function EventAdminForm({ data, forUserId, forUserName }: any) {
                     )}
 
                     {/* Form Submission Action Footer */}
-                    <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end">
+                    <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end items-center gap-3">
+                      <FormCancelButton fallback={"/admin/events"} disabled={isSubmitting} />
                       <button
                         type="submit"
                         disabled={isSubmitting}

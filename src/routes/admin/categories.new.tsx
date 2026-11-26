@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { FormCancelButton } from "#/components/admin/FormCancelButton";
 import React, { useState, useEffect } from "react";
 import { CheckCircle2, ChevronDown, FolderTree, FileText, Hash, ArrowUpDown, RefreshCw } from "lucide-react";
 
@@ -298,7 +299,8 @@ export function CategoryForm({ initialData, onSuccess }: CategoryFormProps) {
                     </div>
 
                     {/* Submit Footer Action Controls */}
-                    <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end">
+                    <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end items-center gap-3">
+                      <FormCancelButton fallback={"/admin/categories"} disabled={isSubmitting} />
                       <button
                         type="submit"
                         disabled={isSubmitting || !formData.name || !formData.description}

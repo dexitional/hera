@@ -1,13 +1,13 @@
 import React, { useState } from "react";
+import { FormCancelButton } from "#/components/admin/FormCancelButton";
 import { CheckCircle2, ChevronDown, Phone, Hash, ToggleLeft, Coins } from "lucide-react";
-import { useNavigate, useRouter } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createEventTransactionFn, updateEventTransactionFn } from "#/server/tenant-events";
 
 export default function EventTransactionAdminForm({ data: { data, contestants, eventId } }: any) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const router = useRouter();
 
   const [formData, setFormData] = useState<any>({
     contestantId: data?.contestantId || (contestants && contestants[0]?.id),
@@ -320,15 +320,7 @@ export default function EventTransactionAdminForm({ data: { data, contestants, e
 
                     {/* Submit Action Footer */}
                     <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end gap-4">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (window.confirm(`Go back!`)) router.history.back();
-                        }}
-                        className="text-xs font-medium text-zinc-400 hover:text-white transition-colors"
-                      >
-                        Cancel
-                      </button>
+                      <FormCancelButton fallback={`/admin/events/${eventId}/transactions`} disabled={isSubmitting} className="text-xs font-medium text-zinc-400 hover:text-white transition-colors" />
 
                       <button
                         type="submit"

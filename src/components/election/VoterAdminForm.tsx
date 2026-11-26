@@ -1,4 +1,5 @@
-import { useNavigate, useRouter } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import { FormCancelButton } from "#/components/admin/FormCancelButton";
 import React, { useState } from "react";
 import { CheckCircle2, User, Mail, Phone, Key, RefreshCw } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,7 +10,6 @@ export default function VoterAdminForm({ data: { data, electionId }}: any) {
   
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const router = useRouter();
   
   const [formData, setFormData] = useState<any>({
     // electionId: data?.electionId || elections && elections[0]?.id,
@@ -305,14 +305,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
                     {/* Footer Trigger Button */}
                     <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end gap-4">
-                      <button 
-                         type="button"
-                         onClick={() => {
-                            if(window.confirm(`Go back!`)) router.history.back(); 
-                         }}
-                      >
-                        Cancel
-                      </button>
+                      <FormCancelButton fallback={`/admin/elections/${electionId}/voters`} disabled={isSubmitting} />
                       
                       <button
                         type="submit"

@@ -65,7 +65,9 @@ export const Route = createFileRoute('/api/webhooks/arkesel-ussd')({
           const phoneNumber = String(fields.phoneNumber ?? fields.msisdn ?? fields.MSISDN ?? '');
           const text = String(fields.text ?? fields.userData ?? fields.message ?? '');
           const type = String(fields.type ?? fields.Type ?? '').toLowerCase();
-          const isNewSession = type === 'initiation';
+          // Arkesel marks a session's first request with newSession: true; other
+          // gateways use type: "initiation".
+          const isNewSession = type === 'initiation' || fields.newSession === true || String(fields.newSession).toLowerCase() === 'true';
 
           if (!sessionId || !phoneNumber) {
             return jsonUssdResponse({ sessionId, phoneNumber, continueSession: false, message: 'Invalid request.' });

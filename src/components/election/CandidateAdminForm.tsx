@@ -1,15 +1,14 @@
 import React, { useState, useRef } from "react";
+import { FormCancelButton } from "#/components/admin/FormCancelButton";
 import { CheckCircle2, ChevronDown, User, UploadCloud, FileImage, X, AlertCircle, Hash } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { createCandidateFn, updateCandidateFn } from "#/server/tenant-elections";
 import { convertToFormData } from "#/lib/utils";
-import { useRouter } from "@tanstack/react-router";
 
 export default function CandidateAdminForm({ data: { data, positions }}: any) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const router = useRouter();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -386,14 +385,7 @@ export default function CandidateAdminForm({ data: { data, positions }}: any) {
 
                     {/* Submit layout control row element */}
                     <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end gap-4 cursor-pointer">
-                      <button 
-                        type="button"
-                        onClick={() => {
-                            if(window.confirm(`Go back!`)) router.history.back(); 
-                        }}
-                      >
-                        Cancel
-                      </button>
+                      <FormCancelButton fallback={`/admin/elections/${positions?.[0]?.electionId}/candidates`} disabled={isSubmitting} />
                       
                       <button
                         type="submit"

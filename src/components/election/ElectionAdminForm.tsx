@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { FormCancelButton } from "#/components/admin/FormCancelButton";
 import { CheckCircle2, Calendar, Settings, Eye, Globe, UploadCloud, FileImage, X, AlertCircle, ShieldCheck } from "lucide-react";
 import moment from "moment";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -635,7 +636,8 @@ export default function ElectionAdminForm({ data, forUserId, forUserName }: any)
                           </div>
       
                           {/* Form Submission Action Footer */}
-                          <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end">
+                          <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end items-center gap-3">
+                            <FormCancelButton fallback={"/admin/elections"} disabled={isSubmitting} />
                             <button
                               type="submit"
                               disabled={isSubmitting}

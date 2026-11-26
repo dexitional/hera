@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq, like } from 'drizzle-orm';
 import { db } from '../../db';
 import { categories, contestants, events } from '../../db/schema';
 import { guardTransaction, releaseTransactionLock } from '../../middleware/idempotency';
@@ -12,6 +12,42 @@ export type UssdStepResult = {
   continueSession: boolean;
   nextState?: EventsVotingState;
 };
+
+/** Most nominees a 4-digit match will list for the voter to pick from. */
+const MAX_PICK = 5;
+
+/**
+ * Resolves what the voter dialed or typed to active nominees. Exact codes
+ * first. A USSD dial string can only carry digits, so a code with a letter
+ * (e.g. "A3243") can't be dialed; its 4 digits are accepted instead and
+ * matched against the end of every active nominee's code.
+ */
+export async function resolveNomineeCode(input: string) {
+  const code = input.trim().toUpperCase();
+  if (!code) return [];
+  const exact = await lookupActiveContestant(code);
+  if (exact) return [exact];
+  if (!/^\d{4}$/.test(code)) return [];
+  return db
+    .select({ contestant: contestants, category: categories, event: events })
+    .from(contestants)
+    .innerJoin(categories, eq(contestants.categoryId, categories.id))
+    .innerJoin(events, eq(categories.eventId, events.id))
+    .where(and(like(contestants.code, `_${code}`), eq(events.isActive, true)))
+    .orderBy(asc(contestants.code))
+    .limit(MAX_PICK + 1);
+}
+
+type NomineeRow = NonNullable<Awaited<ReturnType<typeof lookupActiveContestant>>>;
+
+function askForVotes(row: NomineeRow): UssdStepResult {
+  const unitPrice = row.event.unitPrice ?? 0;
+  return {
+    message: `Voting for: ${row.contestant.name}\n${row.category.name} - ${row.event.title}\nEnter number of votes (GHS ${unitPrice.toFixed(2)} each):`,
+    continueSession: true,
+    nextState: { step: 'awaiting_votes', code: row.contestant.code },
+  };
+}
 
 async function lookupActiveContestant(code: string) {
   const [row] = await db
@@ -49,20 +85,29 @@ export async function handleEventsVotingStep(params: {
     };
   }
 
-  // Nominee code was just entered.
+  // Nominee code was just entered (or came in the dial string, see router.ts).
   if (state.step === 'awaiting_code') {
-    const code = latestInput.toUpperCase();
-    const row = await lookupActiveContestant(code);
-    if (!row) {
+    const matches = await resolveNomineeCode(latestInput);
+    if (matches.length === 0) {
       return { message: 'Invalid or inactive nominee code. Please check the code and try again.', continueSession: false };
     }
-
-    const unitPrice = row.event.unitPrice ?? 0;
+    if (matches.length === 1) return askForVotes(matches[0]);
+    if (matches.length > MAX_PICK) {
+      return { message: 'Several nominees match those digits. Please dial again with the full nominee code from the voting page.', continueSession: false };
+    }
     return {
-      message: `Voting for: ${row.contestant.name}\n${row.category.name} - ${row.event.title}\nEnter number of votes (GHS ${unitPrice.toFixed(2)} each):`,
+      message: `Choose your nominee:\n${matches.map((m, i) => `${i + 1}. ${m.contestant.name} (${m.contestant.code})`).join('\n')}`,
       continueSession: true,
-      nextState: { step: 'awaiting_votes', code },
+      nextState: { step: 'awaiting_pick', codes: matches.map((m) => m.contestant.code) },
     };
+  }
+
+  // A nominee was picked from the list of 4-digit matches.
+  if (state.step === 'awaiting_pick') {
+    const chosen = state.codes[parseInt(latestInput, 10) - 1];
+    const row = chosen ? await lookupActiveContestant(chosen) : null;
+    if (!row) return { message: 'Invalid choice. Please dial again.', continueSession: false };
+    return askForVotes(row);
   }
 
   // Vote count was just entered.

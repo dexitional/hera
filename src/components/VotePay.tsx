@@ -5,9 +5,9 @@ import { verifyAndCastCardVoteFn } from '#/server/tenant-events';
 import { modalPage, wait, type ModalNominee, type ModalReceipt } from '#/lib/utils';
 
 const MAX_VOTES = 1000;
-// Paystack silently rejects transactions below its own minimum chargeable amount --
-// often rendering as a blank checkout iframe instead of a visible error. Keep our own
-// floor comfortably above that so "Pay" always sends a valid amount.
+// Smallest card payment Paystack reliably accepts (below it, card checkout
+// can fail silently as a blank iframe). Mobile money in the same checkout
+// takes smaller amounts, so this only shows a note; it doesn't block paying.
 const MIN_CHECKOUT_AMOUNT_GHS = 1;
 
 export default function VotePay({
@@ -36,10 +36,8 @@ export default function VotePay({
 
   const handlePay = async () => {
     if (!nominee) return;
-    if (totalAmount < MIN_CHECKOUT_AMOUNT_GHS) {
-      setErrorMessage(`Minimum card payment is GH₵${MIN_CHECKOUT_AMOUNT_GHS.toFixed(2)}. Please increase your vote count.`);
-      return;
-    }
+    // Below the card minimum is still allowed: mobile money in the same
+    // Paystack checkout accepts smaller amounts (the note above says so).
 
     setErrorMessage(null);
     setIsProcessing(true);
@@ -84,9 +82,9 @@ export default function VotePay({
     <div className="p-4 sm:p-6">
       <div className="text-center mb-6">
         <div className="mb-3">
-          <div className="inline-flex items-center gap-2 bg-purple-400/10 px-3 py-1.5 rounded-full border border-blue-500/20">
+          <div className="inline-flex items-center gap-2 bg-purple-400/10 px-3 py-1.5 rounded-full border border-purple-500/20">
             <ShoppingCart className="w-3 h-3 text-purple-400" />
-            <span className="text-xs font-medium text-blue-400">Bulk Voting</span>
+            <span className="text-xs font-medium text-purple-400">Bulk Voting</span>
           </div>
         </div>
         <h2 className="text-xl font-bold text-white mb-1">Vote for {nominee?.name ?? 'this nominee'}</h2>
@@ -154,7 +152,9 @@ export default function VotePay({
       {belowMinimum && !errorMessage && (
         <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 mb-4 text-xs text-amber-300">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>Minimum card payment is GH₵{MIN_CHECKOUT_AMOUNT_GHS.toFixed(2)}. Increase your vote count to continue.</span>
+          <span>
+            Card payments need at least GH₵{MIN_CHECKOUT_AMOUNT_GHS.toFixed(2)}. For this amount, choose <strong className="font-semibold text-amber-200">Mobile Money</strong> at checkout, or add votes to pay by card.
+          </span>
         </div>
       )}
 
@@ -177,8 +177,8 @@ export default function VotePay({
         <button
           type="button"
           onClick={handlePay}
-          disabled={isProcessing || belowMinimum}
-          className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+          disabled={isProcessing}
+          className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-800 to-purple-900 text-white rounded-xl hover:from-purple-900 hover:to-purple-950 transition-all duration-300 flex items-center justify-center gap-2 group text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
         >
           {isProcessing ? (
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

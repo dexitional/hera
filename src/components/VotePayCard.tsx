@@ -1,4 +1,4 @@
-import { USSD_SHORTCODE, type ModalNominee } from '#/lib/utils';
+import { ussdDialFor, type ModalNominee } from '#/lib/utils';
 
 type PayPage = 'card' | 'ussd' | 'ended' | 'checkout'
 
@@ -21,7 +21,7 @@ export default function VotePayCard({ nominee, onSelectMode }: { nominee: ModalN
             </div>
             <div className="space-y-3 sm:space-y-4 mb-6">
             <button className="w-full group" tabIndex={0} onClick={() => onSelectMode('checkout')}>
-                <div className="bg-linear-to-r from-purple-600 to-blue-600 p-4 sm:p-5 rounded-xl sm:rounded-2xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 shadow-lg">
+                <div className="bg-linear-to-r from-purple-800 to-purple-900 border border-white/10 p-4 sm:p-5 rounded-xl sm:rounded-2xl hover:from-purple-900 hover:to-purple-950 transition-all duration-300 shadow-lg">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 sm:gap-4">
                     <div className="w-12 h-12 aspect-square bg-white/10 rounded-lg sm:rounded-xl flex items-center justify-center">
@@ -58,7 +58,7 @@ export default function VotePayCard({ nominee, onSelectMode }: { nominee: ModalN
                     </div>
                     </div>
                     <div className="bg-slate-600/20 px-2 py-1 sm:px-3 sm:py-1 rounded-full">
-                    <span className="text-slate-300 text-xs font-medium">{USSD_SHORTCODE}</span>
+                    <span className="text-slate-300 text-xs font-medium">{ussdDialFor(nominee?.code)}</span>
                     </div>
                 </div>
                 </div>
