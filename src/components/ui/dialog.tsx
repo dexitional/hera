@@ -15,7 +15,8 @@ export const DialogContent = React.forwardRef<
   <DialogPrimitive.Portal>
     <DialogPrimitive.Overlay
       className={cn(
-        "fixed inset-0 z-50 bg-[#0a192a]/80 backdrop-blur-sm",
+        // Lighter scrim so the page shows (blurred) through the glass modal.
+        "fixed inset-0 z-50 bg-[#0a192a]/55 backdrop-blur-[3px]",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
       )}
@@ -24,7 +25,9 @@ export const DialogContent = React.forwardRef<
       ref={forwardedRef}
       className={cn(
         `fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-${modalPage.state.size} -translate-x-1/2 -translate-y-1/2`,
-        "rounded-3xl border border-white/10 bg-[#233554] p-6 text-white shadow-2xl",
+        // Glass: translucent dark navy, heavy backdrop blur, fine light edge and top highlight.
+        "rounded-3xl border border-white/15 bg-[#1a2c46]/70 backdrop-blur-2xl backdrop-saturate-150 p-6 text-white",
+        "shadow-[0_24px_80px_-12px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.10)]",
         "focus:outline-none",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",

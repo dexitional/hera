@@ -30,7 +30,7 @@ export default function NomineeCard({ nominee }: { nominee: ModalNominee | null 
                 </div>
               </div>
               <div className=" relative mb-6">
-                <div className=" absolute inset-0 -m-1 bg-blue-500/20 rounded-full blur-sm"></div>
+                <div className=" absolute inset-0 -m-1 bg-purple-500/20 rounded-full blur-sm"></div>
                 <div className=" relative w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-white/10 overflow-hidden bg-zinc-900 flex items-center justify-center">
                   {nominee?.imageUrl ? (
                     <img
@@ -65,7 +65,7 @@ export default function NomineeCard({ nominee }: { nominee: ModalNominee | null 
                   <div className=" inline-flex flex-col items-start gap-2">
                     <div className=" bg-zinc-900 px-4 py-3 rounded-2xl border border-white/5">
                       <div className=" flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="tabler-icon tabler-icon-phone w-5 h-5 text-blue-400"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"></path></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="tabler-icon tabler-icon-phone w-5 h-5 text-purple-400"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"></path></svg>
                         <span className=" text-xl font-bold text-white tracking-widest">{nominee?.code ?? "----"}</span>
                       </div>
                     </div>
@@ -99,11 +99,11 @@ export default function NomineeCard({ nominee }: { nominee: ModalNominee | null 
                 <div className=" mt-6 space-y-3">
                   <span className=" text-xs text-zinc-500 uppercase tracking-wider">Nominee Profile</span>
                   <div className=" flex items-center gap-2 bg-zinc-900/50 rounded-xl p-3 border border-white/5">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="tabler-icon tabler-icon-link w-4 h-4 text-blue-400"><path d="M9 15l6 -6"></path><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"></path><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="tabler-icon tabler-icon-link w-4 h-4 text-purple-400"><path d="M9 15l6 -6"></path><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"></path><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"></path></svg>
                     <a
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 text-sm text-blue-400 hover:text-blue-300 transition-colors truncate"
+                      className="flex-1 text-sm text-purple-400 hover:text-purple-300 transition-colors truncate"
                       href={nominee ? `${typeof window !== 'undefined' ? window.location.origin : ''}/nominee/${nominee.code}` : '#'}
                     >
                       {typeof window !== 'undefined' ? window.location.host : 'heravote.com'}/nominee/{nominee?.code ?? ''}

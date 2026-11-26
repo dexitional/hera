@@ -5,7 +5,7 @@ import { modalPage, useModalPageState, type ModalNominee } from '#/lib/utils'
 import { getPublicContestantFn } from '#/server/tenant-events'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Award, ArrowLeft, Clapperboard, Download, Image as ImageIcon, QrCode, ThumbsUp, User } from 'lucide-react'
+import { Award, ArrowLeft, Clapperboard, Image as ImageIcon, QrCode, ThumbsUp, User } from 'lucide-react'
 import { MediaPlayer } from '#/components/media/MediaEmbed'
 
 const nomineeQueryOptions = (nomineeId: any) => ({
@@ -105,22 +105,33 @@ function RouteComponent() {
                 </div>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="relative rounded-3xl overflow-hidden animate-in fade-in slide-in-from-left-4 duration-500 delay-100 fill-mode-both">
-                  <div className="relative w-full bg-slate-800/40 min-h-[320px] flex items-center justify-center">
-                    {nominee.imageUrl ? (
-                      <>
+                {/* Photo: on wide screens the frame is exactly as tall as the details
+                    column beside it (the photo fills it, uncropped, on a blurred
+                    backdrop of itself); stacked on phones it keeps its own shape. */}
+                <div className="relative min-h-[320px] rounded-3xl overflow-hidden bg-slate-800/40 animate-in fade-in slide-in-from-left-4 duration-500 delay-100 fill-mode-both">
+                  {nominee.imageUrl ? (
+                    <>
+                      <img
+                        src={nominee.imageUrl}
+                        alt=""
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-2xl"
+                      />
+                      <div className="flex w-full items-center justify-center lg:absolute! lg:inset-0!">
                         <img
                           alt={nominee.name}
                           decoding="async"
-                          className="w-full h-auto rounded-3xl"
                           src={nominee.imageUrl}
+                          className="relative w-full max-h-[75vh] object-contain lg:h-full! lg:max-h-full!"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                      </>
-                    ) : (
+                      </div>
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                    </>
+                  ) : (
+                    <div className="flex min-h-[320px] items-center justify-center">
                       <User className="w-24 h-24 text-zinc-600" />
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500 delay-200 fill-mode-both">
                   <div className="bg-slate-600/10 backdrop-blur-sm border border-slate-600/20 rounded-3xl p-6">
@@ -191,34 +202,15 @@ function RouteComponent() {
                 </div>
               </div>
 
-              {/* Campaign media (optional): intro video and flyer */}
-              {(nominee.introVideoUrl || nominee.flyerUrl) && (
-                <div className={`grid grid-cols-1 gap-8 ${nominee.introVideoUrl && nominee.flyerUrl ? 'lg:grid-cols-2' : ''}`}>
-                  {nominee.introVideoUrl && (
-                    <div id="intro-video" className="scroll-mt-24 bg-slate-600/10 border border-slate-600/20 rounded-3xl p-5 sm:p-6 space-y-4">
-                      <h2 className="text-xl font-extrabold flex items-center gap-2" style={{ fontFamily: "Inter, sans-serif" }}>
-                        <Clapperboard className="w-5 h-5 text-purple-400" /> Meet {nominee.name.split(' ')[0]}
-                      </h2>
-                      <div className="flex justify-center">
-                        <MediaPlayer url={nominee.introVideoUrl} maxWidth={640} />
-                      </div>
-                    </div>
-                  )}
-                  {nominee.flyerUrl && (
-                    <div id="flyer" className="scroll-mt-24 bg-slate-600/10 border border-slate-600/20 rounded-3xl p-5 sm:p-6 space-y-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <h2 className="text-xl font-extrabold flex items-center gap-2" style={{ fontFamily: "Inter, sans-serif" }}>
-                          <ImageIcon className="w-5 h-5 text-purple-400" /> Campaign flyer
-                        </h2>
-                        <a href={nominee.flyerUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-slate-600/20 px-3 py-1.5 text-xs text-zinc-200 hover:bg-slate-600/30">
-                          <Download className="w-3.5 h-3.5" /> Open
-                        </a>
-                      </div>
-                      <a href={nominee.flyerUrl} target="_blank" rel="noopener noreferrer" className="block">
-                        <img src={nominee.flyerUrl} alt={`${nominee.name} campaign flyer`} loading="lazy" className="mx-auto max-h-[640px] w-auto rounded-2xl" />
-                      </a>
-                    </div>
-                  )}
+              {/* Intro video (optional). The flyer isn't shown here; nominees share it from their portal. */}
+              {nominee.introVideoUrl && (
+                <div id="intro-video" className="scroll-mt-24 bg-slate-600/10 border border-slate-600/20 rounded-3xl p-5 sm:p-6 space-y-4">
+                  <h2 className="text-xl font-extrabold flex items-center gap-2" style={{ fontFamily: "Inter, sans-serif" }}>
+                    <Clapperboard className="w-5 h-5 text-purple-400" /> Meet {nominee.name.split(' ')[0]}
+                  </h2>
+                  <div className="flex justify-center">
+                    <MediaPlayer url={nominee.introVideoUrl} maxWidth={720} />
+                  </div>
                 </div>
               )}
             </section>

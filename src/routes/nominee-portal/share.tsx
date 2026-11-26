@@ -295,7 +295,8 @@ function CampaignMediaCard({ me, url, canShareFiles }: { me: any; url: string; c
   const isLinkVideo = video ? parseMediaUrl(video)?.kind === "iframe" : false;
   // Uploaded videos are shared as the voting page, opened at the video.
   const videoShareUrl = video ? (isLinkVideo ? video : url ? `${url}#intro-video` : video) : "";
-  const flyerPageUrl = url ? `${url}#flyer` : "";
+  // The public page no longer shows the flyer, so link shares point at the image itself.
+  const flyerPageUrl = flyer ?? "";
   const name = me.contestant.name;
 
   const flyerFile = async () => {
