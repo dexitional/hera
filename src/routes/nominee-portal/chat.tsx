@@ -6,6 +6,7 @@ import { deleteOwnNomineeChatFn, getNomineeChatFn, postNomineeChatFn } from "#/s
 import { ChatRoom } from "#/components/chat/ChatRoom";
 import { useChatRoom } from "#/components/chat/useChatRoom";
 import { PANEL } from "#/components/nominee/NomineeDashboard";
+import { Reveal } from "#/components/nominee/Reveal";
 import { chatSeenKey } from "#/components/nominee/ChatSummaryCard";
 
 export const Route = createFileRoute("/nominee-portal/chat")({
@@ -34,15 +35,16 @@ function NomineeChat() {
 
   return (
     <div className="mx-auto w-full max-w-4xl">
-        <section className="w-full pb-5">
+        <Reveal className="w-full pb-5">
           <h1 className="flex items-center gap-3 text-3xl font-extrabold leading-tight tracking-tight text-white md:text-4xl">
             <MessagesSquare className="h-7 w-7 text-purple-300" /> Nominees' chat
           </h1>
           <p className="mt-1 text-zinc-300">
             {me.event.title}: every nominee in this event and the organisers. Be respectful; organisers moderate this chat.
           </p>
-        </section>
+        </Reveal>
 
+        <Reveal delay={100}>
         <div className={`${PANEL} h-[calc(100dvh-15rem)] min-h-[420px] overflow-hidden md:h-[min(72vh,760px)]`}>
           <ChatRoom
             messages={room.messages}
@@ -60,6 +62,7 @@ function NomineeChat() {
             emptyText="No messages yet. Start the conversation: share an idea, ask a question or raise a concern."
           />
         </div>
+        </Reveal>
     </div>
   );
 }
