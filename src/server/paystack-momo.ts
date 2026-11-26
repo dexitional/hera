@@ -63,9 +63,38 @@ export async function initiateMomoCharge(params: InitiateMomoChargeParams): Prom
     throw new Error(reason);
   }
 
+  if (result.data?.status === 'failed') {
+    throw new Error(result.data?.message || result.data?.gateway_response || 'The mobile money charge was declined.');
+  }
+
   return {
     reference: result.data.reference,
     status: result.data.status,
     displayText: result.data.display_text,
   };
+}
+
+/**
+ * Some mobile money charges (typically MTN numbers Paystack hasn't verified
+ * yet) come back as `send_otp`: Paystack texts the customer a code, and only
+ * after that code is submitted here does the network send the approval
+ * prompt. Returns the charge's new status ('pay_offline' / 'pending' means
+ * the prompt is on its way; 'send_otp' again means the code was wrong).
+ */
+export async function submitMomoOtp(reference: string, otp: string): Promise<InitiateMomoChargeResult> {
+  const secretKey = process.env.PAYSTACK_SECRET_KEY;
+  if (!secretKey) throw new Error('Card/mobile money payments are not configured for this platform yet.');
+  const response = await fetch('https://api.paystack.co/charge/submit_otp', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${secretKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ otp, reference }),
+  });
+  const result: any = await response.json().catch(() => null);
+  const status = result?.data?.status;
+  if (!status) {
+    // Paystack answers a wrong code with an error status but no data.status.
+    const reason = result?.data?.message || result?.message || 'Could not verify the code.';
+    return { reference, status: /otp|code|token/i.test(reason) ? 'send_otp' : 'failed', displayText: reason };
+  }
+  return { reference, status, displayText: result.data.display_text || result.data.message };
 }

@@ -33,36 +33,40 @@ export default function VoteUSSD({ nominee, onBack }: { nominee: ModalNominee | 
             <span className="text-sm font-medium text-purple-400">Dial this code</span>
           </div>
           <div className="bg-slate-800/30 p-3 rounded-lg">
-            <span className="text-xl sm:text-2xl font-bold text-white tracking-wider break-all">{ussdDialFor(nominee?.code)}</span>
+            <span className="text-xl sm:text-2xl font-bold text-white tracking-wider">{USSD_SHORTCODE}</span>
           </div>
-          <p className="mt-2 text-xs text-zinc-400">
-            Opens voting for {nominee?.name ?? 'this nominee'} directly. Or dial {USSD_SHORTCODE}, choose 1. Vote and enter the code {nominee?.code ?? ''}.
-          </p>
         </div>
         <div className="space-y-3 sm:space-y-4">
           <span className="text-sm font-medium mb-3 text-white">Step-by-step instructions:</span>
           <div className="space-y-2 sm:space-y-3">
             <div className="flex items-start gap-3 text-zinc-300">
               <div className="w-6 h-6 flex items-center justify-center bg-purple-500/20 rounded-full text-xs font-bold text-purple-400 border border-purple-500/30 shrink-0 mt-0.5">1</div>
-              <span className="text-sm wrap-break-word">Dial {ussdDialFor(nominee?.code)} on any phone</span>
+              <span className="text-sm wrap-break-word">Dial {USSD_SHORTCODE} on your phone</span>
             </div>
             <div className="flex items-start gap-3 text-zinc-300">
               <div className="w-6 h-6 flex items-center justify-center bg-purple-500/20 rounded-full text-xs font-bold text-purple-400 border border-purple-500/30 shrink-0 mt-0.5">2</div>
-              <span className="text-sm wrap-break-word">Check the nominee name, then enter the number of votes</span>
+              <span className="text-sm wrap-break-word">Enter nominee code: {nominee?.code ?? "----"}</span>
             </div>
             <div className="flex items-start gap-3 text-zinc-300">
               <div className="w-6 h-6 flex items-center justify-center bg-purple-500/20 rounded-full text-xs font-bold text-purple-400 border border-purple-500/30 shrink-0 mt-0.5">3</div>
-              <span className="text-sm wrap-break-word">Confirm the total with 1</span>
+              <span className="text-sm wrap-break-word">Enter the number of votes you want to cast</span>
             </div>
             <div className="flex items-start gap-3 text-zinc-300">
               <div className="w-6 h-6 flex items-center justify-center bg-purple-500/20 rounded-full text-xs font-bold text-purple-400 border border-purple-500/30 shrink-0 mt-0.5">4</div>
-              <span className="text-sm wrap-break-word">Approve the Mobile Money prompt on your phone</span>
+              <span className="text-sm wrap-break-word">Confirm your vote selection</span>
             </div>
             <div className="flex items-start gap-3 text-zinc-300">
               <div className="w-6 h-6 flex items-center justify-center bg-purple-500/20 rounded-full text-xs font-bold text-purple-400 border border-purple-500/30 shrink-0 mt-0.5">5</div>
               <span className="text-sm wrap-break-word">Wait for SMS confirmation</span>
             </div>
           </div>
+        </div>
+        {/* Alternative: one dial straight to this nominee's vote count. */}
+        <div className="rounded-xl border border-dashed border-purple-500/30 bg-purple-500/5 p-3 sm:p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-purple-300">Faster alternative</p>
+          <p className="mt-1 text-sm text-zinc-300">
+            Dial <span className="font-mono font-bold text-white break-all">{ussdDialFor(nominee?.code)}</span> to skip the menu and go straight to entering your votes for {nominee?.name ?? 'this nominee'}.
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <button
