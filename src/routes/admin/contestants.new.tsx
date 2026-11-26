@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { FormCancelButton } from "#/components/admin/FormCancelButton";
 import React, { useState, useEffect, useRef } from "react";
 import { CheckCircle2, ChevronDown, User, Tag, Hash, ArrowUpDown, RefreshCw, UploadCloud, FileImage, X, AlertCircle } from "lucide-react";
 
@@ -439,7 +440,8 @@ export function ContestantForm({ initialData }: ContestantFormProps) {
                     </div>
 
                     {/* Submit Footer Actions */}
-                    <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end">
+                    <div className="bg-[#0a192a]/50 border-t border-zinc-800 px-6 py-4 flex justify-end items-center gap-3">
+                      <FormCancelButton fallback={"/admin/contestants"} disabled={isSubmitting} />
                       <button
                         type="submit"
                         disabled={isSubmitting || uploadingToBucket || !formData.name || !formData.tagline || !formData.imageUrl}
