@@ -20,7 +20,9 @@ export type EventsVotingState =
   // Several active nominees matched a 4-digit code; the voter picks one by number.
   | { step: 'awaiting_pick'; codes: string[] }
   | { step: 'awaiting_votes'; code: string }
-  | { step: 'awaiting_confirm'; code: string; voteCount: number };
+  | { step: 'awaiting_confirm'; code: string; voteCount: number }
+  // Paystack texted the voter a code; submitting it triggers the MoMo prompt.
+  | { step: 'awaiting_otp'; reference: string; voteCount: number; totalAmount: number; attempts: number };
 
 export type ElectionInviteState = { step: 'awaiting_username' };
 

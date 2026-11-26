@@ -2,7 +2,7 @@ import { and, asc, eq, like } from 'drizzle-orm';
 import { db } from '../../db';
 import { categories, contestants, events } from '../../db/schema';
 import { guardTransaction, releaseTransactionLock } from '../../middleware/idempotency';
-import { initiateMomoCharge } from '../paystack-momo';
+import { initiateMomoCharge, submitMomoOtp } from '../paystack-momo';
 import type { EventsVotingState } from './session-store';
 
 const MAX_VOTES = 1000;
@@ -43,7 +43,8 @@ type NomineeRow = NonNullable<Awaited<ReturnType<typeof lookupActiveContestant>>
 function askForVotes(row: NomineeRow): UssdStepResult {
   const unitPrice = row.event.unitPrice ?? 0;
   return {
-    message: `Voting for: ${row.contestant.name}\n${row.category.name} - ${row.event.title}\nEnter number of votes (GHS ${unitPrice.toFixed(2)} each):`,
+    // message: `Voting for: ${row.contestant.name}\n${row.category.name} - ${row.event.title}\nEnter number of votes (GHS ${unitPrice.toFixed(2)} each):`,
+    message: `Voting for: ${row.contestant.name}\nEnter number of votes (GHS ${unitPrice.toFixed(2)} each):`,
     continueSession: true,
     nextState: { step: 'awaiting_votes', code: row.contestant.code },
   };
@@ -135,6 +136,26 @@ export async function handleEventsVotingStep(params: {
     };
   }
 
+  // The code Paystack texted the voter was just entered.
+  if (state.step === 'awaiting_otp') {
+    const otp = latestInput.replace(/\s/g, '');
+    if (!/^\d{4,8}$/.test(otp)) {
+      if (state.attempts >= 1) return { message: 'That code is not valid. Please dial again to restart your vote.', continueSession: false };
+      return { message: 'Enter the code from the SMS (numbers only):', continueSession: true, nextState: { ...state, attempts: state.attempts + 1 } };
+    }
+    try {
+      const result = await submitMomoOtp(state.reference, otp);
+      if (result.status === 'send_otp') {
+        if (state.attempts >= 1) return { message: 'That code was not accepted. Please dial again to restart your vote.', continueSession: false };
+        return { message: 'That code was not accepted. Check the SMS from Paystack and enter the code again:', continueSession: true, nextState: { ...state, attempts: state.attempts + 1 } };
+      }
+      return chargeOutcome(result.status, result.displayText, state.totalAmount, state.voteCount);
+    } catch (err: any) {
+      console.error('USSD momo OTP submission failed:', err?.message);
+      return { message: 'Could not verify the code right now. Please dial again shortly.', continueSession: false };
+    }
+  }
+
   // Confirmation choice was just entered -- trigger the Mobile Money charge.
   const { code, voteCount } = state;
 
@@ -160,9 +181,10 @@ export async function handleEventsVotingStep(params: {
     return { message: lock.message ?? 'A transaction is already in progress.', continueSession: false };
   }
 
+  let charge;
   try {
     const chargeEmail = `ussd-${phoneNumber.replace(/[^0-9]/g, '')}-${Date.now().toString(36)}@heravote.com`;
-    await initiateMomoCharge({
+    charge = await initiateMomoCharge({
       email: chargeEmail,
       amountGhs: totalAmount,
       phone: phoneNumber,
@@ -180,8 +202,29 @@ export async function handleEventsVotingStep(params: {
     return { message: 'Could not start the mobile money charge. Please try again shortly.', continueSession: false };
   }
 
-  return {
-    message: `Approve the Mobile Money prompt on your phone to complete payment of GHS ${totalAmount.toFixed(2)} for ${voteCount} vote(s). You will receive an SMS confirmation once your vote is counted.`,
-    continueSession: false,
-  };
+  // Paystack wants the code it just texted the voter before it asks the
+  // network to send the approval prompt: keep the session open for it.
+  if (charge.status === 'send_otp') {
+    return {
+      message: `Paystack has sent a code by SMS to your phone.\nEnter the code to get your Mobile Money prompt (GHS ${totalAmount.toFixed(2)}):`,
+      continueSession: true,
+      nextState: { step: 'awaiting_otp', reference: charge.reference, voteCount, totalAmount, attempts: 0 },
+    };
+  }
+
+  return chargeOutcome(charge.status, charge.displayText, totalAmount, voteCount);
+}
+
+/** What to tell the voter once a charge has moved past any code step. */
+function chargeOutcome(status: string, displayText: string | undefined, totalAmount: number, voteCount: number): UssdStepResult {
+  if (status === 'success') {
+    return { message: `Payment of GHS ${totalAmount.toFixed(2)} received for ${voteCount} vote(s). You will receive an SMS once your vote is counted.`, continueSession: false };
+  }
+  if (status === 'pay_offline' || status === 'pending' || status === 'ongoing') {
+    return {
+      message: `Approve the Mobile Money prompt to complete payment of GHS ${totalAmount.toFixed(2)} for ${voteCount} vote(s). You will receive an SMS once your vote is counted.`,
+      continueSession: false,
+    };
+  }
+  return { message: displayText || 'The mobile money payment could not be completed. Please try again.', continueSession: false };
 }
