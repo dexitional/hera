@@ -11,7 +11,7 @@ import { Reveal } from './Reveal'
 // Chart colours for the (always dark) portal: the dark-theme values from
 // admin-theme.css, validated with the dataviz palette checker.
 const VIZ_VARS = {
-  '--viz-series-1': '#3987e5',
+  '--viz-series-1': 'var(--color-purple-500)',
   '--viz-track': '#1f2b3a',
   '--viz-grid': '#1c2633',
   '--viz-axis': '#334155',
@@ -128,7 +128,7 @@ function Ring({ progress, size = 96, stroke = 9 }: { progress: number; size?: nu
       <defs>
         <linearGradient id="goal-gradient" x1="0" x2="1" y1="0" y2="1">
           <stop offset="0%" stopColor="#c3d34a" />
-          <stop offset="100%" stopColor="#3987e5" />
+          <stop offset="100%" stopColor="var(--color-purple-600)" />
         </linearGradient>
       </defs>
     </svg>
@@ -396,7 +396,7 @@ export function NomineeDashboard({ contestantId, aside }: { contestantId: string
                     <span className="shrink-0 font-mono text-sm font-bold text-white">{n(r.votes)}</span>
                   </div>
                   <div className="ml-10 mt-2 h-1.5 rounded-full bg-[#1f2b3a]">
-                    <div className="h-1.5 rounded-full bg-[#3987e5]" style={{ width: `${leader?.votes ? (r.votes / leader.votes) * 100 : 0}%` }} />
+                    <div className="h-1.5 rounded-full bg-purple-500" style={{ width: `${leader?.votes ? (r.votes / leader.votes) * 100 : 0}%` }} />
                   </div>
                 </li>
               ))}

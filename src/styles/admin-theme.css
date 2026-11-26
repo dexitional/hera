@@ -171,11 +171,13 @@ html.admin-light .bg-\[\#0a192a\]\/50 { box-shadow: 0 1px 2px rgb(16 24 40 / 0.0
 /* Chart colours (components/admin/charts.tsx). Validated with the dataviz
    palette validator against each surface: dark #0f1925, light #ffffff. */
 .viz-root {
-  --viz-series-1: #3987e5; --viz-series-2: #d95926;
+  /* Series 1 is the theme primary (olive). */
+  --viz-series-1: var(--color-purple-500); --viz-series-2: #d95926;
   --viz-track: #1f2b3a; --viz-grid: #1c2633; --viz-axis: #334155; --viz-surface: #0f1925;
 }
 html.admin-light .viz-root {
-  --viz-series-1: #2a78d6; --viz-series-2: #eb6834;
+  /* A deeper shade of the primary: #97a41b is only 2.75:1 on white, below the 3:1 graphics minimum. */
+  --viz-series-1: var(--color-purple-700); --viz-series-2: #eb6834;
   --viz-track: #e4e7ec; --viz-grid: #eef0f3; --viz-axis: #cbd5e1; --viz-surface: #ffffff;
 }
 

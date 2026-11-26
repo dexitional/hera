@@ -5,7 +5,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 // Colours come from CSS variables on a .viz-root ancestor, defined per theme
 // in src/styles/admin-theme.css and validated with the dataviz palette
 // validator against each surface (dark #0f1925, light #ffffff):
-//   --viz-series-1 (blue), --viz-series-2 (orange), --viz-track, --viz-grid, --viz-axis.
+//   --viz-series-1 (theme primary, olive), --viz-series-2 (orange), --viz-track, --viz-grid, --viz-axis.
 export const VIZ_ROOT_CLASS = 'viz-root'
 
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
@@ -189,7 +189,7 @@ export function SegmentedBar({
             <div
               key={p.label}
               title={`${p.label}: ${formatValue(p.value)} (${share.toFixed(1)}%)`}
-              className="flex items-center justify-center text-[11px] font-bold text-white/95"
+              className="flex items-center justify-center text-[11px] font-bold text-[#0b1a2e]"
               style={{ width: `${share}%`, background: p.color }}
             >
               {share >= 12 ? `${share.toFixed(0)}%` : ''}
