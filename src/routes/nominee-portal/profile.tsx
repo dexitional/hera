@@ -4,6 +4,7 @@ import { Camera, Loader2 } from "lucide-react";
 import { getNomineeMeFn, updateNomineeProfileFn } from "#/server/nominee-portal";
 import { PANEL } from "#/components/nominee/NomineeDashboard";
 import { NomineeMediaFields, type NomineeMediaChange } from "#/components/media/NomineeMediaFields";
+import { Reveal } from "#/components/nominee/Reveal";
 
 export const Route = createFileRoute("/nominee-portal/profile")({
   loader: async () => {
@@ -71,7 +72,7 @@ function NomineeProfile() {
 
   return (
     <div className="space-y-6">
-        <section>
+        <Reveal>
           {firstTime && (
             <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-purple-200">
               Step 1 of 1 · Before you continue
@@ -83,10 +84,11 @@ function NomineeProfile() {
           <p className="text-zinc-300">
             {me.category.name} · {me.event.title}. This is what voters see on your voting page.
           </p>
-        </section>
+        </Reveal>
 
         <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
 
+        <Reveal delay={90}>
         <form onSubmit={submit} className={`${PANEL} space-y-6 p-6 sm:p-8`}>
           <div className="flex items-center gap-4">
             <button
@@ -143,9 +145,10 @@ function NomineeProfile() {
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} {firstTime ? "Save and continue" : "Save changes"}
           </button>
         </form>
+        </Reveal>
 
         {/* Live preview of the public card */}
-        <aside className="space-y-3 lg:sticky lg:top-24">
+        <aside className="space-y-3 lg:sticky lg:top-24 animate-in fade-in slide-in-from-right-4 duration-500 delay-200 fill-mode-both motion-reduce:animate-none">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Live preview</p>
           <div className={`${PANEL} overflow-hidden`}>
             <div className="relative aspect-[4/5] bg-black/30">

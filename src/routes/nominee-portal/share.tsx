@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Clapperboard, Copy, Download, ExternalLink, ImageIcon, Loader2, MessageCircle, QrCode, Share2, Smartphone, Sparkles } from "lucide-react";
 import { parseMediaUrl } from "#/lib/media-embed";
 import { MediaPlayer } from "#/components/media/MediaEmbed";
+import { Reveal } from "#/components/nominee/Reveal";
 import ShareMenu from "#/components/ShareMenu";
 import { USSD_SHORTCODE } from "#/lib/utils";
 import { getNomineeMeFn, getNomineePhotoFn } from "#/server/nominee-portal";
@@ -452,15 +453,16 @@ function ShareKit() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <Reveal>
         <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">Share kit</h1>
         <p className="mt-1 text-zinc-300">Everything you need to bring in votes: a ready-made poster, your QR code and captions.</p>
-      </div>
+      </Reveal>
 
-      <CampaignMediaCard me={me} url={url} canShareFiles={canShareFiles} />
+      <Reveal delay={80}><CampaignMediaCard me={me} url={url} canShareFiles={canShareFiles} /></Reveal>
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
         {/* Poster studio */}
+        <Reveal delay={160} from="left">
         <section className={`${PANEL} space-y-4 p-5`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="flex items-center gap-2 text-sm font-bold text-white"><ImageIcon className="h-4 w-4 text-purple-300" /> Campaign poster</h2>
@@ -511,9 +513,11 @@ function ShareKit() {
             )}
           </div>
         </section>
+        </Reveal>
 
         <div className="space-y-6">
           {/* QR + link */}
+          <Reveal delay={220} from="right">
           <section className={`${PANEL} p-5`}>
             <h2 className="flex items-center gap-2 text-sm font-bold text-white"><QrCode className="h-4 w-4 text-purple-300" /> QR code & link</h2>
             <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -556,8 +560,10 @@ function ShareKit() {
               </p>
             </div>
           </section>
+          </Reveal>
 
           {/* Captions */}
+          <Reveal delay={280} from="right">
           <section className={`${PANEL} p-5`}>
             <h2 className="flex items-center gap-2 text-sm font-bold text-white"><MessageCircle className="h-4 w-4 text-purple-300" /> Ready-made captions</h2>
             <ul className="mt-4 space-y-3">
@@ -577,6 +583,7 @@ function ShareKit() {
               ))}
             </ul>
           </section>
+          </Reveal>
         </div>
       </div>
     </div>

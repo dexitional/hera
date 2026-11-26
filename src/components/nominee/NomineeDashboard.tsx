@@ -6,6 +6,7 @@ import type { LucideIcon } from 'lucide-react'
 import { ColumnChart } from '#/components/admin/charts'
 import { DeltaBadge } from '#/components/admin/ui'
 import { useNomineeDashboard } from './usePortalData'
+import { Reveal } from './Reveal'
 
 // Chart colours for the (always dark) portal: the dark-theme values from
 // admin-theme.css, validated with the dataviz palette checker.
@@ -18,7 +19,7 @@ const VIZ_VARS = {
 } as React.CSSProperties
 
 /** Bordered glass panel used across the portal. */
-export const PANEL = 'rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]'
+export const PANEL = 'rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset] transition-colors duration-300 hover:border-white/[0.16]'
 
 const RANGES = [
   { key: '7', label: '7D', days: 7 },
@@ -295,17 +296,20 @@ export function NomineeDashboard({ contestantId, aside }: { contestantId: string
     main = (
       <div className="space-y-4" style={VIZ_VARS}>
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <Stat label="Total votes" value={own.total} hint={`from ${n(own.payments)} ${own.payments === 1 ? 'payment' : 'payments'}`} icon={Vote} />
-          <Stat label="Today" value={today} icon={Flame} delta={<DeltaBadge delta={{ pct: pct(today, yesterday), label: 'vs yesterday' }} />} hint="vs yesterday" />
-          <Stat label="Last 7 days" value={last7} icon={CalendarDays} delta={prev7 !== null ? <DeltaBadge delta={{ pct: pct(last7, prev7), label: 'vs the 7 days before' }} /> : undefined} hint={prev7 !== null ? 'vs the 7 days before' : undefined} />
-          <Stat
-            label="Your rank"
-            icon={Trophy}
-            display={own.total > 0 ? ordinal(rank.position) : '—'}
-            hint={own.total > 0 ? (rank.position === 1 ? `of ${rank.of} · leading` : `of ${rank.of} in your category`) : 'Shows once you have votes'}
-          />
+          <Reveal delay={0}><Stat label="Total votes" value={own.total} hint={`from ${n(own.payments)} ${own.payments === 1 ? 'payment' : 'payments'}`} icon={Vote} /></Reveal>
+          <Reveal delay={70}><Stat label="Today" value={today} icon={Flame} delta={<DeltaBadge delta={{ pct: pct(today, yesterday), label: 'vs yesterday' }} />} hint="vs yesterday" /></Reveal>
+          <Reveal delay={140}><Stat label="Last 7 days" value={last7} icon={CalendarDays} delta={prev7 !== null ? <DeltaBadge delta={{ pct: pct(last7, prev7), label: 'vs the 7 days before' }} /> : undefined} hint={prev7 !== null ? 'vs the 7 days before' : undefined} /></Reveal>
+          <Reveal delay={210}>
+            <Stat
+              label="Your rank"
+              icon={Trophy}
+              display={own.total > 0 ? ordinal(rank.position) : '—'}
+              hint={own.total > 0 ? (rank.position === 1 ? `of ${rank.of} · leading` : `of ${rank.of} in your category`) : 'Shows once you have votes'}
+            />
+          </Reveal>
         </div>
 
+        <Reveal delay={260}>
         <section className={`${PANEL} space-y-3 p-5`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -321,13 +325,16 @@ export function NomineeDashboard({ contestantId, aside }: { contestantId: string
               ))}
             </div>
           </div>
-          <ColumnChart
-            ariaLabel={`Your votes per day, ${shortDate(visible[0].date)} to ${shortDate(visible[visible.length - 1].date)}`}
-            formatValue={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v)))}
-            formatTooltipValue={(v) => `${n(v)} votes`}
-            integer height={210}
-            data={visible.map((p) => ({ key: p.date, label: shortDate(p.date), value: p.votes }))}
-          />
+          {/* Keyed by range so switching 7D / 30D / All redraws with a quick fade. */}
+          <div key={range} className="animate-in fade-in zoom-in-[0.98] duration-300 ease-out motion-reduce:animate-none">
+            <ColumnChart
+              ariaLabel={`Your votes per day, ${shortDate(visible[0].date)} to ${shortDate(visible[visible.length - 1].date)}`}
+              formatValue={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v)))}
+              formatTooltipValue={(v) => `${n(v)} votes`}
+              integer height={210}
+              data={visible.map((p) => ({ key: p.date, label: shortDate(p.date), value: p.votes }))}
+            />
+          </div>
           <details className="text-xs text-zinc-400">
             <summary className="cursor-pointer select-none hover:text-white">Show as a table</summary>
             <table className="mt-2 w-full">
@@ -338,7 +345,9 @@ export function NomineeDashboard({ contestantId, aside }: { contestantId: string
             </table>
           </details>
         </section>
+        </Reveal>
 
+        <Reveal delay={320}>
         <div className="grid gap-4 lg:grid-cols-2">
           <section className={`${PANEL} space-y-3 p-5`}>
             <div>
@@ -369,8 +378,10 @@ export function NomineeDashboard({ contestantId, aside }: { contestantId: string
             )}
           </section>
         </div>
+        </Reveal>
 
         {standings && (
+          <Reveal>
           <section className={`${PANEL} p-5`}>
             <h3 className="flex items-center gap-2 text-sm font-bold text-white"><Medal className="h-4 w-4 text-purple-300" /> Category standings</h3>
             <ol className="mt-3 space-y-2">
@@ -391,14 +402,16 @@ export function NomineeDashboard({ contestantId, aside }: { contestantId: string
               ))}
             </ol>
           </section>
+          </Reveal>
         )}
       </div>
     )
 
     sideExtras = (
       <>
-        <GoalCard contestantId={contestantId} total={own.total} />
-        <Milestones total={own.total} />
+        <Reveal delay={240} from="right"><GoalCard contestantId={contestantId} total={own.total} /></Reveal>
+        <Reveal delay={300} from="right"><Milestones total={own.total} /></Reveal>
+        <Reveal delay={360} from="right">
         <section className={`${PANEL} p-5`}>
           <h3 className="flex items-center gap-2 text-sm font-bold text-white"><Radio className="h-4 w-4 text-purple-300" /> Recent votes</h3>
           {own.recent.length === 0 ? (
@@ -415,6 +428,7 @@ export function NomineeDashboard({ contestantId, aside }: { contestantId: string
             </ul>
           )}
         </section>
+        </Reveal>
       </>
     )
   }

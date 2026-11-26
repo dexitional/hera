@@ -6,6 +6,7 @@ import { getNomineeMeFn } from "#/server/nominee-portal";
 import { NomineeDashboard, PANEL } from "#/components/nominee/NomineeDashboard";
 import { ChatSummaryCard } from "#/components/nominee/ChatSummaryCard";
 import { SignInPanel } from "#/components/nominee/SignInPanel";
+import { Reveal } from "#/components/nominee/Reveal";
 
 export const Route = createFileRoute("/nominee-portal/")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -104,6 +105,7 @@ function Overview({ me }: { me: any }) {
 
   return (
     <div className="space-y-6">
+      <Reveal>
       <div className={`${PANEL} relative overflow-hidden`}>
         {me.event.imageUrl && (
           <img src={me.event.imageUrl} alt="" aria-hidden className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-[0.14] blur-2xl" />
@@ -158,9 +160,11 @@ function Overview({ me }: { me: any }) {
         </div>
       </div>
 
+      </Reveal>
+
       <NomineeDashboard
         contestantId={me.contestant.id}
-        aside={<><ChatSummaryCard contestantId={me.contestant.id} /><QuickShare me={me} publicUrl={publicUrl} /></>}
+        aside={<><Reveal delay={120} from="right"><ChatSummaryCard contestantId={me.contestant.id} /></Reveal><Reveal delay={180} from="right"><QuickShare me={me} publicUrl={publicUrl} /></Reveal></>}
       />
     </div>
   );

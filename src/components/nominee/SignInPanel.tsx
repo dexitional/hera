@@ -102,7 +102,7 @@ export function SignInPanel({ initialCode }: { initialCode?: string }) {
   return (
     <div className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] shadow-2xl lg:grid-cols-2">
       {/* Brand side */}
-      <div className="relative overflow-hidden border-b border-white/10 p-6 sm:p-10 lg:border-b-0 lg:border-r">
+      <div className="relative overflow-hidden border-b border-white/10 p-6 sm:p-10 lg:border-b-0 lg:border-r animate-in fade-in slide-in-from-left-4 duration-700 ease-out fill-mode-both motion-reduce:animate-none">
         <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-transparent to-sky-500/10" />
         <div className="relative">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-purple-200">
@@ -113,8 +113,8 @@ export function SignInPanel({ initialCode }: { initialCode?: string }) {
             Follow your votes as they come in, share your voting page, and stay in touch with the organisers.
           </p>
           <ul className="mt-8 space-y-5 max-sm:hidden!">
-            {FEATURES.map((f) => (
-              <li key={f.title} className="flex gap-3">
+            {FEATURES.map((f, i) => (
+              <li key={f.title} className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both motion-reduce:animate-none" style={{ animationDelay: `${300 + i * 110}ms` }}>
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5">
                   <f.icon className="h-5 w-5 text-purple-300" />
                 </span>
@@ -129,7 +129,7 @@ export function SignInPanel({ initialCode }: { initialCode?: string }) {
       </div>
 
       {/* Form side */}
-      <form onSubmit={(e) => { e.preventDefault(); void signIn() }} className="flex flex-col justify-center gap-6 p-6 sm:p-10">
+      <form onSubmit={(e) => { e.preventDefault(); void signIn() }} className="flex flex-col justify-center gap-6 p-6 sm:p-10 animate-in fade-in slide-in-from-right-4 duration-700 delay-150 ease-out fill-mode-both motion-reduce:animate-none">
         <div>
           <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5">
             <KeyRound className="h-5 w-5 text-purple-300" />

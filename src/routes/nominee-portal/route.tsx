@@ -94,6 +94,13 @@ function AccountMenu({ me }: { me: any }) {
 
 function PortalShell() {
   const { me } = Route.useLoaderData();
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  // Animate pages only once the visitor has moved within the portal: the
+  // first page is server-rendered and already visible, and a class that
+  // appeared later on the same element would replay the animation.
+  const firstPath = useRef(path);
+  const moved = useRef(false);
+  if (path !== firstPath.current) moved.current = true;
   const signedIn = Boolean(me?.activated);
   const isActive = useActive();
   const { data: chat } = useChatSummary(signedIn ? me!.contestant.id : undefined);
@@ -151,7 +158,10 @@ function PortalShell() {
       </header>
 
       <main className={`relative mx-auto w-full max-w-6xl flex-1 px-4 pt-6 sm:px-6 sm:pt-10 lg:px-8 ${signedIn ? "pb-28 md:pb-16" : "pb-16"}`}>
-        <Outlet />
+        {/* Keyed by page: each tab change fades and lifts the new page in. */}
+        <div key={path} className={moved.current ? "animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out fill-mode-both motion-reduce:animate-none" : ""}>
+          <Outlet />
+        </div>
       </main>
 
       {/* Phone tab bar */}
